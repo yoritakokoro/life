@@ -231,7 +231,7 @@
   var FT = function (L, k) { return L.tr[k] == null ? 50 : L.tr[k]; };
   function fr(L, H, f) {
     var y = H.y;
-    return (L.friends || []).filter(function (x) { return x.alive && !x.apart && y - x.by >= 16 && (!f || f(x, y - x.by)); }).sort(function (a, b) { return b.aff - a.aff; })[0] || null;
+    return (L.friends || []).filter(function (x) { return x.alive && !x.apart && !x.fig && y - x.by >= 16 && (!f || f(x, y - x.by)); }).sort(function (a, b) { return b.aff - a.aff; })[0] || null;
   }
   [
     { id: 'fr_office', w: 2.2, ok: function (L, H) { if (H.a < 18 || H.a > 50 || L.office || L.cls === 'slave') return false; var f = fr(L, H, function (x) { return x.aff >= 35 && !x.office && x.sex === 'M'; }); return f && { friend: f }; },
@@ -732,18 +732,30 @@
   /* ---------- 同性之情：史书只在帝王"断袖"、宫人"对食"、晋人"男宠"处留下几笔 ---------- */
   var sameFr = function (L) { return (L.friends || []).filter(function (f) { return f.alive && !f.apart && !f.fig && f.sex === L.sex && f.aff >= 55; }).sort(function (a, b) { return b.aff - a.aff; })[0]; };
   [
-    { id: 'lg_m', w: 1.2, ok: function (L, H) { var f = sameFr(L); return L.sex === 'M' && !L.eth && H.a >= 16 && H.a <= 40 && !L.love && !L.flags.lgAsk && f && { friend: f }; },
+    { id: 'lg_m', w: 0.75, ok: function (L, H) { var f = sameFr(L); return L.sex === 'M' && !L.eth && !L.married && H.a >= 16 && H.a <= 40 && !L.love && !L.flags.lgAsk && f && { friend: f }; },
       q: '你和同为男子的{friend}形影不离，农闲时同出同归，夜里也常同榻而眠。有一天你忽然明白：你喜欢他，不是兄弟之间的那种喜欢，是像别的男人喜欢女子那样的喜欢。', o: ['把这份心思藏在心里', '向他吐露', '躲开他，早些娶妻'],
       r: [[{ p: 1, t: '你把这份心思藏在了心里。你们还是最好的朋友；只有你自己知道，你爱着一个男人。', fx: { flag: 'lgAsk', love: 1 } }],
         [{ p: 0.5, t: '你吐露了心思。{friend}沉默了很久，握住了你的手——他对你，也是一样的心思。从此你们是旁人眼里的挚友，彼此心里的爱人。', fx: { flag: 'lgAsk', love: 2, frAff: 20 } }, { p: 0.5, t: '你吐露了心思。{friend}愣住了，说他只把你当兄弟。此后他见了你，总有些躲闪。', fx: { flag: 'lgAsk', frAff: -25 } }],
         [{ p: 1, t: '你开始躲着{friend}，又催着家里早些给你说亲。娶妻生子、延续香火，是一个男人躲不开的事。', fx: { flag: 'lgAsk', frAff: -15 } }]],
       aw: function (L) { return [RT(L, 'cau') + 10, RT(L, 'act') - 20, RT(L, 'cau')]; } },
-    { id: 'lg_f', w: 0.3, ok: function (L, H) { var f = sameFr(L); return L.sex === 'F' && !L.eth && H.a >= 13 && H.a <= 35 && !L.love && !L.flags.lgAsk && !L.flags.palaceIn && f && { friend: f }; },
+    { id: 'lg_f', w: 0.15, ok: function (L, H) { var f = sameFr(L); return L.sex === 'F' && !L.eth && !L.married && H.a >= 13 && H.a <= 35 && !L.love && !L.flags.lgAsk && !L.flags.palaceIn && f && { friend: f }; },
       q: '你和同里的姑娘{friend}一起采桑、一起织布，无话不说。你渐渐发觉，你喜欢她——像别家的姑娘喜欢情郎那样。可女子终究要嫁人，你们迟早各奔东西。', o: ['把这份心思藏在心里', '向她吐露，和她私定终身', '求父母晚些给你说亲'],
       r: [[{ p: 1, t: '你把这份心思藏在了心里。她出嫁那天，你送了她一双亲手绣的鞋，回来哭了一夜。你爱过一个女子，这件事谁也不知道。', fx: { flag: 'lgAsk', love: 1 } }],
         [{ p: 0.6, t: '你向她吐露了心思。她红着脸点了头。你们两个姑娘在桑树下对拜，私定终身。后来各自被许了人家，每年回娘家，总要想办法见上一面。', fx: { flag: 'lgAsk', love: 2, frAff: 20 } }, { p: 0.4, t: '你向她吐露了心思。她吓了一跳，说你说的是胡话。此后她再也不和你一起采桑了。', fx: { flag: 'lgAsk', frAff: -25 } }],
         [{ p: 0.4, t: '父母拗不过你，把亲事往后推了两年。那两年，你天天和她在一起，是你一生里最好的日子。', fx: { flag: 'lgAsk', love: 2, frAff: 10 } }, { p: 0.6, t: '父亲沉下脸说："女大不中留。"媒人第二天就上了门。', fx: { flag: 'lgAsk', love: 1 } }]],
       aw: function (L) { return [RT(L, 'cau') + 10, RT(L, 'soc'), RT(L, 'per') - 10]; } },
+    { id: 'lg_mw', w: 0.15, ok: function (L, H) { var f = sameFr(L); return L.sex === 'M' && !L.eth && L.married && L.spouseK && L.spouseK.alive && H.a >= 20 && H.a <= 50 && !L.love && !L.flags.lgAsk && !L.affair && f && { friend: f }; },
+      q: '你已经娶了妻，也有了家。可你和同为男子的{friend}之间，越来越不像寻常的朋友。他来的那几天，你总找借口不回内室。', o: ['把这份心思压下去，做个本分的丈夫', '瞒着妻子，和他暗中往来', '狠下心，和他断了往来'],
+      r: [[{ p: 1, t: '你把这份心思压了下去，照旧做你的丈夫、你的父亲。只是每回{friend}来，你都要在门口站很久。', fx: { flag: 'lgAsk', love: 1 } }],
+        [{ p: 1, t: '你们开始瞒着家里人往来。旁人只当是两个男人交情深厚，妻子却渐渐看出了些什么。', fx: { flag: 'lgAsk', love: 2, frAff: 15, affair: 'same' } }],
+        [{ p: 1, t: '你对{friend}说，往后不要再来了。他愣了很久，转身走了。那天夜里，你一个人喝了很多酒。', fx: { flag: 'lgAsk', love: 1, frAff: -30 } }]],
+      aw: function (L) { return [RT(L, 'cau') + 15, RT(L, 'act') - 20, RT(L, 'per') - 10]; } },
+    { id: 'lg_fw', w: 0.04, ok: function (L, H) { var f = sameFr(L); return L.sex === 'F' && !L.eth && L.married && L.spouseK && L.spouseK.alive && !L.spouseK.famous && H.a >= 18 && H.a <= 45 && !L.love && !L.flags.lgAsk && !L.affair && f && { friend: f }; },
+      q: '你已经嫁了人。回娘家时，又见到了从小要好的姑娘{friend}——她也嫁了人。你们拉着手说了一下午的话，你发觉自己对她的心思，还和当年一样。', o: ['把这份心思压在心里', '借着回娘家的机会，和她暗中来往', '从此不再见她'],
+      r: [[{ p: 1, t: '你把这份心思压在了心里。此后每次回娘家，你都盼着能在井边遇见她。', fx: { flag: 'lgAsk', love: 1 } }],
+        [{ p: 1, t: '你们约好每次回娘家都见上一面，有时还托人捎信。两个出嫁的女子来往得这样勤，婆家起了疑心。', fx: { flag: 'lgAsk', love: 2, frAff: 15, affair: 'same' } }],
+        [{ p: 1, t: '你没有再去见她。婆家的日子一天天过去，你很少再想起从前的事——只是很少。', fx: { flag: 'lgAsk', love: 1, frAff: -20 } }]],
+      aw: function (L) { return [RT(L, 'cau') + 15, RT(L, 'act') - 20, RT(L, 'per') - 10]; } },
     { id: 'lg_palace', w: 0.8, ok: function (L, H) { return L.sex === 'F' && L.flags.palaceIn && L.cls === 'slave' && H.a >= 18 && H.a <= 50 && !L.flags.duishi && !L.flags.dsAsk && {}; },
       q: '宫里的日子漫长。宫女之间，常有两个女子"自相与为夫妇"，叫作"对食"，彼此照应，也彼此妒忌。和你同屋的一个宫女，待你格外好，看你的眼神也格外不同。', o: ['和她结为对食', '婉言谢绝'],
       r: [[{ p: 1, t: '你们两个女子结为对食，像夫妻一样过日子：冬天一同取暖，病了相互煎药，受了委屈有人可说。宫里的人都知道，也没有人管。', fx: { flag: ['dsAsk', 'duishi'], body: 2 } }],

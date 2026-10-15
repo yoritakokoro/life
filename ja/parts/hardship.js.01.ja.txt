@@ -80,7 +80,7 @@
   var FT = function (L, k) { return L.tr[k] == null ? 50 : L.tr[k]; };
   function fr(L, H, f) {
     var y = H.y;
-    return (L.friends || []).filter(function (x) { return x.alive && !x.apart && y - x.by >= 16 && (!f || f(x, y - x.by)); }).sort(function (a, b) { return b.aff - a.aff; })[0] || null;
+    return (L.friends || []).filter(function (x) { return x.alive && !x.apart && !x.fig && y - x.by >= 16 && (!f || f(x, y - x.by)); }).sort(function (a, b) { return b.aff - a.aff; })[0] || null;
   }
   [
     { id: 'fr_office', w: 2.2, ok: function (L, H) { if (H.a < 18 || H.a > 50 || L.office || L.cls === 'slave') return false; var f = fr(L, H, function (x) { return x.aff >= 35 && !x.office && x.sex === 'M'; }); return f && { friend: f }; },

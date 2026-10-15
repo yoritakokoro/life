@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>五千万分の一</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="五千万分の一：漢末三国時代のひとりの庶民としてランダムに生まれ、その一生を見届ける。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<!--BODY-->
+<header class="topbar">
+  <div class="wrap">
+    <button class="brand" id="btn-home" type="button">五千万分の一<small>漢末三国の一生</small></button>
+    <nav class="nav" aria-label="ページ">
+      <button type="button" id="btn-codex">名簿</button>
+      <button type="button" id="btn-lives">前世</button>
+      <button type="button" id="btn-about">説明</button>
+      <a class="lang" id="lang-link" href="../index.html" lang="zh-Hans" hreflang="zh-Hans">中文</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- 開篇 -->
+  <section class="screen" id="intro">
+    <div class="wrap hero">
+      <h1 class="scroll-title">五千万分の一<span class="seal">漢末生まれ</span></h1>
+      <div class="hero-body">
+        <p class="kicker">漢末 · 三国 · ランダムに選ばれたひとりの庶民</p>
+        <div class="lede">
+          <p>建安の英雄たちは史書に記される。</p>
+          <p>だがこの時代に生まれた人々のほとんどは、生涯、劉備にも曹操にも孫権にも会うことはなかった。</p>
+          <p class="q">あなたは誰になるだろう？</p>
+        </div>
+
+        <div class="census" aria-label="戸口の記録">
+          <div><b class="num">5648<small>万人</small></b><span>永寿三年（157）<br>後漢の登録人口の頂点</span></div>
+          <div><b class="num">約767<small>万人</small></b><span>三国鼎立期<br>魏・蜀・呉の登録人口の合計</span></div>
+          <div><b class="num">1616<small>万人</small></b><span>太康元年（280）<br>三国が晋に統一された後の統計</span></div>
+        </div>
+        <p class="footnote">戸籍から消えた人々が、みな死者だったわけではない。多くは豪族の庇護下に逃げ込み、あるいは兵戸や屯田客となって、編戸の民として記録されなくなった。それでも、戦乱・飢饉・疫病で死んだ人々は、まさに数えきれないほど多かった。</p>
+
+        <fieldset class="modes" id="modes">
+          <legend>生まれ方</legend>
+          <label class="mode"><input type="radio" name="mode" value="history" checked><b>史実の人生</b><span>西暦150～220年のあいだに、人口に応じた重みでランダムに生まれる</span></label>
+          <label class="mode"><input type="radio" name="mode" value="xiping"><b>熹平生まれ</b><span>168～178年生まれ。黄巾が起きたとき、ちょうど若者の盛り</span></label>
+          <label class="mode"><input type="radio" name="mode" value="zhongping"><b>中平生まれ</b><span>184年前後生まれ。漢末をまるごと経験する</span></label>
+          <label class="mode"><input type="radio" name="mode" value="jianan"><b>建安生まれ</b><span>196年前後生まれ。乱世に育つ</span></label>
+          <label class="mode"><input type="radio" name="mode" value="sanguo"><b>三国鼎立</b><span>220～232年生まれ。漢の滅亡後、魏・蜀・呉が並び立つ</span></label>
+          <label class="mode"><input type="radio" name="mode" value="weijin"><b>魏晋の際</b><span>245～262年生まれ。司馬氏が次第に天下を握る</span></label>
+          <label class="mode"><input type="radio" name="mode" value="taikang"><b>太康生まれ</b><span>266～280年生まれ。天下はひとつにまとまり、そしてまた乱れる</span></label>
+          <label class="mode"><input type="radio" name="mode" value="chaos"><b>乱世の子</b><span>戦乱の地に生まれやすい</span></label>
+          <label class="mode"><input type="radio" name="mode" value="blind"><b>真のランダム</b><span>生まれた年さえ知らされず、わかるのは干支だけ（150～280）</span></label>
+        </fieldset>
+
+        <div class="actions">
+          <button class="btn-seal" id="btn-born" type="button">大漢に生まれる</button>
+          <span class="ledger-strip" id="intro-ledger"></span>
+          <label class="focus-chk" title="チェックしない場合、あなた本人は幼年期に少し運に恵まれる。同じ時刻に生まれた他の人々、家族、統計の数字は史実どおり"><input type="checkbox" id="harsh"> 史実の夭折率（猶予なし）</label>
+        </div>
+
+        <details class="panel" id="mirror">
+          <summary>もし私があの時代に生まれたら</summary>
+          <div class="inner">
+            <p class="footnote">現代のあなたの生まれの条件を入力すると、「後漢における相当の生まれ」を作り出す。後漢では読み書きのできる人は一割に満たなかった。家庭の経済状況と学歴が高いほど士族や県吏の家に生まれやすくなるが、保証はない。</p>
+            <form id="mirror-form" class="form-grid">
+              <label class="field">性別
+                <select id="m-sex"><option value="M">男</option><option value="F">女</option></select>
+              </label>
+              <label class="field">出生地域
+                <select id="m-prov"></select>
+              </label>
+              <label class="field">家庭の経済状況
+                <select id="m-tier"><option value="0">苦しい</option><option value="1" selected>普通</option><option value="2">まずまず</option><option value="3">裕福</option></select>
+              </label>
+              <label class="field">学歴
+                <select id="m-edu"><option value="none">学校に通っていない</option><option value="basic">中学以下</option><option value="high">高校</option><option value="college" selected>大学</option><option value="grad">大学院</option></select>
+              </label>
+              <label class="field">生まれたい時代
+                <select id="m-era"><option value="history" selected>史実どおり（150～220）</option><option value="xiping">熹平（168～178）</option><option value="zhongping">中平（182～186）</option><option value="jianan">建安（194～198）</option><option value="sanguo">三国鼎立（220～232）</option><option value="weijin">魏晋の際（245～262）</option><option value="taikang">太康（266～280）</option></select>
+              </label>
+              <label class="field">現在の職業
+                <select id="m-job"><option value="" selected>未記入 / 学生</option><option value="army">軍人・警察・警備</option><option value="civil">公務員・公的機関</option><option value="edu">教師・研究者</option><option value="med">医療</option><option value="biz">商売・営業</option><option value="craft">エンジニア・技術・職人</option><option value="farm">農業・肉体労働</option><option value="art">芸術・デザイン</option></select>
+              </label>
+              <label class="field">気性
+                <select id="m-temper"><option value="" selected>よくわからない</option><option value="out">外向的・にぎやか好き</option><option value="in">内向的・静か好き</option><option value="cau">慎重・事なかれ</option><option value="bold">大胆・冒険好き</option></select>
+              </label>
+              <label class="field">体
+                <select id="m-body"><option value="12">丈夫で、めったに病気をしない</option><option value="0" selected>ふつう</option><option value="-12">病弱</option></select>
+              </label>
+            </form>
+            <p class="footnote">職業と気性が変えるのは、天分と性情の傾向、そして生まれの重みだけだ。軍に入りたい人は、後漢では兵戸に生まれやすく、あるいは成人後に軍に身を投じる道を選びやすくなる。</p>
+            <div class="actions"><button class="btn primary" id="btn-mirror" type="button">この条件で生まれる</button></div>
+          </div>
+        </details>
+
+        <details class="panel" id="seed-panel">
+          <summary>命数を入力</summary>
+          <div class="inner">
+            <p class="footnote">どの一生にも命数がある。同じ命数なら同じ生まれ。だが選択が違えば、人生も違ってくる。</p>
+            <div class="actions">
+              <label class="field" style="flex:1 1 12rem">命数<input type="text" id="seed-input" placeholder="例：H-1K3X9Q" autocomplete="off" spellcheck="false"></label>
+              <button class="btn" id="btn-seed" type="button">この命数で生まれる</button>
+            </div>
+          </div>
+        </details>
+
+        <p class="footnote">これは歴史の確率シミュレーションであって、正確な人口学的再構成ではない。戦乱・飢饉・疫病・死を扱うが、自殺の場面は含まない。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 降生 -->
+  <section class="screen" id="birth" hidden>
+    <div class="wrap birth">
+      <div class="birth-head" id="birth-main"></div>
+      <div class="birth-side">
+        <div>
+          <h2 class="sect-title">誕生時の<em>属性</em></h2>
+          <div class="attrs" id="birth-attrs"></div>
+        </div>
+        <div>
+          <h2 class="sect-title">同じ時刻に<em>ほかに三人が生まれた</em></h2>
+          <div class="comps" id="birth-comps"></div>
+        </div>
+        <div class="actions">
+          <button class="btn-seal" id="btn-start" type="button">この一生を始める</button>
+          <div class="seg" role="radiogroup" aria-label="速度" id="speed-birth"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 人生 -->
+  <section class="screen" id="life" hidden style="padding-top:0">
+    <div class="hud">
+      <div class="wrap">
+        <div class="hud-row">
+          <div class="hud-era"><b id="hud-era">—</b><span id="hud-sub"></span></div>
+          <div class="hud-age"><span class="hud-name" id="hud-name"></span><b id="hud-age">0</b> 歳</div>
+          <div class="hud-meta"><span id="hud-place"></span><span class="chip" id="hud-ctrl"><i></i><span></span></span><span class="num" id="hud-days"></span></div>
+          <div class="controls">
+            <button class="icon-btn" id="btn-play" type="button" aria-label="一時停止"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg></button>
+            <div class="seg" role="radiogroup" aria-label="速度" id="speed-hud"></div>
+            <button class="btn" id="btn-skip" type="button">結末まで飛ばす</button>
+          </div>
+        </div>
+        <div class="focus-row" id="focus-row">
+          <label class="focus-sel" for="focus-select">目下の重点</label>
+          <select id="focus-select"></select>
+          <label class="focus-chk"><input type="checkbox" id="focus-auto" checked> システムに任せる</label>
+          <p class="focus-why" id="focus-why"></p>
+          <div class="focus-actions">
+            <button class="btn" id="btn-spend" type="button">計画と支出</button>
+            <label class="focus-chk" title="オンにすると、毎年あなたの性情・目下の重点・暮らし向きに応じて、余財の一部を自動で使う：買い物、学問、交遊、不動産、仕官の根回し……"><input type="checkbox" id="auto-spend"> 自動支出</label>
+            <label class="focus-chk" title="オンにすると、避難・縁談・借金などの大事もシステムが代わりに決める"><input type="checkbox" id="auto-choice"> 大事も運命に任せる</label>
+          </div>
+        </div>
+        <div class="season" id="season" aria-hidden="true"><span>春</span><span>夏</span><span>秋</span><span>冬</span></div>
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="ticker" id="ticker"><b>史書に見るこの年</b><p></p></div>
+      <div class="tabs" role="tablist" id="tabs">
+        <button type="button" role="tab" data-tab="chron" aria-selected="true">編年</button>
+        <button type="button" role="tab" data-tab="reg" aria-selected="false">戸籍</button>
+        <button type="button" role="tab" data-tab="side" aria-selected="false">地図</button>
+        <button type="button" role="tab" data-tab="hanji" aria-selected="false">漢紀</button>
+      </div>
+      <div class="life-grid" id="life-grid" data-tab="chron">
+        <aside class="pane reg" aria-label="戸籍">
+          <div>
+            <h2 class="sect-title">戸籍<em>数え年</em></h2>
+            <div class="slips" id="slips"></div>
+            <p class="slip-note">大男・大女：十五歳以上。使男・使女：七～十四歳。未使：七歳未満。走馬楼呉簡の戸籍の書式にならう。</p>
+          </div>
+          <div>
+            <h2 class="sect-title">属性</h2>
+            <div class="attrs" id="attrs"></div>
+          </div>
+          <dl class="status" id="status"></dl>
+          <div>
+            <h2 class="sect-title">この地の法令<em id="laws-ruler"></em></h2>
+            <ul class="laws" id="laws"></ul>
+          </div>
+          <div>
+            <h2 class="sect-title">家計<em id="eco-head"></em></h2>
+            <dl class="status eco" id="eco"></dl>
+            <details class="eco-more"><summary>詳細</summary><div id="eco-detail"></div></details>
+          </div>
+          <div>
+            <h2 class="sect-title">親族</h2>
+            <ul class="family" id="family"></ul>
+          </div>
+          <div>
+            <h2 class="sect-title">旧友</h2>
+            <ul class="family" id="friends"></ul>
+          </div>
+        </aside>
+        <section class="pane chron-pane" aria-label="編年">
+          <div class="chron-tools"><span>編年</span><button type="button" class="ghost" id="chron-order" title="編年の並び順を切り替える">最新を上に ⇅</button></div>
+          <div class="chron" id="chron" aria-live="polite"></div>
+        </section>
+        <aside class="pane side" aria-label="地図">
+          <div>
+            <h2 class="sect-title">地図<em id="map-year"></em></h2>
+            <div class="map-wrap" id="map-wrap"></div>
+            <div class="legend" id="map-legend"></div>
+            <p class="pop-note" id="pop-note"></p>
+          </div>
+          <div>
+            <h2 class="sect-title">本郡の情勢<em id="reg-name"></em></h2>
+            <dl class="status reg" id="reg"></dl>
+            <p class="reg-note" id="reg-note"></p>
+          </div>
+          <div>
+            <h2 class="sect-title">同じ時刻に生まれたほかの三人</h2>
+            <div class="comps" id="comps"></div>
+          </div>
+        </aside>
+      </div>
+      <section class="hanji" id="hanji" aria-label="漢紀">
+        <h2 class="sect-title">漢紀<em>一マス一年</em></h2>
+        <div class="hanji-scroll" id="hanji-scroll"></div>
+        <div class="legend" id="hanji-legend"></div>
+        <p class="hj-tip" id="hanji-tip"></p>
+      </section>
+    </div>
+  </section>
+
+  <!-- 終章 -->
+  <section class="screen" id="end" hidden>
+    <div class="wrap">
+      <div class="end-grid">
+        <div class="end-main" style="display:flex;flex-direction:column;gap:var(--s-5);min-width:0">
+          <div class="stele" id="stele"></div>
+          <div class="achs" id="achs"></div>
+          <div class="afterword" id="afterword"></div>
+          <div>
+            <h2 class="sect-title">一生の歩み</h2>
+            <div class="tiles" id="end-tiles"></div>
+          </div>
+          <div id="end-echo-wrap" hidden>
+            <h2 class="sect-title">人生の残響<em>若き日の選択が、長い年月を経て返ってくる</em></h2>
+            <ul class="echoes" id="end-echo"></ul>
+          </div>
+          <div>
+            <h2 class="sect-title">家族<em id="family-sum"></em></h2>
+            <div class="lineage" id="lineage"></div>
+            <div class="end-family" id="end-family"></div>
+          </div>
+          <div>
+            <h2 class="sect-title">旧友<em id="friends-sum"></em></h2>
+            <div class="end-family" id="end-friends"></div>
+          </div>
+          <div>
+            <h2 class="sect-title">あなたと同じ時刻に生まれた人々</h2>
+            <div class="comps" id="end-comps"></div>
+          </div>
+        </div>
+        <div class="end-side">
+          <p class="verdict" id="verdict"></p>
+          <div>
+            <h2 class="sect-title">生存曲線<em>各年齢でまだ生きている割合</em></h2>
+            <div class="key"><span><i class="han"></i>漢末生まれ（本シミュレーション）</span><span><i class="mod"></i>現代中国（参考値）</span></div>
+            <div class="chart-box" id="surv"></div>
+            <details><summary class="footnote">データを見る</summary><div id="surv-table"></div></details>
+          </div>
+          <div>
+            <h2 class="sect-title">同時代の人々は何で死んだか</h2>
+            <div class="causes" id="causes"></div>
+          </div>
+        </div>
+      </div>
+      <section class="hanji" id="end-hanji-wrap">
+        <h2 class="sect-title">漢紀<em>一マス一年</em></h2>
+        <div class="hanji-scroll" id="end-hanji"></div>
+        <div class="legend" id="end-hanji-legend"></div>
+        <p class="hj-tip" id="end-hanji-tip"></p>
+      </section>
+      <div class="end-actions">
+        <button class="btn-seal" id="btn-again" type="button">ふたたび輪廻へ</button>
+        <button class="btn primary" id="btn-heir" type="button" hidden>子孫として続ける</button>
+        <button class="btn" id="btn-copy" type="button">墓誌をコピー</button>
+        <button class="btn" id="btn-back" type="button">最初に戻る</button>
+        <span class="seed-code" id="seed-code"></span>
+      </div>
+      <details class="panel full-chron" id="full-chron">
+        <summary>編年の全文</summary>
+        <div class="inner"><div class="chron" id="end-chron"></div></div>
+      </details>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg-codex" aria-labelledby="codex-h">
+  <div class="dlg-head"><h2 id="codex-h">名簿</h2><button class="ghost" type="button" data-close>閉じる</button></div>
+  <div class="dlg-body"><p class="footnote" id="codex-sum"></p><div class="codex" id="codex"></div></div>
+</dialog>
+<dialog id="dlg-lives" aria-labelledby="lives-h">
+  <div class="dlg-head"><h2 id="lives-h">前世</h2><button class="ghost" type="button" data-close>閉じる</button></div>
+  <div class="dlg-body"><p class="footnote" id="lives-sum"></p><ul class="lives" id="lives"></ul></div>
+</dialog>
+<dialog id="dlg-spend" aria-labelledby="spend-h">
+  <div class="dlg-head"><h2 id="spend-h">計画と支出</h2><button class="ghost" type="button" data-close>閉じる</button></div>
+  <div class="dlg-body"><p class="spend-room" id="spend-room"></p><div id="spend-list"></div><p class="footnote">食糧・衣服・税といった必要な出費は毎年自動で精算される。ここで使えるのは残った余財だけだ。金額は「銭」で表す：銭貨・布帛・穀物を銭に換算した合計。</p></div>
+</dialog>
+<dialog id="dlg-about" aria-labelledby="about-h">
+  <div class="dlg-head"><h2 id="about-h">説明</h2><button class="ghost" type="button" data-close>閉じる</button></div>
+  <div class="dlg-body">
+    <p>あなたは後漢末から西晋末までのあいだに、ひとりの庶民としてランダムに生まれる。シミュレーションは西暦 350 年までを描く。出生地は『続漢書』郡国志に載る各郡の人口で重みづけして抽選し、戦乱・逃亡・移住に応じて毎年補正する。身分階層、暮らし向き、親族、寿命はすべて確率で生成される。</p>
+    <p>歴史上の出来事は筋書きではなく「天気」だ。年と地域に応じて、戦乱・飢饉・疫病・移住・徴兵の危険を変える。遠方の大事は、一、二年たってから噂としてあなたの耳に届くことが多い。</p>
+    <p>ときどき選択を迫られる。逃げるか留まるか、応募するか帰郷するか、承諾するかもう少し待つか。選択は確率を変えるが、結果を決めはしない。歴史上の人物も登場するが、その確率は低い。生まれが高い人、官に就いた人、読み書きができる人、名声のある人ほど出会いやすく、士人にしか会えない人物もいる。</p>
+    <p>五つの属性：体魄（病気・飢饉・戦争での生存）、家業（土地・食糧・危機への備え）、才学（読み書き・仕官）、人望（宗族・郷里・婚姻）、名声（中年以降にはじめて現れうる）。ほかに目に見えない性情と天分がある。幼い頃の一、二の瞬間がひそかにそれらを形づくり、天分はのちの行いによってはじめて表に出る。</p>
+    <p>「目下の重点」は、この人がこの時期どこに心力を注いでいるかを表す。既定では、年齢・性情・暮らし向き・身分・目の前の困難・これまでの習慣からシステムが判断する。向きを少し変えることはできるが、人はあなたの言うことを全部聞くとは限らない。</p>
+    <p>家計は毎年自動で精算される。田の収穫、糸紡ぎと機織り、僱われ仕事、俸禄から、食糧・衣服・塩と鉄・税（漢の算賦・口銭・更賦、曹魏の戸調、西晋の戸調式）を差し引いた残りが「余剰」だ。収入が足りなければ蓄えを取り崩し、蓄えが尽きれば借金をする。借金が重くのしかかったとき、はじめて本当に大きな決断を迫られる。家産、家の余財、あなた自身の私財は別々で——戸主になってはじめて家の金を動かせる。</p>
+    <p>生まれが、人がどこまで行けるかを決める。名門大族の子弟には門第と縁組と門生故吏があるが、董卓、袁曹、高平陵のような岐路では、どちらにつくかを迫られる。寒門の天分は、せいぜい書佐の職ひとつ、匠籍ひとつにしかならないことが多い。女子は仕官も従軍もできず、たいていは学問もさせてもらえず、婚家、「七出」、そして寡婦となった後の田産に向き合わねばならない。南方は稲が多く、瘴癘が多く、巫鬼を信じる。北方は粟と麦が多く、戦乱が多く、胡騎が近い。</p>
+    <p>漢末には、子ども三、四人に一人が五歳まで生きられなかった。一生を見届けられるよう、既定ではあなた本人の幼年期に少し「猶予」を設けてある。兄弟姉妹、子ども、同じ時刻に生まれた他の人々、結末の統計は史実どおりだ。本来の過酷さを味わいたければ、最初の画面で「史実の夭折率」にチェックを入れればよい。</p>
+    <p><b>これは歴史の確率シミュレーションであって、正確な人口学的再構成ではない。</b>三国時代には完全な人口統計がなく、多くの数値は史料にもとづく推定である。</p>
+    <ul class="sources">
+      <li>『後漢書』『続漢書』郡国志（永和五年の郡国戸口）</li>
+      <li>『三国志』および裴松之注</li>
+      <li>『晋書』（地理志・食貨志・宣帝紀など）</li>
+      <li>長沙走馬楼三国呉簡（戸籍簡の書式）</li>
+      <li>葛剣雄『中国人口史』などの現代の研究（人口推計の桁）</li>
+    </ul>
+    <p class="footnote">記録（前世と名簿）はあなたのブラウザの中にだけ保存される。</p>
+  </div>
+</dialog>
+<!--/BODY-->
+<script src="js/data.js"></script>
+<script src="js/history.js"></script>
+<script src="js/choices.js"></script>
+<script src="js/hardship.js"></script>
+<script src="js/laws.js"></script>
+<script src="js/region.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

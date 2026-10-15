@@ -994,6 +994,13 @@ var SGE = (function (D) {
     // 事情败露
     L.affair = null; L.flags.affCaught = true; L.rec.tags.push('loss');
     var t;
+    if (A.k === 'same') {
+      L.standing -= 6;
+      if (L.sex === 'M') { if (L.cls === 'gentry' && R() < 0.6) add(L, 2.2, 'bad', '你们的事在士人中间传开了。有人拿"断袖""分桃"来讥讽你，也有人一笑置之——当时风气如此。只有妻子，再也不肯和你多说一句话。'); else if (R() < 0.6) add(L, 2.2, 'bad', '事情传开了。乡里人背后讥笑你们是"断袖"，妻子哭着回了娘家，好几个月才被劝回来。律令不管这样的事，可乡论比律令更难熬。'); else add(L, 2.2, 'bad', '妻子撞见了你们。她什么也没说，从此和你分房而睡。'); affAdd(sp, -40); }
+      else if (R() < 0.7) { L.standing -= 4; L.body -= 5; affAdd(sp, -45); add(L, 2.2, 'bad', '婆家截下了你们的书信。婆婆骂你不守妇道，从此不许你回娘家。丈夫打了你一顿，此后再没正眼看过你。'); }
+      else { add(L, 2.2, 'bad', '婆家截下了你们的书信。丈夫以"淫佚"为由，写了休书。孩子留在了夫家。'); doDivorce(L, y); }
+      return;
+    }
     if (A.k === 'sao') {
       L.standing -= 20;
       if (R() < 0.5) { add(L, 2.2, 'bad', '事情败露了。族人把你们告到了县里。按律，"复兄弟之妻"者黥为城旦舂。'); sentence(L, y, 2.21, '黥为城旦', 4); }
@@ -3357,7 +3364,7 @@ var SGE = (function (D) {
     (L.visited = L.visited || []).push(p.n);
     return p;
   }
-  function friendsFor(L, min) { return (L.friends || []).filter(function (f) { return f.alive && !f.apart && f.aff >= min; }).sort(function (a, b) { return b.aff - a.aff; }).slice(0, 6); }
+  function friendsFor(L, min) { return (L.friends || []).filter(function (f) { return f.alive && !f.apart && !f.fig && f.aff >= min; }).sort(function (a, b) { return b.aff - a.aff; }).slice(0, 6); }
   function friendByName(L, n) { return (L.friends || []).filter(function (f) { return f.name === n; })[0]; }
   function frSub(L, f) { return '交情：' + relLabel(f.aff) + (f.job ? ' · ' + f.job : '') + (f.sworn ? ' · 结义' : ''); }
   function kinForGift(L) { var y = L.by + L.age; return liveKin(L, function (k) { return !k.out && ['father', 'mother', 'spouse', 'conc', 'child', 'sib', 'gp'].indexOf(k.rel) >= 0 && y - k.by >= 5; }).slice(0, 8); }
@@ -3700,6 +3707,7 @@ var SGE = (function (D) {
     if (fx.cash) { if (fx.cash > 0) E.cash += fx.cash; else payFrom(L, -fx.cash); }
     if (fx.priv) E.priv = Math.max(0, E.priv + fx.priv);
     if (fx.affair) { var lsx = L.sex === 'M' ? 'F' : 'M', lsur = surname(R, L.cls === 'gentry' ? 'gentry' : 'peasant'); L.affair = { k: fx.affair, since: y, name: lsur + givenName(R, lsx) }; }
+    if (fx.affair === 'same' && meta.friend && L.affair) L.affair.name = meta.friend.name;
     if (fx.vic) victimOutcome(L, y, fx.vic, s);
     if (fx.crime) crimeStart(L, y, fx.crime, s + 0.05);
     if (fx.love && meta.friend) { L.love = { name: meta.friend.name, sex: meta.friend.sex, y: y, mutual: fx.love === 2 }; if (fx.love === 2) meta.friend.lover = true; }
@@ -4198,7 +4206,7 @@ var SGE = (function (D) {
         if (f.aff >= 40) add(L, 2.9, 'fam', '你的朋友' + f.name + '去世了，年' + cnNum(Math.max(1, fa)) + '。' + (f.aff >= 75 ? '你在他坟前坐了很久。'.replace('他', f.sex === 'F' ? '她' : '他') : ''));
         return;
       }
-      if (evDone || R() > 0.1) return;
+      if (f.fig || evDone || R() > 0.1) return;
       evDone = true;
       var r = R(), ta = f.sex === 'F' ? '她' : '他';
       if (r < 0.25 && poorNow(L) && f.aff >= 60) { L.eco.cash += 200; affAdd(f, 5); add(L, 2.5, 'good', f.name + '听说你家断了粮，送来了两斗粟。'); }
@@ -4212,7 +4220,7 @@ var SGE = (function (D) {
     (L.friends || []).forEach(function (f) { if (f.alive && !f.apart && f.ctx !== 'band') { f.apart = true; f.fate = why; } });
   }
   function bestFriend(L, min) {
-    var fs = (L.friends || []).filter(function (f) { return f.alive && !f.apart && f.aff >= (min || 0); }).sort(function (a, b) { return b.aff - a.aff; });
+    var fs = (L.friends || []).filter(function (f) { return f.alive && !f.apart && !f.fig && f.aff >= (min || 0); }).sort(function (a, b) { return b.aff - a.aff; });
     return fs[0] || null;
   }
 
