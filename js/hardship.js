@@ -311,4 +311,68 @@
       r: [[{ p: 1, t: '郡里赐了帛，在你家门口立了一块表彰的石阙。族人逢人便说。你看着那块石头，想起了那些一个人熬过的冬夜。', fx: { fame: 4, standing: 4 } }], [{ p: 1, t: '你推辞了。乡里人说你更难得了。', fx: { standing: 3 } }]],
       aw: function (L) { return [GT(L, 'soc'), GT(L, 'cau')]; } }
   ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 求学与出仕：以史实为准 ---------- */
+  var ET = function (L, k) { return L.tr[k] == null ? 50 : L.tr[k]; };
+  [
+    { id: 'taixue', w: 3, ok: function (L, H) {
+        var p = H.school; if (!p || L.edu || L.office || L.soldier || L.sex !== 'M' || L.cls === 'slave' || L.eth || H.a < 15 || H.a > 30) return false;
+        if (!(L.literate || L.learn >= 25)) return false;
+        if (p.id === 'zhaotx' && L.cls !== 'gentry' && !L.office) return false;
+        return { sc: { id: p.id, n: p.fx.school.n, city: p.fx.school.city, exam: p.fx.school.exam } }; },
+      q: '你读了几年书，家里有人说：该去{school}见见世面了。那里有博士讲经，学成了还能考试补官。', o: ['收拾行装，去{school}求学', '在家里自己读', '不去了，家里离不开人'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= (L.cls === 'gentry' ? 1000 : 3000); }, null, null], why: ['家里出不起盘缠和束脩', null, null],
+      r: [[{ p: 1, t: '你背着书箱上了路。家里给你凑了盘缠，母亲把一双新鞋塞进了包袱。', fx: { edu: true, cash: -2000 } }],
+        [{ p: 1, t: '你在家里自己读书，遇到不懂的，就走十几里路去问乡里的老先生。', fx: { learn: 3 } }],
+        [{ p: 1, t: '你把书简收了起来。家里的田，总得有人种。', fx: {} }]],
+      aw: function (L) { return [ET(L, 'cur') + (L.cls === 'gentry' ? 20 : 0), ET(L, 'cau'), 100 - ET(L, 'cur')]; } },
+    { id: 'qiuxian', w: 6, ok: function (L, H) { return L.sex === 'M' && H.a >= 18 && H.a <= 50 && [210, 211, 214, 215, 217, 218].indexOf(H.y) >= 0 && H.g === 'wei' && !L.office && !L.soldier && L.cls !== 'gentry' && L.cls !== 'slave' && (L.learn >= 25 || L.found.memory || L.found.charm || L.craft >= 40 || L.fame >= 10) && {}; },
+      q: '曹公下《求贤令》："若必廉士而后可用，则齐桓其何以霸世！"……"唯才是举，吾得而用之。"郡里张榜征召有才之士，不问出身。', o: ['毛遂自荐', '不去'],
+      r: [[{ p: 0.45, t: '郡里考问了你一番，让你去郡府做了书佐。乡里人都说，寒门也能做官了。', fx: { office: '书佐', fame: 3 } }, { p: 0.55, t: '你去了。郡吏看了看你的衣着，又问了几句，就把你打发走了。', fx: { standing: -1 } }],
+        [{ p: 1, t: '你没有去。你想，这样的好事，轮不到自己。', fx: {} }]],
+      aw: function (L) { return [ET(L, 'ind') + ET(L, 'cmp') / 2, ET(L, 'cau')]; } },
+    { id: 'zz_low', w: 3, ok: function (L, H) { return L.sex === 'M' && H.a >= 18 && H.a <= 40 && H.y >= 220 && (H.g === 'wei' || H.g === 'jin') && !L.office && !L.soldier && L.cls !== 'gentry' && L.cls !== 'slave' && (L.literate && L.learn >= 30) && !L.flags.zz && !L.flags.zzno && {}; },
+      q: '州郡的中正官要评定本地士人的品第，朝廷凭品第授官。你家门第低微，不打点的话，多半只能评个下品，这辈子也做不了官。', o: ['备一份厚礼去拜见中正', '凭才学去应评', '不去凑这个热闹'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 6000; }, null, null], why: ['你拿不出像样的礼', null, null],
+      r: [[{ p: 0.55, t: '中正收下了礼，给你评了个中品。不久，你被郡里辟为书佐。', fx: { cash: -6000, office: '书佐', flag: 'zz' } }, { p: 0.45, t: '礼收了，品第还是下品。"上品无寒门，下品无势族"——你这才明白这句话。', fx: { cash: -6000, flag: 'zzno', tr: { cmp: 3 } } }],
+        [{ p: 0.2, t: '中正读了你的文章，难得地给了个中品。你被辟为郡吏。', fx: { office: '书佐', fame: 3, flag: 'zz' } }, { p: 0.8, t: '你只评得了下品。中正说你"家世寒素"，连文章都没有看。', fx: { flag: 'zzno', fame: -1 } }],
+        [{ p: 1, t: '你没有去。你想，品第这种东西，从来就不是给你家这样的人准备的。', fx: { flag: 'zzno' } }]],
+      aw: function (L) { return [100 - ET(L, 'ind') + ET(L, 'cmp') / 3, ET(L, 'ind'), ET(L, 'cau')]; } },
+    /* ---------- 夫妻 ---------- */
+    { id: 'sp_sick', w: 0.7, ok: function (L, H) { var k = L.spouseK; return k && k.alive && !k.apart && H.a >= 20 && { kin: k }; },
+      q: '你的{kin}病倒了，躺了半个月不见好。医者说要用几味贵药。', o: ['花钱请医买药', '请巫祝来驱邪', '只能守在床边'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 1200; }, function (L) { return L.eco.cash + L.eco.priv >= 200; }, null], why: ['家里拿不出药钱', '连请巫祝的钱都没有', null],
+      r: [[{ p: 1, t: '你借遍了亲戚，请来医者，抓了药。你守在床边熬了一个月的药，人总算慢慢好了。', fx: { cash: -1200, kinCare: true, kinAff: 10 } }],
+        [{ p: 0.5, t: '巫祝跳了一夜的神。说来也怪，过了几天，人竟好了些。', fx: { cash: -200, kinAff: 3 } }, { p: 0.5, t: '巫祝跳了一夜的神，人还是不见好。', fx: { cash: -200 } }],
+        [{ p: 1, t: '你没钱请医，只能守在床边，一勺一勺地喂水喂粥。', fx: { kinAff: 8, body: -2 } }]],
+      aw: function (L) { return [ET(L, 'soc') + 20, 40, ET(L, 'cau')]; } },
+    { id: 'sp_quarrel', w: 1.2, ok: function (L, H) { var k = L.spouseK; return k && k.alive && !k.apart && k.aff != null && k.aff < 55 && H.a >= 20 && { kin: k }; },
+      q: '你和{kin}为了家里的事大吵了一架。这些年攒下的委屈，一下子都翻了出来。', o: ['先低头认个错', '摔门出去喝酒', '请长辈来评理'],
+      r: [[{ p: 1, t: '你先开了口。那天夜里，两人说了很久的话。', fx: { kinAff: 15, tr: { soc: 2 } } }], [{ p: 1, t: '你在外面喝到半夜才回家。家里黑着灯，谁也没有说话。', fx: { kinAff: -10, body: -1 } }], [{ p: 0.5, t: '长辈把你们俩各说了一顿，事情算是过去了。', fx: { kinAff: 5 } }, { p: 0.5, t: '长辈偏向了一边，另一边心里更不服气了。', fx: { kinAff: -8 } }]],
+      aw: function (L) { return [ET(L, 'soc'), ET(L, 'ind'), ET(L, 'cau')]; } },
+    { id: 'sp_natal', w: 0.7, ok: function (L, H) { var k = L.spouseK; return L.sex === 'F' && L.married && k && k.alive && H.a >= 20 && H.a <= 55 && {}; },
+      q: '娘家托人捎来口信：父亲病重，想见你一面。可家里正是农忙，婆婆的脸色也不好看。', o: ['不管怎样，先回去一趟', '托人捎些钱回去', '婆家不许，只能偷偷哭一场'],
+      need: [null, function (L) { return L.eco.priv >= 300; }, null], why: [null, '你手里没有私房钱', null],
+      r: [[{ p: 1, t: '你回了娘家，守了父亲几天。回到婆家，婆婆一个月没有给你好脸色。', fx: { standing: -1, tr: { ind: 3 } } }], [{ p: 1, t: '你把私房钱托人捎了回去。后来听说，父亲临走前一直念着你的名字。', fx: { priv: -300 } }], [{ p: 1, t: '你没能回去。出嫁的女儿，连哭都只能躲着哭。', fx: { tr: { cau: 3 } } }]],
+      aw: function (L) { return [ET(L, 'ind'), ET(L, 'cau'), 100 - ET(L, 'ind')]; } },
+    /* ---------- 育儿 ---------- */
+    { id: 'kid_raise', w: 2.5, ok: function (L, H) { var k = H.kids(6, 10, null, function (x) { return !x.raised; })[0]; return H.head && k && L.cls !== 'slave' && { kin: k }; },
+      pre: function (L, m) { m.kin.raised = true; },
+      q: '{kin}到了懂事的年纪，整天上蹿下跳。你打算怎么教？', o: ['严加管教，不许偷懒', '顺着孩子的性子', '让孩子跟着你干活'],
+      r: [[{ p: 1, t: '你给{kin}立了规矩：鸡叫就起，做不完的活不许吃饭。孩子怕你，也服你。', fx: { kinAff: -5 } }], [{ p: 1, t: '你由着{kin}的性子，孩子整天在外面疯跑，和你最亲。', fx: { kinAff: 10 } }], [{ p: 1, t: '{kin}跟在你身后学干活，几年下来，样样都拿得起来。', fx: { kinAff: 3 } }]],
+      aw: function (L) { return [ET(L, 'per'), ET(L, 'soc'), ET(L, 'cau')]; } },
+    { id: 'kid_path', w: 3, ok: function (L, H) { var k = H.kids(12, 16, 'M', function (x) { return !x.path && !x.job && !x.out; })[0]; return H.head && k && L.cls !== 'slave' && { kin: k }; },
+      q: '{kin}长大了，该定个出路了。', o: ['送去读书', '送去学一门手艺', '留在家里种地', '跟着人去做买卖'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 1500; }, function (L) { return L.eco.cash + L.eco.priv >= 600; }, null, function (L) { return L.eco.cash + L.eco.priv >= 2000 || L.cls === 'merchant'; }],
+      why: ['家里供不起读书', '连拜师的礼都拿不出', null, '没有本钱'],
+      r: [[{ p: 1, t: '你咬咬牙，送{kin}去读书。孩子走的那天，你一直送到村口。', fx: { cash: -1500, kinPath: 'read', kinLit: true, kinAff: 6 } }],
+        [{ p: 1, t: '你托人把{kin}送到城里的铁匠铺当学徒。三年学徒，管吃不管钱。', fx: { cash: -600, kinPath: 'craft' } }],
+        [{ p: 1, t: '{kin}留在家里种地。你想，地总是要有人种的。', fx: { kinPath: 'farm' } }],
+        [{ p: 1, t: '你拿出本钱，让{kin}跟着同乡的商贩跑买卖。', fx: { cash: -2000, kinPath: 'trade' } }]],
+      aw: function (L) { return [ET(L, 'cur') + (L.literate ? 30 : 0), 50, ET(L, 'cau'), L.cls === 'merchant' ? 90 : 20]; } },
+    { id: 'kid_trouble', w: 1.5, ok: function (L, H) { var k = H.kids(8, 14, 'M')[0]; return H.head && k && { kin: k }; },
+      q: '{kin}在外面闯了祸，把邻家的孩子打得头破血流。邻家的大人找上门来了。', o: ['带着孩子登门赔罪', '护着自家孩子', '当着邻人的面狠狠打他一顿'],
+      r: [[{ p: 1, t: '你提着两斗米，押着{kin}去邻家赔了罪。回来的路上，孩子一句话也没说。', fx: { cash: -200, standing: 2, kinAff: -3 } }], [{ p: 1, t: '你护着自家孩子，和邻家吵了一架。两家从此结了怨。', fx: { standing: -3, kinAff: 8 } }], [{ p: 1, t: '你当着众人的面打了{kin}一顿。邻家消了气，孩子却好几天不肯理你。', fx: { kinAff: -10, standing: 1 } }]],
+      aw: function (L) { return [ET(L, 'soc'), 100 - ET(L, 'soc'), ET(L, 'per')]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
 })(SGD);

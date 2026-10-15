@@ -418,8 +418,10 @@
     var L = S.L, box = $('slips');
     box.innerHTML = '';
     if (L.eth) {
+      box.classList.add('tribal');
       box.innerHTML = '<p class="tribal-note">你是' + D.ETH[L.eth].n + '人。你的族人不在汉人的户籍之中，官府只按部落计口。</p>';
     } else {
+      box.classList.remove('tribal');
       var list = E.household(L, y), head = list[0];
       list.forEach(function (p) {
         var s = h('div', 'slip' + (p.me ? ' me' : ''), esc(E.slipText(L, p, head.name)));
@@ -433,13 +435,20 @@
     renderFriends(y);
     renderEco();
   }
+  function eduText(L) {
+    var E2 = L.edu;
+    if (E2 && !E2.done) return '在' + E2.city + E2.n + '读书';
+    if (E2 && E2.passed) return E2.n + '出身' + (L.learn >= 60 ? '，通经' : '');
+    if (E2) return '曾在' + E2.city + E2.n + '求学';
+    return L.literate ? (L.learn >= 60 ? '通晓经学' : L.learn >= 35 ? '读过几年书' : '识字') : '不识字';
+  }
   function renderStatus(y) {
     var L = S.L;
     var married = L.married ? '已婚' : L.widowed ? (L.sex === 'F' ? '寡居' : '丧妻') : '未婚';
     var job = L.band ? '随' + D.BANDS[L.band].who + '征战' : L.office ? L.office : L.soldier ? (L.job || '军卒') : L.age < 14 ? '孩童' : (L.job || '农');
     var land = L.land > 0 ? L.land + ' 亩' : '无';
     var who = L.sex === 'F' && L.married && L.spouseK ? esc(L.spouseK.name) + '之妻（' + clsName(L) + '）' : L.sex === 'F' && L.widowed ? '寡妇（' + clsName(L) + '）' : clsName(L);
-    $('status').innerHTML = '<dt>身份</dt><dd>' + who + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>识字</dt><dd>' + (L.literate ? '识字' : '不识字') + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +
+    $('status').innerHTML = '<dt>身份</dt><dd>' + who + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>学业</dt><dd>' + eduText(L) + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +
       (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '</dd>' : '') + (L.milMax ? '<dt>军职</dt><dd>' + L.milMax + '</dd>' : '') +
       (L.eth ? '' : '<dt>家境</dt><dd>' + E.lifeTier(L, y).lv + '</dd>') + (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
       (Object.keys(L.found).length ? '<dt>天资</dt><dd>' + Object.keys(L.found).map(function (k) { return E.TALENT[k].n; }).join('、') + '</dd>' : '');
@@ -548,7 +557,7 @@
   function renderFamily(y) {
     var L = S.L, ul = $('family');
     ul.innerHTML = '';
-    var order = { gp: 0, father: 1, mother: 2, spouse: 3, sib: 4, child: 5 };
+    var order = { gp: 0, father: 1, mother: 2, spouse: 3, conc: 3.5, sib: 4, child: 5 };
     var ks = L.kin.filter(function (k) { return k.by <= y; }).slice().sort(function (a, b) { return order[a.rel] - order[b.rel] || a.by - b.by; });
     if (!ks.length) { ul.innerHTML = '<li class="empty">无</li>'; return; }
     ks.forEach(function (k) {
@@ -561,7 +570,7 @@
       else st = (y - k.by) + '岁';
       if (!dead && !k.apart) st += (k.job && !k.soldier ? ' · ' + k.job : '') + (k.aff != null && y - k.by >= 8 && L.age >= 8 ? ' · ' + E.relLabel(k.aff) : '');
       var li = h('li', dead ? 'dead' : '');
-      li.innerHTML = '<span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + (k.zi ? '<small class="alias">字' + esc(k.zi) + '</small>' : '') + '</span><span class="s">' + st + '</span>';
+      li.innerHTML = '<span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + (k.zi ? '<small class="alias">字' + esc(k.zi) + '</small>' : '') + (k.shu ? '<small class="alias">庶出</small>' : '') + '</span><span class="s">' + st + '</span>';
       ul.appendChild(li);
     });
   }
@@ -856,7 +865,7 @@
   }
   function kinExtra(k) { return [k.job, k.aff != null && k.rel !== 'gp' && (k.alive || k.dy - k.by >= 8) ? '与你' + E.relLabel(k.aff) : ''].filter(Boolean).join(' · '); }
   function renderEndFamily(L) {
-    var groups = [['父母', ['father', 'mother']], ['祖辈', ['gp']], ['配偶', ['spouse']], ['兄弟姐妹', ['sib']], ['子女', ['child']]];
+    var groups = [['父母', ['father', 'mother']], ['祖辈', ['gp']], ['配偶', ['spouse', 'conc']], ['兄弟姐妹', ['sib']], ['子女', ['child']]];
     var box = $('end-family'), html = '', born = 0, lived = 0;
     groups.forEach(function (g) {
       var ks = L.kin.filter(function (k) { return g[1].indexOf(k.rel) >= 0 && k.by <= L.dy; }).sort(function (a, b) { return a.by - b.by; });
@@ -865,7 +874,7 @@
         if (k.rel === 'child') { born++; if ((k.alive ? L.dy : k.dy) - k.by >= 15) lived++; }
         var dead = !k.alive && k.dy <= L.dy;
         var marks = (k.adopted ? '<span class="mk">收养</span>' : '') + (k.lit ? '<span class="mk">识字</span>' : '');
-        var alias = [k.xiao && k.xiao !== k.name ? '小名' + k.xiao : '', k.zi ? '字' + k.zi : ''].filter(Boolean).join('，');
+        var alias = [k.xiao && k.xiao !== k.name ? '小名' + k.xiao : '', k.zi ? '字' + k.zi : '', k.shu ? '庶出' + (k.momName ? '，生母' + k.momName : '') : ''].filter(Boolean).join('，');
         return '<li class="' + (dead ? 'dead' : '') + '"><span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + (alias ? '<small class="alias">（' + esc(alias) + '）</small>' : '') + marks + '</span><span class="s">' + (k.by ? k.by + '年生 · ' : '') + esc(kinFate(L, k)) + (kinExtra(k) ? '<br>' + esc(kinExtra(k)) : '') + '</span></li>';
       }).join('') + '</ul></div>';
     });
