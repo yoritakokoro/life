@@ -255,12 +255,41 @@
     renderSpeed($('speed-birth')); renderSpeed($('speed-hud'));
   }
 
+  /* ---------- 编年的阅读方向：默认像聊天记录一样，新事出现在下面，自动跟随 ---------- */
+  function narrow() { return window.innerWidth <= 860; }
+  function follow() {
+    var c = $('chron'); if (S.stick === false) return;
+    if (narrow()) { if (!store.chronUp && S.playing !== false) { var r = c.getBoundingClientRect(); if (r.bottom > window.innerHeight) window.scrollBy(0, r.bottom - window.innerHeight + 12); } return; }
+    if (!store.chronUp) c.scrollTop = c.scrollHeight; else c.scrollTop = 0;
+  }
+  // 让编年框正好填满到窗口底部，最新的事总在眼前
+  function fitChron() {
+    var c = $('chron'); if (!c || !c.offsetParent) return;
+    if (narrow()) { c.style.maxHeight = 'none'; return; }
+    var top = c.getBoundingClientRect().top + window.scrollY;
+    c.style.maxHeight = Math.max(window.innerWidth <= 860 ? 260 : 320, window.innerHeight - top - 16) + 'px';
+  }
+  function setChronOrder() {
+    fitChron();
+    var c = $('chron'), b = $('chron-order');
+    c.classList.toggle('up', !!store.chronUp);
+    if (b) b.textContent = store.chronUp ? '最新在上 ⇅' : '最新在下 ⇅';
+  }
+  function toggleChronOrder() {
+    store.chronUp = !store.chronUp; save();
+    var c = $('chron'), secs = Array.prototype.slice.call(c.children).reverse();
+    secs.forEach(function (x) { c.appendChild(x); });
+    S.stick = true; setChronOrder(); follow();
+    toast(store.chronUp ? '最新的年份显示在最上面' : '最新的事显示在最下面，并自动跟随');
+  }
+
   /* ---------- 人生播放 ---------- */
   function stopLife() { S.yearActive = false; S.queue = []; clearTimeout(S.endTimer); S.choiceOpen = false; }
 
   function beginPlayback() {
     show('life');
     $('chron').innerHTML = '';
+    S.stick = true; setChronOrder();
     S.playing = true; setPlayIcon();
     renderSpeed($('speed-hud'));
     buildMap();
@@ -296,7 +325,9 @@
     head.innerHTML = '<b>' + (S.blind ? E.ganzhi(y) : esc(el.big)) + '</b><span>' + (S.blind ? '' : y + ' · ' + E.ganzhi(y) + '<br>') + (L.age === 0 ? '出生' : L.age + ' 岁') + '</span>';
     var ol = h('ol');
     sec.appendChild(head); sec.appendChild(ol);
-    $('chron').prepend(sec);
+    if (store.chronUp) $('chron').prepend(sec); else $('chron').appendChild(sec);
+    if (L.age <= 1) fitChron();
+    follow();
     S.ol = ol;
     S.t = 0; setSeason(0);
     stepLoop();
@@ -307,7 +338,7 @@
     if (r && r.pending) {
       if ($('auto-choice').checked) {
         var c = r.pending, i = E.autoAnswer(S.L);
-        S.ol.appendChild(h('li', 'e e-choice', esc(c.q) + ' —— 交给命运：<b>' + esc(c.o[i]) + '</b>'));
+        S.ol.appendChild(h('li', 'e e-choice', esc(c.q) + ' —— 交给命运：<b>' + esc(c.o[i]) + '</b>')); follow();
         stepLoop(); return;
       }
       showChoice(r.pending); return;
@@ -340,7 +371,7 @@
       };
       box.appendChild(b);
     });
-    S.ol.appendChild(card);
+    S.ol.appendChild(card); S.stick = true; follow();
     var first = box.querySelector('button');
     if (first) first.focus({ preventScroll: true });
     card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -361,7 +392,7 @@
     return h('li', 'e e-' + e.k, tag + esc(e.t));
   }
   function revealEntry(e) {
-    S.ol.appendChild(entryEl(e));
+    S.ol.appendChild(entryEl(e)); follow();
     if (e.k === 'death') S.dying = true;
   }
   function revealAt(e) { return (Math.min(e.s, 3.95) / 4) * S.speed * 0.95 + Math.min(0.25, S.speed * 0.05); }
@@ -547,7 +578,7 @@
         b.onclick = function () {
           var res = E.spend(L, it.id);
           var e = { k: 'spend', t: res.t };
-          if (S.ol) S.ol.appendChild(entryEl(e));
+          if (S.ol) { S.ol.appendChild(entryEl(e)); follow(); }
           toast(res.ok ? '已支用 ' + E.fmt(res.c) + ' 钱值' : '没有成功');
           renderSpend(); renderEco(); renderAttrs($('attrs'), { body: L.body, wealth: L.wealth, learn: L.learn, standing: L.standing, fame: L.fame }, L);
         };
@@ -1062,6 +1093,10 @@
     $('focus-select').onchange = function () { focusChanged(true); };
     $('focus-auto').onchange = function () { focusChanged(false); };
     $('btn-spend').onclick = openSpend;
+    $('chron-order').onclick = toggleChronOrder;
+    window.addEventListener('resize', function () { fitChron(); follow(); });
+    $('chron').addEventListener('scroll', function () { if (narrow()) return; var c = $('chron'); S.stick = store.chronUp ? c.scrollTop < 60 : c.scrollHeight - c.scrollTop - c.clientHeight < 80; });
+    window.addEventListener('scroll', function () { if (!narrow() || !S.L || !$('chron').offsetParent) return; var r = $('chron').getBoundingClientRect(); S.stick = store.chronUp ? true : r.bottom - window.innerHeight < 160; }, { passive: true });
     $('auto-spend').checked = !!store.autoSpend;
     $('auto-spend').onchange = function () { store.autoSpend = $('auto-spend').checked; save(); if (S.L) S.L.autoSpendOn = store.autoSpend; toast(store.autoSpend ? '已开启自动支用' : '已关闭自动支用'); };
     $('dlg-spend').addEventListener('close', function () { if (S.wasPlaying) { S.playing = true; setPlayIcon(); } S.wasPlaying = false; });

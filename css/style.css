@@ -237,6 +237,10 @@ details.panel > .inner { padding: 0 var(--s-4) var(--s-4); display: flex; flex-d
 /* 编年 */
 .chron-pane { background: var(--silk-2); border: 1px solid var(--rule); border-radius: 4px; padding: var(--s-4) var(--s-5) var(--s-5); box-shadow: var(--shadow); }
 .chron { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+/* 编年自成一个滚动区：新事在下、自动跟随，往上翻可回看 */
+#life .chron-pane .chron { max-height: calc(100vh - 230px); min-height: 260px; overflow-y: auto; overscroll-behavior: contain; padding-right: var(--s-2); scroll-behavior: auto; }
+.chron-tools { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--s-3); padding-bottom: var(--s-2); border-bottom: 1px solid var(--rule); font-size: .85rem; color: var(--ink-3, #6b5b45); letter-spacing: .2em; }
+.chron-tools button { font-size: .8rem; letter-spacing: .05em; padding: 2px 8px; }
 .chron > * + * { border-top: 1px dashed var(--rule); padding-top: var(--s-4); margin-top: var(--s-4); }
 .yr { display: grid; grid-template-columns: 6.8rem minmax(0, 1fr); gap: var(--s-5); animation: rise .5s ease both; }
 .yr-head { text-align: right; padding-top: 2px; border-right: 1px solid var(--rule); padding-right: var(--s-3); }
@@ -521,3 +525,6 @@ table.ledger tr.tot td { border-bottom: 0; font-weight: 600; color: var(--ink); 
 .choice-card .opts button small { display: block; font-family: var(--font-ui); font-size: 11px; color: var(--ink-3); }
 .choice-card .opts button:first-child.off { background: transparent; color: var(--ink-3); }
 .alias { font-family: var(--font-ui); font-size: var(--t-xs); color: var(--ink-3); margin-left: 4px; font-weight: 400; }
+@media (max-width: 860px) {
+  #life .chron-pane .chron { max-height: none !important; min-height: 0; overflow: visible; }
+}
