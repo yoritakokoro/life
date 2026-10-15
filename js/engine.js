@@ -601,12 +601,13 @@ var SGE = (function (D) {
     corv: ['你在服劳役时累倒，再也没有起来。'],
     battle: ['你战死于{n}。'],
     massacre: ['城破之后，你被魏军杀害了。'],
+    suicide: ['你自尽了。'],
     executed: ['你被卷入一场案子，下狱后被处死。'],
     childbirth: ['你生下孩子后血崩不止，死于难产。'],
     road: ['你倒在了逃难的路上。'],
     feud: ['你被人寻仇，死在了刀下。']
   };
-  var CAUSE_SHORT = { fade: '不知所终', executed: '被诛', infant: '夭折', child: '夭折', ill: '病故', old: '寿终', tiger: '虎患', drown: '溺水', fall: '意外', bandit: '盗贼', plag: '疫病', fam: '饥荒', war: '兵祸', flood: '水灾', corv: '劳役', battle: '战死', massacre: '屠城', executed: '株连', childbirth: '难产', road: '死于逃难', feud: '仇杀' };
+  var CAUSE_SHORT = { suicide: '自尽', fade: '不知所终', executed: '被诛', infant: '夭折', child: '夭折', ill: '病故', old: '寿终', tiger: '虎患', drown: '溺水', fall: '意外', bandit: '盗贼', plag: '疫病', fam: '饥荒', war: '兵祸', flood: '水灾', corv: '劳役', battle: '战死', massacre: '屠城', executed: '株连', childbirth: '难产', road: '死于逃难', feud: '仇杀' };
   var CAUSE_STAT = { fade: '不知所终', infant: '夭折', child: '夭折', ill: '疾病', old: '寿终', tiger: '意外', drown: '意外', fall: '意外', bandit: '兵祸盗贼', plag: '疫病', fam: '饥荒', war: '兵祸盗贼', flood: '意外', corv: '劳役', battle: '战死', massacre: '兵祸盗贼', executed: '株连', childbirth: '难产', road: '饥荒', feud: '兵祸盗贼' };
 
   function die(L, cause, s, map) {
@@ -1294,7 +1295,7 @@ var SGE = (function (D) {
   function planYear(L, y) {
     var R = L.R;
     if (L.flags.apprenticeY && y - L.flags.apprenticeY >= 3 && L.job === '学徒') { L.flags.apprenticeY = null; L.cls = L.cls === 'gentry' ? L.cls : 'artisan'; L.job = '工匠'; L.craft += 10; add(L, 2.3, 'good', '三年学徒期满，师父说你可以出师了。从此你靠手艺吃饭。'); }
-    if (L.flags.wenpo && L.age >= 25 && !/稳婆/.test(L.job || '') && !L.office && L.sex === 'F') { L.flags.wenpo = null; L.job = '稳婆'; L.standing += 3; add(L, 2.3, 'life', '村里的老稳婆过世了。从此谁家要生孩子，都来叫你。'); }
+    if (L.flags.wenpo && !inPal(L) && L.age >= 25 && !/稳婆/.test(L.job || '') && !L.office && L.sex === 'F') { L.flags.wenpo = null; L.job = '稳婆'; L.standing += 3; add(L, 2.3, 'life', '村里的老稳婆过世了。从此谁家要生孩子，都来叫你。'); }
   }
 
   /* ---------- 出嫁从夫：嫁到什么人家，就过什么日子 ---------- */
@@ -1332,6 +1333,9 @@ var SGE = (function (D) {
   }
 
   /* ---------- 府邸与宫中：做了诸侯的姬妾，日子就被关在高墙之内 ---------- */
+  var PAL_OK = ['lg_palace', 'sick', 'plague', 'buddha', 'homesick'];
+  function inPal(L) { return L.flags.palace != null && !L.flags.palaceOut; }
+  var CAP_SEAT = { luoyang: ['河南尹', '洛阳'], guanzhong: ['京兆尹', '长安'], yu: ['颍川郡', '许县'], ji: ['魏郡', '邺县'], jiangdong: ['丹杨郡', '建业'], shu: ['蜀郡', '成都'] };
   function inHH(L) { var k = L.spouseK; return !!(L.flags.famousConc && !L.flags.leftHH && k && k.famous && !k.apart && (k.alive || L.flags.fcPal === '皇宫' || L.flags.noRemarry)); }
   var FAR_HH = { fu: ['消息传进了府里，女眷们私下议论了好几天。', '府里的人很快就传开了这个消息。'], gong: ['消息传进了宫里，宫人们私下议论了好几天。', '宫里的人很快就传开了这个消息。'] };
   var REACT_HH = { war: { fu: ['外面在打仗。府门紧闭，女眷们都被关在后院，只听得见远处的鼓声。', '前方的战报一封封送进府里，女眷们围着打听，谁也不敢多问。'], gong: ['外面在打仗。宫门加了守卫，宫人们夜里都不敢睡熟。', '前方的战报送进宫里，宫人们私下传着，谁也不敢大声说。'] }, fam: { fu: ['外面闹饥荒，府里的用度也减了，可你们这些女眷还吃得饱。墙外饿死的人，你是听仆妇说的。'], gong: ['外面闹饥荒。宫里减了膳食，以示与民同苦——减下来的，仍比外面一户人家一年吃的多。'] }, plag: { fu: ['外面闹疫病。府门紧闭，进出的人都要用艾草熏过。'], gong: ['外面闹疫病。宫里请了巫祝驱疫，宫人们戴着香囊，不许出宫门一步。'] } };
@@ -1402,6 +1406,226 @@ var SGE = (function (D) {
     }
     return null;
   }
+  /* ---------- 侍婢与宫人：底层女子的去处，偶尔被看中 ---------- */
+  // 卖身为婢、立佣券做侍女、父亲坐罪被没入官府；好胜的人会自己去争
+  function vain(L) { return L.tr.cmp >= 62; }
+  function jealous(L) { return L.tr.cmp >= 70 && L.tr.soc < 48; }
+  function maidOk(L) { return L.sex === 'F' && !L.married && !L.flags.concubineOf && !L.flags.isConc && L.flags.palace == null && (L.job === '侍女' || L.cls === 'slave' && (L.job === '婢女' || L.job === '奴婢')); }
+  function maidFig(L, y) { var id = L.flags.maidOf, C = id && FAMOUS_CONC[id]; return C && y >= C.y[0] && y <= C.y[1] && y < C.d ? id : null; }
+  function capOf(L, y) { var g = group(ctrl(L.zone, y)); return g === 'han' ? (y < 190 ? 'luoyang' : y < 196 ? 'guanzhong' : 'yu') : g === 'wei' ? (y < 220 ? 'ji' : 'luoyang') : g === 'wu' ? 'jiangdong' : g === 'shu' ? 'shu' : g === 'jin' ? (y < 311 ? 'luoyang' : 'jiangdong') : null; }
+  function maidLines(L) {
+    var M = D.MAID, y = L.by + L.age, mf = maidFig(L, y), p = M.daily.slice();
+    if (L.job === '侍女') p = p.concat(M.dailyHire);
+    if (mf) p = p.concat(M.fu.map(function (t) { return t.replace(/\{lord\}/g, figName(mf)); }));
+    return p;
+  }
+  function maidChoice(L, y, P) {
+    var R = L.R, a = L.age, M = D.MAID;
+    if (!M || L.sex !== 'F' || L.eth || inHH(L) || L.soldier || L.band || L.convict || !L.alive) return;
+    // 一、荒年里，人牙子上门：卖身为婢，或立佣券做几年侍女
+    if (!L.married && !L.widowed && a >= 12 && a <= 18 && !L.flags.maidAsk && L.job !== '侍女' && L.flags.palace == null && ['peasant', 'tenant', 'artisan', 'tuntian'].indexOf(L.cls) >= 0 && R() < (poorNow(L) ? 0.06 : 0.012)) {
+      L.flags.maidAsk = true;
+      var fid = lordFigAt(ctrl(L.zone, y), y), C = fid && FAMOUS_CONC[fid], fam = C && y >= C.y[0] && y <= C.y[1] && R() < 0.2 ? fid : null;
+      var hi = Math.floor(R() * M.hh.length), lean = poorNow(L) && (L.crisis || L.eco.debt > 0), price = lean ? 5000 : 12000;
+      var q = (fam ? M.inQf.replace(/\{lord\}/g, figName(fam)) : M.inQ.replace('{hh}', M.hh[hi][0])).replace('{p}', fmt(price)) + (lean ? M.lean : '');
+      P.queue.push({ key: 'maid', kd: 'in', fam: fam, hi: hi, price: price, q: q, o: M.inO, w: [lean ? 1.6 : 0.5, 1.2, 1.5] });
+      return;
+    }
+    // 二、被主人看中（私家婢女被主人看中，另有 f_master）
+    if (maidOk(L) && a >= 14 && a <= 26 && cool(L, 'mpick', 2)) {
+      var mf = maidFig(L, y);
+      if ((mf || L.cls !== 'slave') && R() < 0.035 * (L.found.charm ? 1.8 : 1)) {
+        P.queue.push({ key: 'maid', kd: 'pick', fam: mf, q: mf ? M.pickQf.replace(/\{lord\}/g, figName(mf)) : M.pickQ, o: L.cls === 'slave' ? M.pickO.slice(0, 2) : M.pickO, w: [2, 1, 1] });
+        return;
+      }
+    }
+    // 三、好胜的人，自己去争
+    if (maidOk(L) && vain(L) && a >= 14 && a <= 26 && cool(L, 'mshow', 3) && R() < 0.4) {
+      var sf = maidFig(L, y), ks = ['wine', 'sing'].concat(jealous(L) ? ['frame'] : [], ['none']), so = ks.map(function (k) { return M.showO[k]; });
+      P.queue.push({ key: 'maid', kd: 'show', fam: sf, ks: ks, q: sf ? M.showQf.replace(/\{lord\}/g, figName(sf)) : M.showQ, o: so, w: ks.map(function (k) { return k === 'none' ? 1 : 1.5; }) });
+      return;
+    }
+    // 四、宫人争宠
+    var lv = L.flags.palace;
+    if (lv != null && !L.flags.palaceOut && (L.cls === 'slave' || L.flags.palaceUp) && lv < 3 && vain(L) && a >= 14 && a <= 30 && cool(L, 'gshow', 3) && R() < 0.4) {
+      var era = y >= 181 && y <= 189 && L.zone === 'luoyang' ? 'lie' : y >= 266 && y <= 290 && L.zone === 'luoyang' ? 'yang' : 'gen';
+      var gk = ['act'].concat(L.eco.cash + L.eco.priv >= 1000 ? ['bribe'] : [], jealous(L) && lv >= 1 ? ['frame'] : [], ['none']);
+      P.queue.push({ key: 'maid', kd: 'gshow', ks: gk, q: M.gShowQ[era], o: gk.map(function (k) { return k === 'act' ? M.gShowO[era] : M.gShowO[k]; }), w: gk.map(function (k) { return k === 'none' ? 1 : 1.5; }) });
+      return;
+    }
+    // 五、父亲坐罪，妻女没入官府
+    var f = L.kin[0];
+    if (!L.married && a >= 8 && a <= 20 && L.cls !== 'slave' && L.flags.palace == null && !L.flags.moAsk && f && f.alive && !f.apart && !f.out && (L.cls === 'clerk' || L.cls === 'gentry' && (L.gate || 0) <= 2) && capOf(L, y) && R() < 0.0025 * chaos(y)) {
+      L.flags.moAsk = true;
+      P.queue.push({ key: 'maid', kd: 'mo', q: M.moQ, o: M.moO, w: [1, 2] });
+    }
+  }
+  function palaceUp(L, y) {
+    var rk = palaceRanks(y), lv = L.flags.palace || 0;
+    if (lv >= rk.length - 2) return;
+    lv++; L.flags.palace = lv; L.flags.palaceUp = true; L.job = rk[lv]; L.flags.palaceTop = rk[lv]; L.fame += 4 + lv * 3; L.standing += 5;
+    if (lv >= 1) L.cls = 'gentry';
+    add(L, 1.36, 'good', PAL_T[rk[lv]] || D.MAID.palUp);
+  }
+  function maidToConc(L, y, fam) {
+    var R = L.R, M = D.MAID;
+    if (fam) { famousConcOutcome(L, y, { fid: fam, maid: true }, 0); return; }
+    if (L.cls === 'slave') { L.flags.concubineOf = true; L.standing += 3; add(L, 1.34, 'life', M.toSlaveC); return; }
+    L.spouseK = null; var ocls = L.cls; L.cls = 'gentry'; L.gate = L.gate || 1;
+    var nsp = makeSpouse(L, y); nsp.age = L.age + 12 + Math.floor(R() * 20); nsp.from = L.flags.maidHS || '';
+    doMarry(L, nsp, y, 1.33, M.toConcN);
+    L.flags.isConc = true; L.cls0 = ocls; L.standing += 4; L.job = '持家';
+    add(L, 1.34, 'life', M.toConcN2.replace('{n}', nsp.name));
+  }
+  function maidOutcome(L, y, c, i) {
+    var R = L.R, M = D.MAID, k = c.ks ? c.ks[i] : i, rr;
+    if (!L.alive) return;
+    if (c.kd === 'in') {
+      if (i === 2) { add(L, 1.3, 'life', M.inR[2]); return; }
+      var hs = c.fam ? M.hsF.replace(/\{lord\}/g, figName(c.fam)) : M.hh[c.hi][1];
+      L.flags.maidWas = i === 0 ? 'bi' : 'hire'; L.flags.maidHS = hs; L.flags.maidOf = c.fam || null;
+      if (i === 0) {
+        L.cls = 'slave'; L.eco = initEco(L); L.land = 0; L.job = '婢女'; L.standing = Math.min(L.standing, 8);
+        liveKin(L, function (x) { return ['father', 'mother', 'dimu', 'sib', 'gp'].indexOf(x.rel) >= 0; }).forEach(function (x) { x.out = true; });
+        add(L, 1.3, 'bad', M.inR[0].replace('{hs}', hs).replace('{p}', fmt(c.price)));
+      } else {
+        L.flags.maidJob0 = L.job; L.job = '侍女'; L.flags.maidEnd = y + 3 + Math.floor(R() * 3);
+        add(L, 1.3, 'life', M.inR[1].replace('{hs}', hs).replace('{n}', cnNum(L.flags.maidEnd - y)));
+      }
+      if (c.fam && i === 0) seatMove(L, FAMOUS_CONC[c.fam].seat(y), 1.31, M.seat, y);
+      return;
+    }
+    if (c.kd === 'pick') {
+      if (i === 0) { maidToConc(L, y, c.fam); return; }
+      if (i === 1) {
+        if (R() < 0.5) { add(L, 1.3, 'life', M.pickR.saved); return; }
+        if (c.fam) { add(L, 1.3, 'bad', M.pickR.forced); maidToConc(L, y, c.fam); return; }
+        if (L.cls === 'slave') { var dz = pick(R, ['jingnan', 'jiangdong', 'yu', 'ji', 'xu'].filter(function (z) { return z !== L.zone; })); L.flags.maidOf = null; relocate(L, dz, 1.3, M.pickR.sold, 0.02, y); return; }
+        add(L, 1.3, 'bad', M.pickR.fired); maidQuit(L); return;
+      }
+      add(L, 1.3, 'life', M.pickR.quit); maidQuit(L); return;
+    }
+    if (c.kd === 'show') {
+      if (k === 'none') { add(L, 1.3, 'life', M.showR.none); return; }
+      if (k === 'frame') {
+        if (R() < 0.5) { add(L, 1.3, 'life', M.showR.frameOk); L.tr.cmp = clamp(L.tr.cmp + 2, 5, 95); }
+        else { add(L, 1.3, 'bad', M.showR.frameBad); L.body -= 3; L.standing -= 2; }
+        return;
+      }
+      var p = 0.16 * (L.found.charm ? 1.8 : 1) * (k === 'wine' ? 1.1 : 0.9);
+      rr = R();
+      if (rr < p) { add(L, 1.3, 'good', M.showR.ok); maidToConc(L, y, maidFig(L, y)); }
+      else if (rr < p + 0.3) { add(L, 1.3, 'bad', M.showR.caught); L.body -= 4; L.standing -= 2; }
+      else add(L, 1.3, 'life', M.showR.miss);
+      return;
+    }
+    if (c.kd === 'gshow') {
+      rr = R();
+      if (k === 'none') add(L, 1.3, 'life', M.gShowR.none);
+      else if (k === 'act') {
+        var gp = 0.12 * (L.found.charm ? 1.8 : 1);
+        if (rr < gp) { add(L, 1.3, 'good', M.gShowR.ok); palaceUp(L, y); }
+        else if (rr < gp + 0.25) { add(L, 1.3, 'bad', M.gShowR.caught); L.body -= 4; L.standing -= 2; }
+        else add(L, 1.3, 'life', M.gShowR.miss);
+      } else if (k === 'bribe') {
+        payFrom(L, 1000);
+        if (rr < 0.18 * (L.found.charm ? 1.6 : 1)) { add(L, 1.3, 'good', M.gShowR.bribeOk); palaceUp(L, y); }
+        else add(L, 1.3, 'life', M.gShowR.bribeNo);
+      } else if (k === 'frame') {
+        if (rr < 0.35) { add(L, 1.3, 'life', M.gShowR.frameOk); L.standing += 2; }
+        else if (rr < 0.55) die(L, 'executed', 1.35, { full: M.gShowR.frameDie });
+        else { add(L, 1.3, 'bad', M.gShowR.frameBad); L.standing -= 4; }
+      }
+      return;
+    }
+    if (c.kd === 'mo') {
+      var f = L.kin[0], pz = capOf(L, y);
+      if (!f || !f.alive) return;
+      if (i === 1 && L.eco.cash + L.eco.priv >= 20000) {
+        payFrom(L, 20000);
+        if (R() < 0.6) { f.job = '刑徒'; add(L, 1.3, 'bad', M.moR.ransom); return; }
+      } else if (i === 1) add(L, 1.29, 'bad', M.moR.noMoney);
+      kinDie(L, f, 'executed', 1.3, y);
+      liveKin(L, function (x) { return x.rel === 'mother' || x.rel === 'sib' || x.rel === 'dimu'; }).forEach(function (x) { x.apart = true; });
+      L.cls = 'slave'; L.job = '宫人'; L.land = 0; L.eco = initEco(L); L.eco.house = 0; L.flags.palace = 0; L.flags.palaceIn = y; L.flags.palaceTop = '宫人'; L.flags.moru = y; L.standing = Math.min(L.standing, 5);
+      var tx = M.moR.taken + (M.moNote[group(ctrl(L.zone, y))] || '');
+      if (pz && CAP_SEAT[pz]) { var cs = CAP_SEAT[pz]; if (L.county === cs[1]) add(L, 1.32, 'bad', tx.replace('{dest}', cs[1])); else seatMove(L, cs, 1.32, tx, y); } else add(L, 1.32, 'bad', tx.replace('{dest}', zname(L.zone)));
+    }
+  }
+  function maidQuit(L) { L.job = L.flags.maidJob0 || ''; L.flags.maidOf = null; L.flags.maidEnd = null; }
+  function maidYear(L, y) {
+    if (!D.MAID || L.job !== '侍女' || !L.alive) return;
+    L.eco.priv += 300;
+    if (L.married || y >= (L.flags.maidEnd || 0)) { if (!L.married) add(L, 1.4, 'life', D.MAID.endHire); maidQuit(L); }
+  }
+  /* ---------- 君主之死、政权之亡：后宫与姬妾的下场 ---------- */
+  var EMP_DIE = { han: [189], wei: [226, 239], shu: [223], wu: [252, 264], jin: [290, 306] };
+  function capQuiet(L, st) { var ji = -1; D.JUN.forEach(function (j, i) { if (ji < 0 && j[0] === st[0] && (j[3].indexOf(st[1]) >= 0 || st[1] === '建业')) ji = i; }); if (ji >= 0) { setPlace(L, ji); L.county = st[1]; L.urban = true; } }
+  function palOut(L, y, cls, job) { L.flags.palaceOut = y; L.cls = cls; L.job = job; L.land = 0; L.standing = Math.min(L.standing, 25); }
+  function palLike(L) { return inPal(L) || !!(L.flags.famousConc && L.flags.fcPal && inHH(L)); }
+  function consortChoice(L, y, P) {
+    var C = D.CFATE, g = group(ctrl(L.zone, y));
+    if (!C || !palLike(L) || !L.flags.palG || L.flags.palG === g) return;
+    if (L.flags.palG === 'shu' && g === 'wei' && L.age < 45) P.queue.push({ key: 'cfate', kd: 'shu', q: C.shuQ, o: C.shuO, w: [L.tr.per >= 65 ? 1.5 : 0.3, 1, 1.5] });
+  }
+  function consortOutcome(L, y, c, i) {
+    var C = D.CFATE, R = L.R;
+    if (c.kd !== 'shu' || !L.alive) return;
+    if (i === 0) { die(L, 'suicide', 1.6, { full: C.shuDie }); return; }
+    if (i === 2 && R() < 0.35) { palOut(L, y, 'peasant', '农'); L.flags.noRemarry = false; add(L, 1.6, 'good', C.shuFree); return; }
+    if (L.flags.famousConc) { L.flags.leftHH = true; L.spouseK = null; L.married = false; L.widowed = true; L.flags.isConc = false; }
+    palOut(L, y, 'soldier', '持家'); L.flags.noRemarry = false;
+    var sp = makeSpouse(L, y); sp.job = '军吏';
+    doMarry(L, sp, y, 1.6, i === 2 ? C.shuGive2 : C.shuGive);
+  }
+  function consortYear(L, y) {
+    var C = D.CFATE, R = L.R, z = L.zone, g = group(ctrl(z, y)), lv = L.flags.palace || 0, fc = !!L.flags.famousConc;
+    if (!C || !L.alive) return;
+    if (fc && L.flags.famousConc === 'yuanshao' && y === 204 && z === 'ji' && L.flags.noRemarry && !L.flags.leftHH) add(L, 1.66, 'life', C.yuan204);
+    if (!palLike(L)) return;
+    var hi = fc || lv >= 1, old = L.flags.palG, r;
+    L.flags.palG = g;
+    if (!old) return;
+    // 汉末：董卓迁都，天子东归
+    if (inPal(L) && y === 190 && z === 'luoyang') { if (R() < 0.06) { die(L, 'road', 1.66, { full: C.qianDie }); return; } seatMove(L, CAP_SEAT.guanzhong, 1.66, C.qian, y); return; }
+    if (inPal(L) && y === 195 && z === 'guanzhong') {
+      r = R();
+      if (r < 0.3) { die(L, 'war', 1.66, { full: C.dongDie }); return; }
+      if (r < 0.55) { palOut(L, y, 'slave', '奴婢'); add(L, 1.66, 'bad', C.dongCap); return; }
+      add(L, 1.66, 'life', C.dong); L.flags.hanEast = true; return;
+    }
+    if (inPal(L) && y === 196 && L.flags.hanEast) { L.flags.hanEast = false; seatMove(L, CAP_SEAT.yu, 1.66, C.xu, y); return; }
+    // 汉亡：天子禅位，做了山阳公
+    if (inPal(L) && y === 220 && (L.flags.palaceIn || 0) < 220 && z === 'yu') {
+      if (hi && R() < 0.6) { seatMove(L, ['河内郡', '山阳'], 1.66, C.shanyang, y); L.flags.palaceUp = false; L.flags.noRemarry = true; return; }
+      if (!hi && R() < 0.3) { palOut(L, y, 'peasant', '农'); add(L, 1.66, 'good', C.hanFree); return; }
+      add(L, 1.66, 'life', C.hanStay); return;
+    }
+    // 永嘉之乱：洛阳陷落
+    if (inPal(L) && y === 311 && z === 'luoyang') {
+      r = R();
+      if (r < 0.35) { die(L, 'war', 1.66, { full: C.yjDie }); return; }
+      if (r < 0.8) { palOut(L, y, 'slave', '奴婢'); relocate(L, 'bing', 1.66, C.yjCap, 0.05, y); return; }
+      palOut(L, y, 'peasant', '农'); add(L, 1.66, 'life', C.yjRun); return;
+    }
+    // 政权灭亡
+    if (old !== g) {
+      if (old === 'shu' && g === 'wei' && L.age >= 45) { palOut(L, y, 'peasant', '农'); if (fc) L.flags.leftHH = true; add(L, 1.66, 'life', C.shuOld); return; }
+      if (old === 'wei' && g === 'jin') {
+        if (hi && !fc && R() < 0.5) { seatMove(L, CAP_SEAT.ji, 1.66, C.chenliu, y); L.flags.palaceUp = false; L.flags.noRemarry = true; return; }
+        add(L, 1.66, 'life', C.weiJin); return;
+      }
+      if (old === 'wu' && g === 'jin' && (fc || lv >= 1)) { seatMove(L, CAP_SEAT.luoyang, 1.66, C.wuJin, y); L.flags.palaceUp = false; return; }
+      return;
+    }
+    // 君主驾崩（改朝换代之外）
+    if (!fc && (EMP_DIE[g] || []).indexOf(y) >= 0) {
+      var kids = liveKin(L, function (k) { return k.rel === 'child'; }).length;
+      if (lv >= 1 && kids) { L.flags.palaceOut = y; L.job = '太妃'; add(L, 1.66, 'life', C.taifei); return; }
+      if (lv >= 1) { L.flags.palaceUp = false; L.flags.noRemarry = true; add(L, 1.66, 'life', C.biegong); return; }
+      if (!(g === 'jin' && y === 290) && R() < 0.3) { palOut(L, y, 'peasant', '农'); add(L, 1.66, 'good', C.fang); }
+    }
+  }
   function famousConcChoice(L, y, P) {
     if (L.sex !== 'F' || L.married || L.widowed || L.age < 15 || L.age > 22 || L.flags.fcAsk || L.eth || L.flags.concubineOf || L.flags.isConc) return;
     var fk = ctrl(L.zone, y), id = lordFigAt(fk, y), C = FAMOUS_CONC[id];
@@ -1447,6 +1671,8 @@ var SGE = (function (D) {
     var R = L.R, P = { queue: [], dec: { flee: {}, sights: [] } }, a = L.age, z = L.zone;
     var free = !L.soldier && !L.band && !L.convict && !inHH(L);
     if (inHH(L)) hhChoice(L, y, P);
+    maidChoice(L, y, P);
+    consortChoice(L, y, P);
     if (L.crime && L.crime.ask) { L.crime.ask = false; P.queue.push({ key: 'crimeAfter', q: '你失手打死了人。死者的家人已经告到了县里，亭长带着求盗正在四处拿人。', o: ['连夜亡命他乡', '投案自首', '求族人凑钱，向死者家私了'], w: [3, 1, L.eco.cash >= 10000 ? 2 : 0.1] }); }
     var gap = a - L.lastChoice >= 3;
     (EV_BY_Y[y] || []).forEach(function (ev) {
@@ -1673,6 +1899,8 @@ var SGE = (function (D) {
       case 'bpov': L.bpovDec = { k: c.pk, i: i }; break;
       case 'crimeAfter': d.crimeAfter = i; break;
       case 'hh': d.hh = { c: c, i: i }; break;
+      case 'maid': d.maid = { c: c, i: i }; break;
+      case 'cfate': d.cfate = { c: c, i: i }; break;
       case 'hobby': d.hobby = { c: c, i: i }; break;
       case 'path': d.path = { c: c, i: i }; break;
       case 'civwar': d.civwar = { c: c, i: i }; break;
@@ -1716,7 +1944,7 @@ var SGE = (function (D) {
       if (a > 0) {
         add(L, 0.02, 'note', fk === 'warlords' ? '你所在的' + D.ZONES[L.zone].zhou + '陷入了群雄割据，' + (WARLORD_DESC[L.zone] || '各路豪强') + '各据一方。' : '你所在的' + D.ZONES[L.zone].zhou + '，如今归' + fname(fk, y) + '统治。');
         var pfk = L.regimes[L.regimes.length - 1];
-        if (pfk && ctrl(L.zone, y - 1) === pfk && !SUCC[pfk + '>' + fk] && !dec.regime && L.cls !== 'gentry' && !L.office && !L.soldier) add(L, 0.03, 'life', pick(R, D.WHEEL[L.cls === 'slave' ? 'slave' : L.cls === 'merchant' ? 'merchant' : 'poor']));
+        if (pfk && ctrl(L.zone, y - 1) === pfk && !SUCC[pfk + '>' + fk] && !dec.regime && L.cls !== 'gentry' && !L.office && !L.soldier) add(L, 0.03, 'life', pick(R, D.WHEEL[inPal(L) ? 'palace' : L.cls === 'slave' ? 'slave' : L.cls === 'merchant' ? 'merchant' : 'poor']));
       }
       L.regimes.push(fk);
     }
@@ -1739,6 +1967,8 @@ var SGE = (function (D) {
     if (dec.civwar) civWarOutcome(L, y, dec.civwar.c, dec.civwar.i);
     if (dec.crimeAfter != null) crimeAfter(L, y, dec.crimeAfter);
     if (dec.hh) hhOutcome(L, y, dec.hh.c, dec.hh.i);
+    if (dec.maid) maidOutcome(L, y, dec.maid.c, dec.maid.i);
+    if (dec.cfate) consortOutcome(L, y, dec.cfate.c, dec.cfate.i);
     if (dec.hobby) hobbyPick(L, y, dec.hobby.c, dec.hobby.i);
     if (dec.path) pathOutcome(L, y, dec.path.c.ks[dec.path.i]);
     planYear(L, y);
@@ -1945,7 +2175,7 @@ var SGE = (function (D) {
     var rk = fx.war ? 'war' : fx.fam ? 'fam' : fx.plag ? 'plag' : null;
     if (rk && a >= 5 && D.REACT && R() < 0.85) {
       var bk = L.cls === 'slave' ? 'slave' : L.cls === 'gentry' ? 'gentry' : L.office ? 'official' : L.cls === 'merchant' ? 'merchant' : L.eth ? 'tribal' : L.cls === 'tenant' && D.REACT[rk].tenant && R() < 0.5 ? 'tenant' : 'poor';
-      var pool = inHH(L) ? REACT_HH[rk][L.flags.fcPal ? 'gong' : 'fu'] : D.REACT[rk][bk] || D.REACT[rk].poor;
+      var pool = inHH(L) || inPal(L) ? REACT_HH[rk][L.flags.fcPal || inPal(L) ? 'gong' : 'fu'] : D.REACT[rk][bk] || D.REACT[rk].poor;
       add(L, s + 0.06, 'life', fresh(L, pool));
     }
     if (fx.m15) {
@@ -2055,7 +2285,7 @@ var SGE = (function (D) {
       }
     },
     marry273: function (L, fx, s, y) {
-      if (L.sex === 'F' && L.age >= 17 && !L.married && !L.spouseK && L.alive) {
+      if (L.sex === 'F' && L.age >= 17 && L.age <= 30 && !L.married && !L.spouseK && L.alive && !inPal(L)) {
         add(L, s + 0.1, 'life', '朝廷下诏：女子年十七父母不嫁者，由官府为之婚配。');
         doMarry(L, makeSpouse(L, y), y, s + 0.2, '官府为你配了婚。');
       }
@@ -2279,13 +2509,14 @@ var SGE = (function (D) {
       if (L.shu && a >= 5) pool = pool.concat(DD.shuChild, DD.shuChild);
     } else if (a >= 62) {
       var otk = lifeTier(L, y).k, elite = L.cls === 'gentry' || !!L.officeMax || otk === 'top' || otk === 'high';
-      pool = pool.concat(DD.old, L.cls === 'slave' ? DD.oldSlave : elite ? DD.oldElite : L.cls === 'merchant' ? DD.oldMerchant : farmerish(L) ? DD.oldFarm : [], L.sex === 'F' && L.cls !== 'slave' ? DD.oldF : []);
+      pool = pool.concat(DD.old, L.cls === 'slave' && !inPal(L) ? DD.oldSlave : inPal(L) ? DD.gongren : elite ? DD.oldElite : L.cls === 'merchant' ? DD.oldMerchant : farmerish(L) ? DD.oldFarm : [], L.sex === 'F' && L.cls !== 'slave' ? DD.oldF : []);
     }
     else if (L.soldier) pool = pool.concat(DD.soldier);
     else if (L.office) pool = pool.concat(DD.clerkJob);
     else if (L.cls === 'gentry') pool = pool.concat(L.sex === 'F' && DD.gentryF ? DD.gentryF : DD.gentry);
     else if (L.cls === 'merchant') pool = pool.concat(L.sex === 'F' ? DD.merchantF : DD.merchant);
     else if (L.cls === 'artisan') pool = pool.concat(L.sex === 'F' ? DD.artisanF.concat(DD.farmerF) : DD.artisan);
+    else if (L.job === '侍女' || L.flags.maidOf && L.cls === 'slave' && !L.flags.concubineOf) pool = pool.concat(maidLines(L));
     else if (L.job === '宫人' || L.job === '采女') pool = pool.concat(DD.gongren);
     else if (L.flags.palace) pool = pool.concat(DD.gongrenHi);
     else if (L.cls === 'slave') pool = pool.concat(L.sex === 'F' && DD.slaveF ? DD.slaveF.concat(DD.slave) : DD.slave);
@@ -2309,6 +2540,7 @@ var SGE = (function (D) {
   var LOCAL = D.LOCAL;
 
   function doMarry(L, sp, y, s, prefix) {
+    if (inPal(L) || inHH(L)) return;
     if (L.sex === 'F' && sp.cls && sp.cls !== L.cls) { L.cls = sp.cls; if (sp.cls === 'gentry') L.gate = Math.max(L.gate || 0, 1); L.clsNote = CLS_WIFE[sp.cls]; }
     var k = newKin(L, 'spouse', sp.sex, y - sp.age, sp.name, { sur: sp.sur });
     L.spouseK = k; L.married = true; L.widowed = false; L.marriedAt = y;
@@ -2371,7 +2603,7 @@ var SGE = (function (D) {
     var unmarried = !L.married;
     if (dec.wedDelayOk) add(L, 1.45, 'life', '父母拗不过你，答应再留你两年。');
     if (dec.marry && !L.married) doMarry(L, dec.marry, y, 1.5, dec.wedForced ? '父亲说："哪有姑娘家自己拿主意的。"亲事还是定了下来。' : '');
-    else if (unmarried && !L.spouseK && !L.band && !dec.fconc && !dec.wfig) {
+    else if (unmarried && !L.spouseK && !L.band && !dec.fconc && !dec.wfig && !inPal(L)) {
       if (L.sex === 'F') {
         var pf = L.flags.wedDelay > y ? 0 : { 13: 0.08, 14: 0.18, 15: 0.3, 16: 0.35, 17: 0.35 }[a] || 0;
         if (L.cls === 'slave' && a >= 15) pf = 0.15;
@@ -2440,13 +2672,15 @@ var SGE = (function (D) {
     childEvent(L, y);
     eduYear(L, y);
     if (L.flags.palace != null && L.alive) palaceYear(L, y);
+    maidYear(L, y);
+    consortYear(L, y);
     if ((L.job === '宫人' || L.job === '采女') && L.alive) {
       if (y === 280 && L.zone === 'jiangdong') relocate(L, 'luoyang', 1.5, '吴亡了。孙皓后宫的五千宫人，被晋军一船一船地运往北方。你也在其中，到了{dest}。', 0.03, y);
       else if ((y === 290 || y === 281) && L.zone === 'luoyang' && R() < 0.4) { L.cls = 'peasant'; L.job = '农'; L.land = 0; L.flags.palaceOut = y; add(L, 1.5, 'good', y === 290 ? '武帝驾崩，宫中放出了一批年长的宫人。你走出宫门，站了很久，不知道该往哪里去。' : '宫人太多，朝廷放出了一批。你走出宫门，站了很久，不知道该往哪里去。'); }
     }
     // 家境滑落
     splitHousehold(L, y);
-    if (L.cls === 'slave' && a >= 15 && R() < 0.012) {
+    if (L.cls === 'slave' && !inPal(L) && a >= 15 && R() < 0.012) {
       L.cls = 'tenant'; L.standing += 10;
       add(L, 3, 'good', y >= 220 && g === 'wei' ? '朝廷下诏放免了一批官私奴婢，你成了良人。' : '主人放免了你，你成了良人。');
     }
@@ -2515,7 +2749,7 @@ var SGE = (function (D) {
     L.spouseK = k; L.married = true; L.widowed = false; L.marriedAt = y; L.flags.isConc = true; L.flags.famousConc = id; L.standing += 8; L.fame += 6;
     liveKin(L, function (x) { return ['father', 'mother', 'dimu', 'sib', 'gp'].indexOf(x.rel) >= 0; }).forEach(function (x) { x.out = true; });
     var CL = (D.CONC_LIFE || {})[id];
-    add(L, 1.25, 'meet', '你被抬进了' + n + '的府里，成了他的妾。' + (CL ? CL.wife(y) : '他后院里的女人已经不少，正室见了你，只淡淡地点了点头。'));
+    add(L, 1.25, 'meet', c.maid ? D.MAID.toConc.replace(/\{lord\}/g, n) + (CL ? CL.wife(y) : '') : '你被抬进了' + n + '的府里，成了他的妾。' + (CL ? CL.wife(y) : '他后院里的女人已经不少，正室见了你，只淡淡地点了点头。'));
     L.job = '姬妾'; L.flags.noRemarry = false;
     seatMove(L, C.seat(y), 1.27, '你被一辆车接走，送进了他在{dest}的府邸。从此难得再见娘家的人。', y);
     markMet(L, id, y, '你曾是' + n + '的妾。');
@@ -2551,6 +2785,8 @@ var SGE = (function (D) {
       add(L, 1.62, 'bad', '董氏一门被诛，连他九十岁的老母也没有放过。你趁乱逃出了郿坞，从此隐姓埋名。'); L.cls = 'peasant'; L.job = '农妇'; L.eco.cash = Math.round(L.eco.cash * 0.2); return;
     }
     if (id === 'lvbu') { add(L, 1.62, 'life', '曹操把吕布的家眷一并带回了许都。'); seatMove(L, ['颍川郡', '许县'], 1.63, '你随着俘虏的队伍被押往{dest}。', y); return; }
+    if (id === 'liubiao') { add(L, 1.62, 'life', D.CFATE.liubiao); L.flags.noRemarry = true; relocate(L, 'qing', 1.63, D.CFATE.liubiaoMove, 0.02, y); return; }
+    if (id === 'sunce') { add(L, 1.62, 'life', D.CFATE.sunce); L.flags.noRemarry = true; return; }
     if (liveKin(L, function (x) { return x.rel === 'child'; }).length) { add(L, 1.62, 'life', '你有孩子，便留在府里守着。新主人照例按月给你一份用度。'); L.flags.noRemarry = true; }
     else if (R() < 0.5) { add(L, 1.62, 'life', '没有生育的姬妾，有的被遣散，有的被赏给了部将。你领了一点钱，被打发出了府门。'); L.eco.cash += 2000; }
     else { add(L, 1.62, 'life', '你没有生育，便在府里一处偏院住了下来，守着他的灵位过日子。'); L.flags.noRemarry = true; }
@@ -3696,6 +3932,7 @@ var SGE = (function (D) {
       if (kid && !c.kid) return;
       // 诸侯府里的姬妾，不再操持外面的营生
       if (L.flags.famousConc && L.spouseK && L.spouseK.alive && /^(call_|craft|apprentice|shop|f_tavern|f_master|f_levy|buyoffice|taixue)/.test(c.id)) return;
+      if (inPal(L) && PAL_OK.indexOf(c.id) < 0) return;
       var seen = (L.choiceSeen || {})[c.id];
       var REP = { sick: 5, plague: 6, storm: 3, relief: 4, lean: 3, extort: 6, kidsick: 4, haul: 5, pressgang: 6, taxdue: 5, hoard: 5, levy: 6, ration: 5, birthday: 8, case: 4, sellchild: 99, bondage: 8, rentup: 99 };
       if (seen != null && (REP[c.id] == null || y - seen < REP[c.id])) return;
@@ -3869,7 +4106,7 @@ var SGE = (function (D) {
     if (fx.kinLit && meta.kin) meta.kin.lit = true;
     if (fx.kinAff && meta.kin) affAdd(meta.kin, fx.kinAff);
     if (fx.kinSoldier && meta.kin && meta.kin.alive) meta.kin.soldier = armyOf(ctrl(L.zone, y));
-    if (fx.palace) { var pz = typeof fx.palace === 'string' ? fx.palace : 'ji'; L.cls = 'slave'; L.job = y < 190 ? '采女' : '宫人'; L.flags.palace = 0; L.flags.palaceIn = y; L.flags.palaceTop = L.job; L.eco.house = 0; if (pz !== L.zone) relocate(L, pz, s + 0.05, '你被押上了车，一路送进了{dest}的宫里。', 0.02, y); }
+    if (fx.palace) { var pz = typeof fx.palace === 'string' ? fx.palace : 'ji'; if (L.married && L.spouseK) { L.spouseK.apart = true; L.spouseK = null; L.married = false; liveKin(L, function (k) { return k.rel === 'child'; }).forEach(function (k) { k.apart = true; }); } L.cls = 'slave'; L.job = y < 190 ? '采女' : '宫人'; L.flags.palace = 0; L.flags.palaceIn = y; L.flags.palaceTop = L.job; L.eco.house = 0; if (CAP_SEAT[pz] && pz === L.zone) capQuiet(L, CAP_SEAT[pz]); else if (CAP_SEAT[pz]) seatMove(L, CAP_SEAT[pz], s + 0.05, '你被押上了车，一路送进了{dest}的宫里。', y); else if (pz !== L.zone) relocate(L, pz, s + 0.05, '你被押上了车，一路送进了{dest}的宫里。', 0.02, y); }
     if (fx.sonsAff) liveKin(L, function (k) { return k.rel === 'child' && k.sex === 'M'; }).forEach(function (k) { affAdd(k, fx.sonsAff); });
     if (fx.frAff && meta.friend) affAdd(meta.friend, fx.frAff);
     if (fx.frGone && meta.friend) { meta.friend.apart = true; meta.friend.fate = fx.frGone; }
@@ -3954,6 +4191,7 @@ var SGE = (function (D) {
     childbirth: '在那个时代，生育是女子一生中最凶险的关口。史书很少写这件事，因为执笔写史的，不是她们。',
     road: '汉末的户口从五千多万跌到不足千万。消失的人里，有许多就倒在逃难的路上。',
     corv: '城墙、宫殿、驰道，都是像你这样的人一筐土一筐土垒起来的。史书记下了它们的名字，没有记下垒它们的人。',
+    suicide: D.CFATE.suicideEnd,
     executed: '权力更迭的时候，史书记下的是胜负。被牵连的人，只是名单上的一行。',
     fade: '户籍上的名字消失，并不一定是死了：逃亡、南渡、被掳、投靠豪强，都会让一个人从簿籍上不见。史书写到这里，你的故事也就停在这里。'
   };
@@ -4139,6 +4377,8 @@ var SGE = (function (D) {
     if (L.cond && L.cond.rev) t.push(D.CONDS[L.cond.k].end[L.cond.gift || (L.cls === 'gentry' ? 'hi' : 'lo')] || D.CONDS[L.cond.k].end.lo);
     if (L.chronic === 'li') t.push('你得了疠风，被赶出里门，在村外的草棚里度过了余生。秦汉的律令里，疠者要迁到"疠所"，与人隔绝。');
     if (L.love) { var lv2 = L.sex === 'M' ? '男子' : '女子'; t.push(L.love.mutual ? '你和同为' + lv2 + '的' + L.love.name + '相爱过。在那个时代，这样的情分没有名分，史书也没有一个字的位置。可它是真的。' : '你一生心里装着同为' + lv2 + '的' + L.love.name + '。这件事，你到死也没有对人说过。'); }
+    if (L.flags.moru) t.push(D.MAID.endMo);
+    else if (L.flags.maidWas && !L.flags.famousConc) t.push(L.flags.maidWas === 'bi' ? D.MAID.endBi : D.MAID.endHire2);
     if (L.flags.duishi) t.push('在宫里，你和宫女' + L.flags.duishi + '结为"对食"——两个女子，像夫妻一样相互照应了许多年。');
     if (L.flags.affCaught) t.push('你的一段私情，后来成了乡里多年的谈资。史书不记这样的事——除非事关王侯。');
     else if (L.flags.affPast) t.push('你有过一段谁也不知道的往事。它跟着你进了坟墓。');
