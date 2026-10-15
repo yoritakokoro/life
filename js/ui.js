@@ -507,6 +507,7 @@
     $('laws-ruler').textContent = L.eth ? '' : E.fname(E.ctrl(L.zone, y), y) + '治下';
     ul.innerHTML = L.eth ? '<li class="empty">你的族人不受汉家律令管束，只听部落首领的。</li>' : ps.length ? '' : '<li class="empty">沿用旧制，没有特别的法令。</li>';
     ps.forEach(function (p) { ul.appendChild(h('li', '', '<b>' + esc(p.n) + '</b><span>' + esc(p.s) + '</span>')); });
+    var at = !L.eth && E.atmosAt(L.zone, y); if (at) ul.insertBefore(h('li', 'atmos', '<b>世风·' + esc(at.n) + '</b><span>' + esc(at.s) + '</span>'), ul.firstChild);
   }
   function renderEco() {
     var L = S.L, v = E.ecoView(L), el = $('eco'), det = $('eco-detail');

@@ -139,6 +139,23 @@ var SGE = (function (D) {
     var fk = ctrl(z, y);
     return (POL_C[k] = (D.POLICIES || []).filter(function (p) { return y >= p.y[0] && y <= p.y[1] && (!p.f || p.f.indexOf(fk) >= 0) && (!p.zones || p.zones.indexOf(z) >= 0); }));
   }
+  var ATM_C = {};
+  function atmosAt(z, y) {
+    var k = z + y; if (ATM_C[k] !== undefined) return ATM_C[k];
+    var fk = ctrl(z, y);
+    return (ATM_C[k] = (D.ATMOS || []).filter(function (a) { return y >= a.y[0] && y <= a.y[1] && a.f.indexOf(fk) >= 0 && (!a.zones || a.zones.indexOf(z) >= 0); })[0] || null);
+  }
+  function atmosLines(L, at) { var hi = L.cls === 'gentry' || !!L.office || !!L.literate; return (at.lines.all || []).concat(hi ? at.lines.hi || [] : at.lines.lo || []); }
+  function atmosYear(L, y) {
+    var at = !L.eth && atmosAt(L.zone, y), R = L.R;
+    if (!at || !L.alive || inPal(L) || inHH(L)) return;
+    if (L.age >= 10 && cool(L, 'atmos', 2) && R() < 0.45) { var al = atmosLines(L, at).filter(function (t) { return !(L.atSeen || {})[t]; }); if (al.length) { var t = pick(R, al); (L.atSeen = L.atSeen || {})[t] = 1; add(L, 2.55, 'hist', t); } }
+    if (!at.risk || L.age < 18 || !(L.cls === 'gentry' || L.office)) return;
+    if (R() >= at.risk * (L.office ? 1.5 : 1)) return;
+    if (at.dieT && R() < (at.dieP || 0)) { die(L, 'executed', 2.6, { full: at.dieT }); return; }
+    L.standing -= 2; L.body = clamp(L.body - 3, 1, 100); payFrom(L, 2000 + Math.round(L.wealth * 50));
+    add(L, 2.6, 'bad', pick(R, at.riskT));
+  }
   function polMul(z, y, key) { var m = 1; polsAt(z, y).forEach(function (p) { if (p.fx[key] != null) m *= p.fx[key]; }); return m; }
   function polSum(z, y, key) { var m = 0; polsAt(z, y).forEach(function (p) { if (p.fx[key]) m += p.fx[key]; }); return m; }
   /* ---------- 本郡情形：治安、糧価、流民 ---------- */
@@ -156,6 +173,7 @@ var SGE = (function (D) {
     });
     var t = 74 - (chaos(y) - 1) * 70 - P.war * 900 - P.fam * 250 - (LOOSE[fk] ? 15 : 0) + (ctrl(z, y - 1) !== fk ? -12 : 0);
     polsAt(z, y).forEach(function (p) { t += { shuke: 8, dongzhou: -12, yuanshu: -10, sunhao: -6, zhanglu: 4, shixie: 6, liubiao: 6, xiaoshi: 2, babing: 3 }[p.id] || 0; });
+    var atO = atmosAt(z, y); if (atO) t += atO.order || 0;
     P.order = clamp(t, 5, 95);
     P.price = Math.min(8, (1 + P.fam * 50) * (1 + P.war * 15) * (1 + (chaos(y) - 1) * 0.6));
     return P;
@@ -2674,6 +2692,7 @@ var SGE = (function (D) {
     if (L.flags.palace != null && L.alive) palaceYear(L, y);
     maidYear(L, y);
     consortYear(L, y);
+    atmosYear(L, y);
     if ((L.job === '宮人' || L.job === '采女') && L.alive) {
       if (y === 280 && L.zone === 'jiangdong') relocate(L, 'luoyang', 1.5, '呉が滅んだ。孫皓の後宮にいた五千人の宮人は、晋の軍によって船で次々と北へ運ばれた。あなたもその中にいて、{dest}に着いた。', 0.03, y);
       else if ((y === 290 || y === 281) && L.zone === 'luoyang' && R() < 0.4) { L.cls = 'peasant'; L.job = '農'; L.land = 0; L.flags.palaceOut = y; add(L, 1.5, 'good', y === 290 ? '武帝が崩御し、宮中から年長の宮人たちが放たれた。あなたは宮門を出て長いこと立ち尽くした。どこへ行けばよいのかわからなかった。' : '宮人が多すぎるため、朝廷は一部を宮中から出した。あなたは宮門を出て長いこと立ち尽くした。どこへ行けばよいのかわからなかった。'); }
@@ -4643,7 +4662,7 @@ var SGE = (function (D) {
     era: era, ganzhi: ganzhi, reignText: reignText, ctrl: ctrl, group: group, fname: fname, zonePop: zonePop, totalPop: totalPop,
     cnNum: cnNum, slipNum: slipNum, zname: zname, household: household, slipText: slipText, kinLabel: kinLabel, relName: relName,
     placeText: placeText, focusOptions: focusOptions, setFocus: setFocus, FOCUS: FOCUS, traitWords: traitWords, hobbyText: hobbyText, condText: condText, TALENT: TALENT, ecoView: ecoView,
-    spendOptions: spendOptions, spend: spend, relLabel: relLabel, famLevel: famLevel, lifeTier: lifeTier, polsAt: polsAt, regionView: regionView, lifeSummary: lifeSummary, heirOf: heirOf, afterlife: afterlife, afterword: afterword, endAch: endAch, isHead: isHead, autoAnswer: autoAnswer, fmt: fmt, LANDP: LANDP, CAUSE_SHORT: CAUSE_SHORT, CAUSE_STAT: CAUSE_STAT, POP_SCALE: POP_SCALE, stats: stats
+    spendOptions: spendOptions, spend: spend, relLabel: relLabel, famLevel: famLevel, lifeTier: lifeTier, polsAt: polsAt, atmosAt: atmosAt, regionView: regionView, lifeSummary: lifeSummary, heirOf: heirOf, afterlife: afterlife, afterword: afterword, endAch: endAch, isHead: isHead, autoAnswer: autoAnswer, fmt: fmt, LANDP: LANDP, CAUSE_SHORT: CAUSE_SHORT, CAUSE_STAT: CAUSE_STAT, POP_SCALE: POP_SCALE, stats: stats
   };
 })(SGD);
 if (typeof module !== 'undefined') module.exports = SGE;

@@ -507,6 +507,7 @@
     $('laws-ruler').textContent = L.eth ? '' : E.fname(E.ctrl(L.zone, y), y) + 'の治下';
     ul.innerHTML = L.eth ? '<li class="empty">あなたの一族は漢の律令に縛られず、部落の首領にだけ従う。</li>' : ps.length ? '' : '<li class="empty">旧制のままで、特別な法令はない。</li>';
     ps.forEach(function (p) { ul.appendChild(h('li', '', '<b>' + esc(p.n) + '</b><span>' + esc(p.s) + '</span>')); });
+    var at = !L.eth && E.atmosAt(L.zone, y); if (at) ul.insertBefore(h('li', 'atmos', '<b>気風・' + esc(at.n) + '</b><span>' + esc(at.s) + '</span>'), ul.firstChild);
   }
   function renderEco() {
     var L = S.L, v = E.ecoView(L), el = $('eco'), det = $('eco-detail');
