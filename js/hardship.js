@@ -612,4 +612,45 @@
     '春社那天，你和同里的女人们一起看社戏，难得笑了一整天。', '你把攒了一冬的鸡蛋拿去集上，换回了一块盐和一包针。', '蚕上了簇，你整夜守着，生怕老鼠来偷。',
     '邻家的媳妇和婆婆吵了架，跑到你家来哭了一下午。', '你在河边捶麻，和同里的女人们说了一上午的闲话。'
   ]);
+
+  /* ---------- 私情：律令、礼法与乡论之下的不伦 ---------- */
+  // 汉《二年律令·杂律》："诸与人妻和奸，及其所与，皆完为城旦舂。"女子犯"淫佚"，在"七出"之列。
+  var wed = function (L) { var k = L.spouseK; return L.married && k && k.alive && !k.apart && !k.famous; };
+  var low = function (L) { return L.cls !== 'gentry' && L.cls !== 'slave' && !L.eth && !L.flags.palaceIn; };
+  [
+    { id: 'aff_m', w: 0.5, ok: function (L, H) { return L.sex === 'M' && low(L) && wed(L) && H.a >= 20 && H.a <= 50 && !L.affair && !L.flags.affAsk && {}; },
+      q: '同里有户人家，男人常年在外服役。他的妻子常借故到你家来借东西，一来二去，看你的眼神就不一样了。', o: ['装作不懂，从此避开她', '暗中和她往来', '把这事告诉妻子'],
+      r: [[{ p: 1, t: '你装作不懂，从此远远看见她就绕道走。过了些日子，她也不再来了。', fx: { flag: 'affAsk', tr: { cau: 3 } } }],
+        [{ p: 1, t: '你们开始暗中往来。每次从她家后门出来，你都要先听一听巷子里有没有脚步声。', fx: { flag: 'affAsk', affair: 'm' } }],
+        [{ p: 0.6, t: '你把这事告诉了妻子。她没说什么，第二天就去那家门口站了半天。那女人再也没来过。', fx: { flag: 'affAsk', kinAff: 0 } }, { p: 0.4, t: '你把这事告诉了妻子。她反倒疑心起你来，好些日子不给你好脸色。', fx: { flag: 'affAsk' } }]],
+      aw: function (L) { return [RT(L, 'cau') + 20, RT(L, 'act') - 20, RT(L, 'soc')]; } },
+    { id: 'aff_f', w: 0.5, ok: function (L, H) { return L.sex === 'F' && low(L) && wed(L) && H.a >= 20 && H.a <= 45 && !L.affair && !L.flags.affAsk && (L.spouseK.soldier || L.spouseK.aff < 50) && {}; },
+      q: '丈夫常年不在你心上，也不常在家。邻里有个男人常来帮你挑水劈柴。有一天，他在门口站了很久，没有走。', o: ['请他以后不要再来', '让他进了门', '把这事告诉婆家的长辈'],
+      r: [[{ p: 1, t: '你请他以后不要再来。他低着头走了。那天夜里，你一个人坐了很久。', fx: { flag: 'affAsk', tr: { per: 3 } } }],
+        [{ p: 1, t: '你让他进了门。从此你学会了在夜里听狗叫，学会了在白天若无其事。', fx: { flag: 'affAsk', affair: 'f' } }],
+        [{ p: 0.5, t: '你把这事告诉了婆家的长辈。他们夸你守妇道，又去那男人家骂了一顿。', fx: { flag: 'affAsk', standing: 3 } }, { p: 0.5, t: '你把这事告诉了婆家的长辈。他们却疑心是你先招惹了人家，从此处处防着你。', fx: { flag: 'affAsk', standing: -2 } }]],
+      aw: function (L) { return [RT(L, 'cau') + 20, RT(L, 'act') - 25, RT(L, 'soc')]; } },
+    { id: 'aff_g', w: 0.6, elite: true, ok: function (L, H) { return L.cls === 'gentry' && wed(L) && H.a >= 20 && H.a <= 50 && !L.affair && !L.flags.affAsk && !L.flags.isConc && {}; },
+      q: '', o: ['只当没有这回事', '暗中往来', '断然回绝，以免授人以柄'],
+      qf: function (L) { return L.sex === 'M' ? '家中宴客，一位同僚的妾在帘后看了你很久。几天后，她托一个婢女给你送来了一方手帕。' : '丈夫的一位门客才貌出众，常在廊下吟诗。那天你在后园里遇见他，他没有像往常那样避开。'; },
+      r: [[{ p: 1, t: '你只当没有这回事。这件事，后来谁也没有再提起。', fx: { flag: 'affAsk' } }],
+        [{ p: 1, t: '你们开始暗中往来。士族人家耳目众多，每一次相见，都要靠一个可靠的婢女传话。', fx: { flag: 'affAsk', affair: 'g' } }],
+        [{ p: 1, t: '你断然回绝了。清议的厉害，你见得太多了。', fx: { flag: 'affAsk', tr: { cau: 4 } } }]],
+      aw: function (L) { return [RT(L, 'cau'), RT(L, 'act') - 30, RT(L, 'cau') + 10]; } },
+    { id: 'aff_slave', w: 0.5, ok: function (L, H) { return L.cls === 'slave' && L.sex === 'M' && H.a >= 18 && H.a <= 40 && !L.affair && !L.flags.affAsk && {}; },
+      q: '主人家的一个侍妾常叫你替她跑腿。主人出门的那天，她把你叫进屋里，让婢女关上了门。', o: ['推开门跑出去', '留下来', '去告诉管事'],
+      r: [[{ p: 1, t: '你推开门跑了出去。此后她再没叫过你，可你知道，她恨上你了。', fx: { flag: 'affAsk', tr: { cau: 4 } } }],
+        [{ p: 1, t: '你留了下来。从此你在主人面前低着头的时候，心总是跳得厉害。', fx: { flag: 'affAsk', affair: 'slave' } }],
+        [{ p: 0.4, t: '你去告诉了管事。主人把那个侍妾卖了，赏了你一匹布。', fx: { flag: 'affAsk', cash: 300 } }, { p: 0.6, t: '你去告诉了管事。侍妾哭着说是你先无礼，主人信了她。你挨了一顿鞭子，被打发去了田庄。', fx: { flag: 'affAsk', body: -8 } }]],
+      aw: function (L) { return [RT(L, 'cau') + 20, RT(L, 'act') - 30, 20]; } },
+    { id: 'aff_victim', w: 0.25, ok: function (L, H) { return wed(L) && H.a >= 25 && H.a <= 55 && !L.flags.victimAsk && !L.flags.isConc && L.cls !== 'slave' && { kin: L.spouseK }; },
+      q: '', o: [],
+      qf: function (L) { return L.sex === 'M' ? '有人悄悄告诉你：你不在家的时候，常有个男人从你家后门进出。' : '你发现丈夫和邻里的一个寡妇来往，已经有些日子了。乡里人都知道，只瞒着你一个。'; },
+      of: function (L) { return L.sex === 'M' ? ['装作不知道', '休了她', '告到官府', '去找那个男人算账'] : ['忍下来，只当不知道', '去那寡妇家门口闹一场', '回娘家，求父兄出面']; },
+      r: [[{ p: 1, t: '你装作不知道。家里的日子照样过，只是你和{kin}之间，从此隔了一层。', fx: { flag: 'victimAsk', kinAff: -25 } }],
+        [{ p: 1, t: '', fx: { flag: 'victimAsk', vic: 1 } }],
+        [{ p: 1, t: '', fx: { flag: 'victimAsk', vic: 2 } }],
+        [{ p: 1, t: '', fx: { flag: 'victimAsk', vic: 3 } }]],
+      aw: function (L) { return L.sex === 'M' ? [RT(L, 'cau'), RT(L, 'per') - 10, 25, RT(L, 'act') - 10] : [RT(L, 'cau') + 20, RT(L, 'per') - 10, RT(L, 'soc') - 10]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
 })(SGD);
