@@ -886,6 +886,59 @@ var SGE = (function (D) {
       add(L, (s || 2) + 0.32, 'bad', '嫡母把你的生母打发出了门，说她还年轻，不必在这个家里守着。你追到门口，只看见一辆牛车走远了。');
     }
   }
+
+  // 民夫：大战要粮，粮要人运
+  function civWarChoice(L, y, P) {
+    var a = L.age, fk = ctrl(L.zone, y);
+    if (L.sex !== 'M' || a < 16 || a > 55 || L.soldier || L.band || L.eth || L.office || ['peasant', 'tenant', 'tuntian', 'artisan', 'clerk'].indexOf(L.cls) < 0) return;
+    var W = (D.CIV_WAR || []).filter(function (w) { return y >= w.y[0] && y <= w.y[1] && w.zones.indexOf(L.zone) >= 0 && (w.fk.indexOf(fk) >= 0 || w.fk.indexOf(group(fk)) >= 0) && !(L.civDone || {})[w.n + y]; })[0];
+    if (!W || L.R() >= (W.y[1] > W.y[0] ? 0.25 : 0.55)) return;
+    (L.civDone = L.civDone || {})[W.n + y] = true;
+    P.queue.push({ key: 'civwar', wi: D.CIV_WAR.indexOf(W), q: W.t + '里正拿着名册上门，你被点了名。', o: ['去服役', '花钱雇人代役', '逃进山里躲一阵'], w: [3, L.eco.cash >= 2000 ? 2 : 0.1, 1] });
+  }
+  function civWarOutcome(L, y, c, i) {
+    var R = L.R, W = D.CIV_WAR[c.wi];
+    if (i === 1 && L.eco.cash < 2000) i = 0;
+    if (i === 0) {
+      if (R() < W.die * bodyMul(L)) { die(L, 'corv', 1.3, { full: W.n === '北伐' ? '你背着粮食走在栈道上，脚下一滑，连人带粮掉进了山谷。' : W.n === '赤壁' ? '你在军中染上了疫病，没能活着回来。' : '你在转运军粮的路上累倒了，再也没有起来。' }); return; }
+      L.body -= 4; L.standing += 1; L.rec.tags.push('war');
+      add(L, 1.3, 'life', pick(R, ['你推着粮车走了几个月，脚上的泡破了又起。回来的时候，瘦得家里人都快认不出了。', '你给大军运了一趟粮，亲眼看见了前线的营垒和满地的死人。回来以后，你很久都不愿提起。', '你跟着运粮的队伍走到了' + W.n + '，又走了回来。同去的人，少了好几个。']));
+    } else if (i === 1) { payFrom(L, 2000); add(L, 1.3, 'life', '你花两千钱雇了一个穷汉替你去。后来听说，他没有回来。'); }
+    else if (R() < 0.35) { L.body -= 5; L.eco.cash = Math.max(0, L.eco.cash - 500); add(L, 1.3, 'bad', '你躲进了山里，没几天就被搜了出来。挨了一顿板子，还被罚了钱，最后还是被押去运粮了。'); }
+    else { L.standing -= 2; add(L, 1.3, 'life', '你在山里躲了一个多月，等征发的人走了才回来。乡里人看你的眼神有些异样。'); }
+  }
+  // 大战之年，不同身份的人各有各的经历
+  function civWarYear(L, y) {
+    var R = L.R, a = L.age, fk = ctrl(L.zone, y);
+    if (!L.alive || L.soldier || L.band || a < 16) return;
+    var W = (D.CIV_WAR || []).filter(function (w) { return y >= w.y[0] && y <= w.y[1] && w.zones.indexOf(L.zone) >= 0 && (w.fk.indexOf(fk) >= 0 || w.fk.indexOf(group(fk)) >= 0); })[0];
+    // 幕府中人随军出征
+    if (L.office === '幕僚' && L.lordFk) {
+      var c = (CAMP_BY_Y[y] || []).filter(function (c) { return c.a.indexOf(armyOf(L.lordFk)) >= 0 || c.a.indexOf(L.lordFk) >= 0; })[0];
+      if (c && R() < 0.4 && !(L.civDone || {})['mf' + y]) {
+        (L.civDone = L.civDone || {})['mf' + y] = true;
+        if (R() < c.r * 0.25) { die(L, /疫/.test(c.t || '') ? 'plag' : 'battle', 1.4, { n: c.n, full: /疫/.test(c.t || '') ? '你随军出征' + c.n + '，在军中染上了疫病，死在了营里。' : '你随军出征' + c.n + '。大营被敌军冲破，你没能逃出来。' }); return; }
+        L.fame += 2; L.battles = (L.battles || []).concat([c.n]);
+        add(L, 1.4, 'war', pick(R, ['你随军出征' + c.n + '，在幕府中掌管文书，日夜起草军令、清点粮册。', '你随军出征' + c.n + '。军议时，你在末座说了几句，主将看了你一眼。', '你随军到了' + c.n + '。从军帐里看出去，满山都是营火。']));
+        return;
+      }
+    }
+    if (!W) return;
+    // 妻子：丈夫被征去运粮
+    if (L.sex === 'F' && L.married && L.spouseK && L.spouseK.alive && !L.spouseK.apart && !L.spouseK.famous && farmerish(L) && R() < (W.y[1] > W.y[0] ? 0.15 : 0.4) && !(L.civDone || {})['f' + W.n + y]) {
+      (L.civDone = L.civDone || {})['f' + W.n + y] = true;
+      add(L, 1.45, 'life', W.t + '丈夫' + L.spouseK.name + '被点了名，背着干粮走了。');
+      if (R() < W.die * 1.2) kinDie(L, L.spouseK, 'corv', 1.46, y);
+      else add(L, 1.46, 'life', '几个月后，丈夫回来了，瘦得脱了形。');
+      return;
+    }
+    // 商人：军需
+    if (L.cls === 'merchant' && L.sex === 'M' && R() < 0.4 && !(L.civDone || {})['m' + W.n + y]) {
+      (L.civDone = L.civDone || {})['m' + W.n + y] = true;
+      if (R() < 0.7) { L.eco.cash += 4000; add(L, 1.45, 'good', W.t + '你把粮食、草料卖给了军中，赚了一笔。'); }
+      else { L.eco.stock = Math.round((L.eco.stock || 0) * 0.5); add(L, 1.45, 'bad', W.t + '军吏说你囤积居奇，把你仓里的粮食征走了一半，只给了一张白条。'); }
+    }
+  }
   function famousConcChoice(L, y, P) {
     if (L.sex !== 'F' || L.married || L.widowed || L.age < 15 || L.age > 22 || L.flags.fcAsk || L.eth) return;
     var fk = ctrl(L.zone, y), id = lordFigAt(fk, y), C = FAMOUS_CONC[id];
@@ -1064,6 +1117,8 @@ var SGE = (function (D) {
     }
     // 回响：年轻时的选择，多年后回来找你
     if (free) memCheck(L, y, P);
+    battleChoice(L, y, P);
+    if (free) civWarChoice(L, y, P);
     if (free) famousConcChoice(L, y, P);
     if (free) youthChoice(L, y, P);
     if (free) wedFigChoice(L, y, P);
@@ -1137,6 +1192,8 @@ var SGE = (function (D) {
       case 'lordfall': d.lordfall = { c: c, i: i }; break;
       case 'fconc': d.fconc = { c: c, i: i }; break;
       case 'yfr': d.yfr = { c: c, i: i }; break;
+      case 'bpov': L.bpovDec = { k: c.pk, i: i }; break;
+      case 'civwar': d.civwar = { c: c, i: i }; break;
       case 'wfig': d.wfig = { c: c, i: i }; break;
       case 'purge': (d.purge = d.purge || {})[c.ev] = { i: i, tie: c.tie, pn: c.pn }; break;
     }
@@ -1197,9 +1254,11 @@ var SGE = (function (D) {
     if (dec.lordfall) lordFallOutcome(L, y, dec.lordfall.c, dec.lordfall.i);
     if (dec.fconc) famousConcOutcome(L, y, dec.fconc.c, dec.fconc.i);
     if (dec.yfr) youthOutcome(L, y, dec.yfr.c, dec.yfr.i);
+    if (dec.civwar) civWarOutcome(L, y, dec.civwar.c, dec.civwar.i);
     if (dec.wfig) wedFigOutcome(L, y, dec.wfig.c, dec.wfig.i);
     if (!L.alive) return finishYear(L, rec);
     concLifeYear(L, y);
+    civWarYear(L, y);
     youthNews(L, y);
     wedFigYear(L, y);
     if (!L.alive) return finishYear(L, rec);
@@ -1624,6 +1683,19 @@ var SGE = (function (D) {
       ['你升为校尉，独领一军。这在你的出身里，是极少见的。', '一场仗打下来，主将上表为你请功，你升了校尉。'],
       ['你被拜为将军。一个人的出身和刀口上的功劳，都写在了这道任命上。']][L.mil - 1]));
   }
+  function povKey(c, army) { var k = c.y + '|' + army + '|' + c.n; return D.BATTLE_POV && D.BATTLE_POV[k] ? k : c.y + '|' + army; }
+  // 名战的关头：年初就要拿主意
+  function battleChoice(L, y, P) {
+    if (!L.soldier || L.band) return;
+    var S = L.soldier, R = L.R, done = false;
+    (CAMP_BY_Y[y] || []).forEach(function (c) {
+      if (done || c.a.indexOf(S.army) < 0) return;
+      var pk = povKey(c, S.army), POV = (D.BATTLE_POV || {})[pk];
+      if (!POV || !POV.ch || R() >= (c.p == null ? 0.5 : c.p)) return;
+      done = true;
+      P.queue.push({ key: 'bpov', pk: pk, q: '【' + c.n + '】' + POV.ch.q, o: POV.ch.o, w: POV.ch.o.map(function () { return 1; }) });
+    });
+  }
   function soldierYear(L, y) {
     var R = L.R, S = L.soldier;
     L.soldierYears++;
@@ -1647,11 +1719,28 @@ var SGE = (function (D) {
     }
     var fought = false;
     (CAMP_BY_Y[y] || []).forEach(function (c) {
-      if (!L.alive || c.a.indexOf(S.army) < 0) return;
-      if (R() >= (c.p == null ? 0.5 : c.p)) return;
+      if (!L.alive || !L.soldier || c.a.indexOf(S.army) < 0) return;
+      var pk = povKey(c, S.army), POV = (D.BATTLE_POV || {})[pk], forced = L.bpovDec && L.bpovDec.k === pk;
+      if (POV && POV.ch && !forced) return; // 有关头抉择的名战，是否参战已在年初定下
+      if (!forced && R() >= (c.p == null ? 0.5 : c.p)) return;
       fought = true;
       add(L, 1.5, 'war', c.t ? '你随军参加了' + c.n + '。' + c.t : '你随军参加了' + c.n + '。');
       L.rec.tags.push('war');
+      if (POV) add(L, 1.55, 'war', pick(R, POV.t));
+      var OW = (D.OFFICER_WAR || {})[Math.min(3, L.mil || 0)];
+      if (OW && R() < 0.6) add(L, 1.56, 'war', pick(R, OW));
+      if (forced) {
+        var o = POV.ch.r[L.bpovDec.i]; L.bpovDec = null;
+        if (R() < o.die * bodyMul(L) * ((L.mil || 0) >= 2 && o.go !== 'army:wei' ? 0.8 : 1)) { die(L, 'battle', 1.7, { n: c.n, full: o.dieT }); return; }
+        add(L, 1.6, 'war', o.t);
+        if (o.fame) L.fame += o.fame;
+        L.battles = (L.battles || []).concat([c.n]);
+        if (o.go === 'home') { L.soldier = null; L.job = '农'; L.flags.deserted = c.n; }
+        else if (o.go && o.go.indexOf('army:') === 0) S.army = o.go.slice(5);
+        if (o.zone && o.zone !== L.zone) relocate(L, o.zone, 1.65, '你在{dest}落了脚。', 0, y);
+        return;
+      }
+      L.battles = (L.battles || []).concat([c.n]);
       if (R() < c.r * bodyMul(L) * (L.flags.armor ? 0.8 : 1) * (L.found.strength ? 0.85 : 1) * (L.lastFocus === 'army' ? 0.9 : 1)) { die(L, 'battle', 1.7, { n: c.n }); return; }
       var r = R();
       if (r < 0.12 * (L.found.strength ? 1.5 : 1)) {
@@ -3570,6 +3659,7 @@ var SGE = (function (D) {
     if ((L.echoes || []).length >= 3) a.push('你年轻时的选择，有' + cnNum(L.echoes.length) + '次在多年后有了回响。');
     if (L.purgeLog) a.push('你在' + L.purgeLog.pn + '一案中活了下来。');
     if (F.loyal) a.push('旧主败亡后，你没有改换门庭。');
+    if ((L.battles || []).length) a.push('你作为一名无名士卒，经历过' + L.battles.slice(0, 3).join('、') + (L.battles.length > 3 ? '等' + cnNum(L.battles.length) + '场战事' : '') + '。');
     if (F.famousConc) a.push('你曾是' + figName(F.famousConc) + '的妾。');
     if (L.youthFig) a.push('你和' + figName(L.youthFig) + '是少年时的朋友。' + (F.yfServed ? '后来你投奔了他。' : ''));
     if (F.wedFig) a.push('你娶了' + figName(F.wedFig) + '的女儿。');
