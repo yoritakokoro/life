@@ -402,9 +402,14 @@ var SGE = (function (D) {
     L.standing = Math.round(ST[0] + R() * (ST[1] - ST[0]));
     L.gate = L.cls === 'gentry' ? (R() < 0.3 ? 3 : 2) : L.cls === 'clerk' ? 1 : 0;
     if (HR && HR.gate != null) L.gate = HR.gate;
+    // 郡望：生在名族的郡里，可能就是那一族的子弟；寻常人家同姓同郡，也可能沾一点疏远的亲
+    var jn = D.JUN[L.jun][0], CL = !HR && !L.eth ? (D.CLANS || []).filter(function (c) { return c.jun === jn; }) : [];
+    if (CL.length && L.cls === 'gentry' && R() < (L.gate >= 3 ? 0.45 : 0.25)) { var cc = pick(R, CL); L.sur = cc.sur; L.clanK = cc.k; }
+    else { var cm0 = CL.filter(function (c) { return c.sur === L.sur; })[0]; if (cm0) { L.clanK = cm0.k; L.clanPoor = L.cls !== 'gentry'; } }
     if (L.cls === 'gentry') {
       L.clanName = D.JUN[L.jun][0].replace(/(郡|国|尹)$/, '') + L.sur + '氏';
       L.gateName = L.gate >= 3 ? '世代二千石的高门' : '郡中著姓';
+      if (L.clanK) { L.clanName = clanOf(L).n; if (L.gate >= 3) L.gateName = clanOf(L).n + '的近支'; }
       if (L.gate >= 3) L.standing = Math.min(95, L.standing + 10);
     }
     L.clan = 1 + Math.floor(R() * (L.cls === 'gentry' ? 5 : 3));
@@ -939,6 +944,33 @@ var SGE = (function (D) {
       else { L.eco.stock = Math.round((L.eco.stock || 0) * 0.5); add(L, 1.45, 'bad', W.t + '军吏说你囤积居奇，把你仓里的粮食征走了一半，只给了一张白条。'); }
     }
   }
+
+  function clanOf(L) { return L.clanK ? (D.CLANS || []).filter(function (c) { return c.k === L.clanK; })[0] : null; }
+  // 族人：同族的名人更容易见到，族中的荣辱也落到你头上
+  function clanYear(L, y) {
+    var C = clanOf(L), R = L.R, a = L.age;
+    if (!C || !L.alive) return;
+    if (!L.flags.clanIntro && a >= 6) { L.flags.clanIntro = true; add(L, 2.15, 'life', L.clanPoor ? '你家姓' + C.sur + '，据说和' + C.n + '是同宗，只是早就出了五服。真要去攀亲，人家未必认。' : C.t); }
+    var act = C.figs.filter(function (f) { return y >= f[1] && y <= f[2]; });
+    L.clanUp = !L.clanPoor && act.length > 0 && L.sex === 'M';
+    if (a >= 10 && act.length) {
+      var f = pick(R, act), id = f[0], fig = D.FIGURES.filter(function (x) { return x.id === id; })[0];
+      if (fig && !L.met[id] && R() < (L.clanPoor ? 0.015 : L.gate >= 3 ? 0.25 : 0.12) * (L.sex === 'F' ? 0.6 : 1)) {
+        var t = L.clanPoor ? fig.n + '回乡祭祖。你家和他虽是同宗，却早已出了五服。你挤在人群里，远远看了他一眼。'
+          : pick(R, ['族中祭祖，你在祠堂里见到了族人' + fig.n + '——' + fig.d + '。', fig.n + '回乡省亲，族中设宴，你也在座。他问了你几句读书的事。', '你随长辈去拜访族中的' + fig.n + '。' + fig.d + '。']);
+        add(L, 2.12, 'meet', t);
+        markMet(L, id, y, L.clanPoor ? '你和' + fig.n + '是出了五服的同宗。' : '你是' + fig.n + '的族人。');
+        L.rec.tags.push('meet');
+      }
+    }
+    C.ev.forEach(function (e) {
+      if (e.y !== y || a < 8) return;
+      add(L, 2.1, 'life', e.t);
+      if (L.clanPoor) return;
+      if (e.fx) { if (e.fx.standing) L.standing += e.fx.standing; if (e.fx.fame) L.fame += e.fx.fame; }
+      if (e.risk && e.risk.zones.indexOf(L.zone) >= 0 && R() < e.risk.p) die(L, 'executed', 2.11, { full: e.risk.dieT });
+    });
+  }
   function famousConcChoice(L, y, P) {
     if (L.sex !== 'F' || L.married || L.widowed || L.age < 15 || L.age > 22 || L.flags.fcAsk || L.eth) return;
     var fk = ctrl(L.zone, y), id = lordFigAt(fk, y), C = FAMOUS_CONC[id];
@@ -1258,6 +1290,7 @@ var SGE = (function (D) {
     if (dec.wfig) wedFigOutcome(L, y, dec.wfig.c, dec.wfig.i);
     if (!L.alive) return finishYear(L, rec);
     concLifeYear(L, y);
+    clanYear(L, y);
     civWarYear(L, y);
     youthNews(L, y);
     wedFigYear(L, y);
@@ -2187,7 +2220,7 @@ var SGE = (function (D) {
       L.office = '县令'; L.job = '县令'; L.officeMax = '县令'; L.fame += 6;
       add(L, 2, 'good', '你调任一个万户以上的大县做县令。从书佐一步步做到这里，用了你大半辈子。');
     }
-    var cm = (L.lastFocus === 'career' ? 2 : 1) * (L.flags.robe ? 1.3 : 1) * (L.flags.connected ? 1.3 : 1) * (L.flags.zz ? 2 : 1) * (L.flags.zzno ? 0.6 : 1) * (L.flags.disciple ? 1.4 : 1) * (L.found.memory ? 1.3 : 1) * (L.found.charm ? 1.2 : 1) * (L.flags.banned ? 0 : 1) * (L.patron ? 1.5 : 1) * (L.flags.praised ? 1.4 : 1) * (L.flags.jushi ? 1.5 : 1) * (L.flags.spur ? 1.3 : 1) * (L.flags.donor ? 1.2 : 1) * (L.shu ? 0.85 : 1);
+    var cm = (L.lastFocus === 'career' ? 2 : 1) * (L.clanUp ? 1.25 : 1) * (L.flags.robe ? 1.3 : 1) * (L.flags.connected ? 1.3 : 1) * (L.flags.zz ? 2 : 1) * (L.flags.zzno ? 0.6 : 1) * (L.flags.disciple ? 1.4 : 1) * (L.found.memory ? 1.3 : 1) * (L.found.charm ? 1.2 : 1) * (L.flags.banned ? 0 : 1) * (L.patron ? 1.5 : 1) * (L.flags.praised ? 1.4 : 1) * (L.flags.jushi ? 1.5 : 1) * (L.flags.spur ? 1.3 : 1) * (L.flags.donor ? 1.2 : 1) * (L.shu ? 0.85 : 1);
     var gm = L.gate >= 3 ? 2.2 : 1;
     if (L.cls === 'gentry' && !L.office && a >= 18) {
       var p = 0;
@@ -3607,6 +3640,8 @@ var SGE = (function (D) {
     else if (L.clanName && age >= 20) who = '你生在' + L.clanName + '。门第给了你读书、做官、乱世里先走一步的机会，也让你在每一次改朝换代时，都必须选一边站。';
     else if (age >= 15) who = '你种出的粮食进了官仓，织出的布帛交了户调，你的名字写在里正的户籍简上。帝王将相的事业，就压在这些简牍上。';
     if (who) t.push(who);
+    var CLN = clanOf(L);
+    if (CLN && !L.clanPoor) t.push('你出身' + CLN.n + '。史书里记着你的许多族人，没有记你。');
     if (L.shu) t.push(L.sex === 'M' && /县令|太守|郡守|刺史|九卿|掾属/.test(L.officeMax || '') ? '你是庶出。袁绍也是庶出，袁术骂他是"家奴"——可这并没有拦住他，也没有拦住你。' : '你是庶出。族谱上，你的名字排在嫡出的兄弟姐妹后面；你生母的名字，族谱上没有。');
     // 三、你活过的年月
     if (age >= 12) {
