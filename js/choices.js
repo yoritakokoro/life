@@ -362,7 +362,7 @@
   /* ---------- 男女有别 ---------- */
   var married = function (L) { return L.married && L.spouseK && L.spouseK.alive && !L.spouseK.apart; };
   C.push(
-    { id: 'inlaw', w: 2, ok: function (L, H) { return L.sex === 'F' && married(L) && H.a >= 15 && H.a <= 35 && !L.flags.inlawDone && {}; },
+    { id: 'inlaw', w: 2, ok: function (L, H) { return L.sex === 'F' && married(L) && !L.flags.famousConc && H.a >= 15 && H.a <= 35 && !L.flags.inlawDone && {}; },
       q: '婆婆嫌你手脚慢，又嫌你娘家陪嫁少，当着邻人的面数落你。', o: ['低头忍着', '顶了一句嘴', '回娘家住几天', '请丈夫说句公道话'],
       need: [null, null, function (L) { return L.kin[1].alive || L.kin[0].alive; }, null], why: [null, null, '娘家已经没有人了', null],
       r: [[{ p: 1, t: ['你低着头，一句话也没说。夜里，你一个人在灶下哭了一场。', '你忍了下来。日子久了，婆婆的话也就听惯了。'], fx: { flag: 'inlawDone', body: -1 } }],
@@ -370,7 +370,7 @@
         [{ p: 1, t: '你回娘家住了几天。母亲叹着气说：嫁出去的女儿，泼出去的水。几天后，你还是回去了。', fx: { flag: 'inlawDone' } }],
         [{ p: 0.4, t: '丈夫替你说了句话，婆婆没再说什么。', fx: { flag: 'inlawDone' } }, { p: 0.6, t: '丈夫低着头不说话。你明白了，在这个家里，你是外人。', fx: { flag: 'inlawDone', standing: -1 } }]],
       aw: function (L) { return [L.tr.cau + 20, L.tr.ind - 20, 30, L.tr.soc]; } },
-    { id: 'noson', w: 3, ok: function (L, H) { var sons = H.kids(0, 99, 'M').length; return L.sex === 'F' && married(L) && L.marriedAt != null && H.y - L.marriedAt >= 6 && sons === 0 && H.a < 40 && !L.flags.nosonDone && {}; },
+    { id: 'noson', w: 3, ok: function (L, H) { var sons = H.kids(0, 99, 'M').length; return L.sex === 'F' && married(L) && !L.flags.isConc && L.marriedAt != null && H.y - L.marriedAt >= 6 && sons === 0 && H.a < 40 && !L.flags.nosonDone && {}; },
       q: '你嫁过来好几年了，还没有生下儿子。婆家人话里话外，都在提"七出"里的"无子"。', o: ['劝丈夫纳一房妾', '去庙里求子', '回娘家求父兄出面'],
       need: [function (L) { return L.eco.cash >= 3000; }, null, function (L) { return L.kin[0].alive || L.kin.some(function (k) { return k.rel === 'sib' && k.sex === 'M' && k.alive; }); }],
       why: ['家里纳不起妾', null, '娘家没有能出面的人'],
@@ -378,7 +378,7 @@
         [{ p: 0.5, t: '你去求了子，又喝了许多偏方熬的药。', fx: { body: -3, flag: 'nosonDone' } }, { p: 0.5, t: '你去求了子。婆家的话越来越难听，你一年比一年沉默。', fx: { body: -2, standing: -2, flag: 'nosonDone' } }],
         [{ p: 0.6, t: '父兄出面说了几句，婆家暂且不提这事了。', fx: { flag: 'nosonDone' } }, { p: 0.4, t: '父兄出面也没有用。你被休回了娘家。', fx: { divorced: true, flag: 'nosonDone' } }]],
       aw: function (L) { return [L.eco.cash > 3000 ? 40 : 0, 50, 30]; } },
-    { id: 'concubine', w: 2, ok: function (L, H) { return L.sex === 'F' && married(L) && H.a >= 25 && (L.cls === 'gentry' || L.cls === 'merchant' || L.office || L.wealth >= 55) && !L.flags.concDone && {}; },
+    { id: 'concubine', w: 2, ok: function (L, H) { return L.sex === 'F' && married(L) && !L.flags.isConc && H.a >= 25 && (L.cls === 'gentry' || L.cls === 'merchant' || L.office || L.wealth >= 55) && !L.flags.concDone && {}; },
       q: '丈夫要纳一房妾，说是为了多子多福。', o: ['点头答应', '坚决不肯', '提出要由你来挑人'],
       r: [[{ p: 1, t: '你点了头。新人进门那天，你在堂上受了她一拜。', fx: { flag: 'concDone', standing: 1, husbandConc: true } }],
         [{ p: 0.5, t: '你不肯。丈夫没有坚持，只是从此很少到你房里来。', fx: { flag: 'concDone' } }, { p: 0.5, t: '你不肯。丈夫还是纳了，族里反倒说你"妒"——那也是七出之一。', fx: { flag: 'concDone', standing: -4, husbandConc: true } }],
