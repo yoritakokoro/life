@@ -53,8 +53,9 @@
           <label class="mode"><input type="radio" name="mode" value="sanguo"><b>三国鼎立</b><span>220～232年出生，汉亡之后，魏蜀吴分立</span></label>
           <label class="mode"><input type="radio" name="mode" value="weijin"><b>魏晋之际</b><span>245～262年出生，司马氏渐得天下</span></label>
           <label class="mode"><input type="radio" name="mode" value="taikang"><b>生于太康</b><span>266～280年出生，天下将归于一，又将再乱</span></label>
+          <label class="mode"><input type="radio" name="mode" value="yongjia"><b>生于永嘉</b><span>296～310年出生，八王之乱、永嘉之乱、衣冠南渡</span></label>
           <label class="mode"><input type="radio" name="mode" value="chaos"><b>乱世之子</b><span>战乱之地的权重更高</span></label>
-          <label class="mode"><input type="radio" name="mode" value="blind"><b>真正的随机</b><span>连出生年份都不告诉你，只有干支</span></label>
+          <label class="mode"><input type="radio" name="mode" value="blind"><b>真正的随机</b><span>连出生年份都不告诉你，只有干支（150～300）</span></label>
         </fieldset>
 
         <div class="actions">
@@ -81,7 +82,7 @@
                 <select id="m-edu"><option value="none">未上学</option><option value="basic">初中及以下</option><option value="high">高中</option><option value="college" selected>大学</option><option value="grad">研究生</option></select>
               </label>
               <label class="field">想降生的年代
-                <select id="m-era"><option value="history" selected>随史实（150～220）</option><option value="xiping">熹平（168～178）</option><option value="zhongping">中平（182～186）</option><option value="jianan">建安（194～198）</option><option value="sanguo">三国鼎立（220～232）</option><option value="weijin">魏晋之际（245～262）</option><option value="taikang">太康（266～280）</option></select>
+                <select id="m-era"><option value="history" selected>随史实（150～220）</option><option value="xiping">熹平（168～178）</option><option value="zhongping">中平（182～186）</option><option value="jianan">建安（194～198）</option><option value="sanguo">三国鼎立（220～232）</option><option value="weijin">魏晋之际（245～262）</option><option value="taikang">太康（266～280）</option><option value="yongjia">永嘉（296～310）</option></select>
               </label>
               <label class="field">现在的职业方向
                 <select id="m-job"><option value="" selected>不填 / 学生</option><option value="army">军人、警察、保安</option><option value="civil">公务员、事业单位</option><option value="edu">教师、科研</option><option value="med">医护</option><option value="biz">经商、销售</option><option value="craft">工程、技术、手艺</option><option value="farm">农业、体力劳动</option><option value="art">文艺、设计</option></select>
@@ -311,7 +312,7 @@
 <dialog id="dlg-about" aria-labelledby="about-h">
   <div class="dlg-head"><h2 id="about-h">说明</h2><button class="ghost" type="button" data-close>关闭</button></div>
   <div class="dlg-body">
-    <p>你会随机降生为东汉末年到西晋初年之间的一个普通人。出生地按《续汉书·郡国志》所载各郡人口加权抽取，再随战乱、逃亡与迁徙逐年修正；身份阶层、家境、亲属和寿命都按概率生成。</p>
+    <p>你会随机降生为东汉末年到西晋末年之间的一个普通人，模拟的年代写到公元 350 年为止。出生地按《续汉书·郡国志》所载各郡人口加权抽取，再随战乱、逃亡与迁徙逐年修正；身份阶层、家境、亲属和寿命都按概率生成。</p>
     <p>历史事件不是剧情，而是"天气"：它们按年份和地区改变战乱、饥荒、疫病、迁徙与征兵的风险。远方的大事，往往要过一两年才以传闻的形式传到你耳中。</p>
     <p>偶尔你需要做出选择：逃难还是留守，应募还是回家，答应还是再等等。选择会改变概率，但不会决定结果。历史人物会出现，但概率很低；出身越高、做了官、识字或有名声的人，越可能遇见他们，有些人物也只有士人才见得到。</p>
     <p>五项属性：体魄（疾病、饥荒、战争中的存活）、家业（土地、粮食、抗风险）、才学（识字、入仕）、人望（宗族、乡里、婚姻）、名声（中年后才可能出现）。此外还有看不见的性情与天资：幼时的一两个瞬间会悄悄塑造它们，天资要靠日后的行为才会显露。</p>

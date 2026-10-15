@@ -40,6 +40,11 @@
     { id: 'wuhuan', w: 4, zones: ['you', 'ji'], y: [187, 206], t: '乌桓骑兵南下抄掠，掳走了上万户人家。', fx: { order: -12, refAdd: 3 } },
     { id: 'jiaozei', w: 3, zones: ['jiao'], y: [160, 280], t: '交趾、九真一带的俚人起兵，攻打郡县。', fx: { order: -8 } },
     { id: 'qinyong', w: 6, zones: ['shu', 'hanzhong'], y: [296, 301], t: '秦、雍二州连年饥荒，流民数万家沿着汉川涌入蜀中。', fx: { refAdd: 10, price: 1.2 } },
+    { id: 'wuzhu', w: 5, zones: ['yu', 'yan', 'luoyang', 'xu', 'qing'], y: [311, 330], t: '附近的坞主筑坞自守，收容流民，一会儿向后赵称臣，一会儿向东晋称臣。', fx: { order: -4, ref: 0.85 } },
+    { id: 'nandu', w: 6, zones: ['jiangdong', 'huainan', 'jingbei', 'jingnan'], y: [311, 330], t: '北方的流民扶老携幼渡过淮河、长江，在江边搭起了草棚。', fx: { refAdd: 8, price: 1.1 } },
+    { id: 'nandu2', w: 6, zones: ['jiangdong', 'huainan', 'jingbei'], y: [349, 350], t: '北方大乱，又一批流民渡江南来，说中原已经"人相食"了。', fx: { refAdd: 10, price: 1.15 } },
+    { id: 'liuminshuai', w: 4, zones: ['huainan', 'xu'], y: [313, 330], t: '流民帅带着几千家部曲屯在淮水边，朝廷封了他官，可谁也管不了他。', fx: { order: -6 } },
+    { id: 'jiebing', w: 4, g: ['other'], f: ['houzhao'], y: [319, 349], t: '一队羯人兵士进村征粮，见了好东西就拿，见了女人就抢，里正一句话也不敢说。', fx: { order: -10 } },
     { id: 'zhangchang', w: 6, zones: ['jingbei', 'jingnan'], y: [303, 304], t: '义阳蛮张昌聚众起事，荆州的流民纷纷归附，郡县大乱。', fx: { order: -18 } }
   ];
 })(SGD);

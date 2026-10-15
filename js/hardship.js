@@ -265,4 +265,50 @@
         [{ p: 1, t: '你没有去。日子是自己过的。', fx: { tr: { cau: 2, cmp: -2 } } }]],
       aw: function (L) { return [FT(L, 'soc'), FT(L, 'cmp') * 1.1, FT(L, 'cau')]; } }
   ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 女子的处境：同为女子，阶层不同，命运也不同 ---------- */
+  var GT = function (L, k) { return L.tr[k] == null ? 50 : L.tr[k]; };
+  function husband(L) { return L.spouseK && L.spouseK.alive && !L.spouseK.apart ? L.spouseK : null; }
+  [
+    { id: 'f_levy', w: 2, ok: function (L, H) { var h = husband(L); return L.sex === 'F' && h && !h.soldier && H.a >= 18 && H.a <= 45 && H.chaos > 1.02 && ['peasant', 'tenant', 'artisan', 'tuntian'].indexOf(L.cls) >= 0 && { kin: h }; },
+      q: '官府征兵，你的丈夫{kin}被点了名。家里只剩下你、孩子和几亩地。', o: ['把家里的布都送给亭长，求他通融', '让他去吧，你一个人撑起这个家', '带着孩子回娘家'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 800; }, null, null], why: ['家里连一匹布都拿不出来了', null, null],
+      r: [[{ p: 0.5, t: '亭长收了布，把名字划掉了。可你知道，明年还会再来。', fx: { cash: -800 } }, { p: 0.5, t: '亭长收了布，转头还是把人带走了。', fx: { cash: -800, kinSoldier: true } }],
+        [{ p: 1, t: '他走了。你白天下地，夜里织布，孩子们跟着你一起拔草。乡里人说，这家的女人比男人还能干。', fx: { kinSoldier: true, standing: 3, body: -3, tr: { per: 3 } } }],
+        [{ p: 1, t: '他走了。你带着孩子回了娘家，嫂子的脸色一天比一天难看。', fx: { kinSoldier: true, standing: -2, tr: { cau: 3 } } }]],
+      aw: function (L) { return [GT(L, 'cau'), GT(L, 'per'), GT(L, 'soc')]; } },
+    { id: 'f_match', w: 3, ok: function (L, H) { return L.sex === 'F' && L.cls === 'gentry' && !L.married && !L.widowed && H.a >= 14 && H.a <= 20 && {}; },
+      q: '族中长辈为你定下了一门亲事：对方是{clan}的世交之子，比你大十几岁，听说性情暴躁。这门亲事能让两家结成姻亲。', o: ['听从父母之命', '以死相争', '求母亲去说情'],
+      r: [[{ p: 1, t: '你没有说一个"不"字。出嫁那天，你回头看了一眼家门。', fx: { gentryWed: true, tr: { cau: 3 } } }],
+        [{ p: 0.5, t: '你绝食三天。族人拗不过你，婚事作罢——可从此你在族中成了"不孝"的女儿。', fx: { standing: -4, tr: { ind: 6 } } }, { p: 0.5, t: '你绝食三天，最后还是被扶上了车。', fx: { gentryWed: true, body: -3, tr: { ind: 3 } } }],
+        [{ p: 0.6, t: '母亲去说了情，换了一门年纪相当的人家。', fx: { gentryWed: true } }, { p: 0.4, t: '母亲叹了口气："女子的命，就是这样。"', fx: { gentryWed: true, tr: { cau: 2 } } }]],
+      aw: function (L) { return [GT(L, 'cau') + 20, GT(L, 'ind') - 10, GT(L, 'soc')]; } },
+    { id: 'f_master', w: 2.5, ok: function (L, H) { return L.sex === 'F' && L.cls === 'slave' && !L.married && H.a >= 14 && H.a <= 24 && {}; },
+      q: '主人看上了你，要纳你为妾。', o: ['顺从', '哭着去求主母做主'],
+      r: [[{ p: 1, t: '你成了主人的妾。在婢女们眼里，你算是"出头"了；在主母眼里，你是眼中钉。', fx: { standing: 3, body: 1, flag: 'concubineOf' } }],
+        [{ p: 0.5, t: '主母把你许给了府里一个老实的奴仆，总算躲过了这一劫。', fx: { standing: -1 } }, { p: 0.5, t: '主母大怒，叫人牙子把你卖到了外郡。', fx: { move: ['jingnan', 'jiangdong', 'yu', 'ji'], standing: -2 } }]],
+      aw: function (L) { return [GT(L, 'cau'), GT(L, 'ind')]; } },
+    { id: 'f_palace', w: 20, ok: function (L, H) { return L.sex === 'F' && !L.married && H.a >= 13 && H.a <= 20 && H.y >= 345 && H.y <= 347 && H.fk === 'houzhao' && {}; },
+      q: '天王下令在州郡括取民间女子，十三到二十岁的都要送进邺宫。差役已经到了村口，挨家挨户地点名。', o: ['连夜嫁给邻村的人家', '躲进山里', '听天由命'],
+      r: [[{ p: 0.8, t: '你连夜嫁给了邻村的一个后生。差役来的时候，你已经是别人的妻子了。', fx: { marry: true } }, { p: 0.2, t: '差役不管你嫁没嫁，照样把你带走了。', fx: { palace: true } }],
+        [{ p: 0.55, t: '你在山洞里躲了半个月，差役走了。回家时，邻家的姐妹已经不见了。', fx: { body: -3 } }, { p: 0.45, t: '你被搜了出来，押上了车。', fx: { palace: true } }],
+        [{ p: 0.75, t: '你被选中了，和几十个女孩一起押上了车。', fx: { palace: true } }, { p: 0.25, t: '差役嫌你长得不好，把你剔了出来。你从没这样庆幸过。', fx: {} }]],
+      aw: function (L) { return [GT(L, 'act'), GT(L, 'ind'), GT(L, 'cau')]; } },
+    { id: 'f_palace_d', w: 20, ok: function (L, H) { if (H.y < 345 || H.y > 347 || H.fk !== 'houzhao' || !H.head) return false; var k = H.kids(13, 20, 'F', function (x) { return !x.out; })[0]; return k && { kin: k }; },
+      q: '天王下令在州郡括取民间女子，十三到二十岁的都要送进邺宫。差役已经到了村口，你家的{kin}正在这个年纪。', o: ['连夜把她嫁给邻村的人家', '把她藏进山里', '求里正把她的名字划掉'],
+      need: [null, null, function (L) { return L.eco.cash + L.eco.priv >= 2000; }], why: [null, null, '你拿不出打点的钱'],
+      r: [[{ p: 0.8, t: '你连夜把{kin}嫁了出去。差役来的时候，她已经是别人家的媳妇了。她走的时候没有哭。', fx: { kinOut: true, kinAff: -5 } }, { p: 0.2, t: '差役不管嫁没嫁，照样把{kin}带走了。你追着车跑了很远。', fx: { kinGone: true } }],
+        [{ p: 0.55, t: '{kin}在山洞里躲了半个月，差役走了。邻家的女儿却没能躲过去。', fx: { kinAff: 10 } }, { p: 0.45, t: '{kin}被搜了出来，押上了车。', fx: { kinGone: true } }],
+        [{ p: 0.6, t: '你送了两千钱，里正把{kin}的名字划掉了，换上了别家的女儿。', fx: { cash: -2000, standing: -2 } }, { p: 0.4, t: '钱收了，名字没划掉。{kin}还是被带走了。', fx: { cash: -2000, kinGone: true } }]],
+      aw: function (L) { return [GT(L, 'cau'), GT(L, 'act'), GT(L, 'ind')]; } },
+    { id: 'f_tavern', w: 1.5, ok: function (L, H) { return L.sex === 'F' && (L.cls === 'merchant' || L.cls === 'artisan') && L.married && H.a >= 18 && H.a <= 50 && {}; },
+      q: '丈夫出门贩货，要走大半年。铺子交到了你手里。', o: ['自己当垆卖酒，撑起铺子', '关了铺子，等他回来'],
+      r: [[{ p: 0.7, t: '你当垆卖酒，招呼往来的客人。到年底一算账，竟比丈夫在家时赚得还多。', fx: { cash: 1500, standing: 1, tr: { soc: 3, ind: 2 } } }, { p: 0.3, t: '有几个无赖来铺子里闹事，赊了酒不给钱。你咬着牙撑到了丈夫回来。', fx: { cash: -500, tr: { per: 3 } } }],
+        [{ p: 1, t: '你关了铺子，在家纺线织布。邻里说，女人家抛头露面，本来就不好。', fx: { tr: { cau: 2 } } }]],
+      aw: function (L) { return [GT(L, 'soc') + GT(L, 'ind') / 2, GT(L, 'cau')]; } },
+    { id: 'f_chaste', w: 2, ok: function (L, H) { return L.sex === 'F' && L.widowed && !L.married && (L.cls === 'gentry' || L.cls === 'clerk') && H.a >= 30 && H.a <= 60 && {}; },
+      q: '你守寡多年，抚养孩子长大。郡里要上报你的事迹，表彰你为"贞妇"。族人说，这是给家门添光彩的事。', o: ['接受旌表', '推辞，说这是本分'],
+      r: [[{ p: 1, t: '郡里赐了帛，在你家门口立了一块表彰的石阙。族人逢人便说。你看着那块石头，想起了那些一个人熬过的冬夜。', fx: { fame: 4, standing: 4 } }], [{ p: 1, t: '你推辞了。乡里人说你更难得了。', fx: { standing: 3 } }]],
+      aw: function (L) { return [GT(L, 'soc'), GT(L, 'cau')]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
 })(SGD);

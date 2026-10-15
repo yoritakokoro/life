@@ -17,8 +17,8 @@
   var store = load();
 
   var SPEEDS = [['慢', 12], ['中', 6], ['快', 2.5], ['极快', 0.7]];
-  var MODES = { history: 'H', zhongping: 'Z', jianan: 'J', chaos: 'C', blind: 'B', xiping: 'X', sanguo: 'S', weijin: 'W', taikang: 'T', mirror: 'M', heir: 'G' };
-  var MODE_NAME = { history: '史实人生', zhongping: '生于中平', jianan: '生于建安', chaos: '乱世之子', blind: '真正的随机', xiping: '生于熹平', sanguo: '三国鼎立', weijin: '魏晋之际', taikang: '生于太康', mirror: '我若生于那个时代', heir: '传家' };
+  var MODES = { history: 'H', zhongping: 'Z', jianan: 'J', chaos: 'C', blind: 'B', xiping: 'X', sanguo: 'S', weijin: 'W', taikang: 'T', yongjia: 'Y', mirror: 'M', heir: 'G' };
+  var MODE_NAME = { history: '史实人生', zhongping: '生于中平', jianan: '生于建安', chaos: '乱世之子', blind: '真正的随机', xiping: '生于熹平', sanguo: '三国鼎立', weijin: '魏晋之际', taikang: '生于太康', yongjia: '生于永嘉', mirror: '我若生于那个时代', heir: '传家' };
   var GNAME = function (g, y) { return { han: '汉', wei: y < 220 ? '曹操' : '魏', shu: y < 221 ? '刘备' : '蜀汉', wu: y < 222 ? '孙氏' : '吴', jin: y >= 317 ? '东晋' : '晋', other: '其他势力' }[g]; };
 
   var S = { speed: store.speed || 6, playing: true, last: 0, t: 0, queue: [], yearActive: false, L: null, comps: [], statsCache: {} };
@@ -33,7 +33,7 @@
   function newSeed() { return (Math.random() * 4294967296) >>> 0; }
   function codeOf(seed, mode) { return MODES[mode] + '-' + seed.toString(36).toUpperCase(); }
   function parseCode(s) {
-    var m = /^\s*([HZJCBXSWTM])\s*-?\s*([0-9A-Z]+)\s*$/i.exec(s || '');
+    var m = /^\s*([HZJCBXSWTYM])\s*-?\s*([0-9A-Z]+)\s*$/i.exec(s || '');
     if (!m) return null;
     var mode = Object.keys(MODES).filter(function (k) { return MODES[k] === m[1].toUpperCase(); })[0];
     var seed = parseInt(m[2], 36);
@@ -123,7 +123,7 @@
       if (!c) { toast('命数的格式像这样：H-1K3X9Q'); return; }
       startLife(c.seed, { mode: c.mode });
     };
-    var hm = /^#m([HZJCBXSWT][0-9A-Z]+)$/i.exec(location.hash || '');
+    var hm = /^#m([HZJCBXSWTY][0-9A-Z]+)$/i.exec(location.hash || '');
     if (hm) { $('seed-input').value = hm[1].slice(0, 1) + '-' + hm[1].slice(1); $('seed-panel').open = true; }
     $('btn-home').onclick = goHome;
     $('btn-back').onclick = goHome;
@@ -768,7 +768,8 @@
     var adultKids = L.kin.filter(function (k) { return k.rel === 'child' && ((k.alive ? L.dy : k.dy) - k.by) >= 15; }).length;
     lines.push(age === 0 ? '你没有活过一岁。' : '你活了' + cn(age) + '年。');
     lines.push(E.reignText(L.birthZone, L.by) + '生。');
-    if (age > 0) lines.push(E.reignText(L.zone, L.dy) + '卒。');
+    if (L.cause === 'fade') lines.push(E.reignText(L.zone, L.dy) + '以后，不知所终。');
+    else if (age > 0) lines.push(E.reignText(L.zone, L.dy) + '卒。');
     if (L.clanName) lines.splice(1, 0, '出身' + L.clanName + '。');
     if (L.sex === 'M' && age >= 20) lines.push(L.officeMax ? '曾任' + L.officeMax + '。' : L.milMax ? '官至' + L.milMax + '。' : '一生未曾入仕。');
     if (L.sex === 'F' && age >= 15 && !L.married && !L.widowed && !L.divorced && L.kidsBorn === 0) lines.push('终身未嫁。');
@@ -790,7 +791,8 @@
     if (age >= 10) lines.push('你是一个' + E.traitWords(L).join('、') + '的人。');
     if (L.lineage && L.lineage.length) { var pa = L.lineage[L.lineage.length - 1]; lines.splice(1, 0, '你是' + pa.name + '的' + (L.sex === 'M' ? '儿子' : '女儿') + '。'); }
     var last = '';
-    if (L.by < 184 && L.dy >= 280) last = '你从黄巾之乱一直活到了三国归晋。';
+    if (L.by < 266 && L.dy >= 317) last = '你从三国的余烬一直活到了衣冠南渡。';
+    else if (L.by < 184 && L.dy >= 280) last = '你从黄巾之乱一直活到了三国归晋。';
     else if (L.by < 220 && L.dy >= 265) last = '你经历了两个王朝的终结。';
     else if (L.by < 220 && L.dy >= 220) last = '你经历了一个王朝的终结。';
     else if (L.by < 184 && L.dy >= 184) last = '你见证了一个太平年代的结束。';
