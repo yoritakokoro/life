@@ -1,0 +1,128 @@
+[
+ {
+  "file": "js/data.js",
+  "part": "ja/parts/data.js.00.txt",
+  "lines": 304,
+  "han": 2963
+ },
+ {
+  "file": "js/history.js",
+  "part": "ja/parts/history.js.00.txt",
+  "lines": 215,
+  "han": 6509
+ },
+ {
+  "file": "js/history.js",
+  "part": "ja/parts/history.js.01.txt",
+  "lines": 417,
+  "han": 6510
+ },
+ {
+  "file": "js/history.js",
+  "part": "ja/parts/history.js.02.txt",
+  "lines": 289,
+  "han": 6552
+ },
+ {
+  "file": "js/history.js",
+  "part": "ja/parts/history.js.03.txt",
+  "lines": 208,
+  "han": 6528
+ },
+ {
+  "file": "js/history.js",
+  "part": "ja/parts/history.js.04.txt",
+  "lines": 228,
+  "han": 6019
+ },
+ {
+  "file": "js/choices.js",
+  "part": "ja/parts/choices.js.00.txt",
+  "lines": 383,
+  "han": 6505
+ },
+ {
+  "file": "js/choices.js",
+  "part": "ja/parts/choices.js.01.txt",
+  "lines": 169,
+  "han": 2802
+ },
+ {
+  "file": "js/hardship.js",
+  "part": "ja/parts/hardship.js.00.txt",
+  "lines": 151,
+  "han": 6559
+ },
+ {
+  "file": "js/hardship.js",
+  "part": "ja/parts/hardship.js.01.txt",
+  "lines": 270,
+  "han": 6501
+ },
+ {
+  "file": "js/hardship.js",
+  "part": "ja/parts/hardship.js.02.txt",
+  "lines": 303,
+  "han": 6552
+ },
+ {
+  "file": "js/hardship.js",
+  "part": "ja/parts/hardship.js.03.txt",
+  "lines": 120,
+  "han": 4528
+ },
+ {
+  "file": "js/laws.js",
+  "part": "ja/parts/laws.js.00.txt",
+  "lines": 148,
+  "han": 3551
+ },
+ {
+  "file": "js/region.js",
+  "part": "ja/parts/region.js.00.txt",
+  "lines": 51,
+  "han": 1023
+ },
+ {
+  "file": "js/engine.js",
+  "part": "ja/parts/engine.js.00.txt",
+  "lines": 1269,
+  "han": 6506
+ },
+ {
+  "file": "js/engine.js",
+  "part": "ja/parts/engine.js.01.txt",
+  "lines": 1240,
+  "han": 6518
+ },
+ {
+  "file": "js/engine.js",
+  "part": "ja/parts/engine.js.02.txt",
+  "lines": 750,
+  "han": 6506
+ },
+ {
+  "file": "js/engine.js",
+  "part": "ja/parts/engine.js.03.txt",
+  "lines": 689,
+  "han": 6514
+ },
+ {
+  "file": "js/engine.js",
+  "part": "ja/parts/engine.js.04.txt",
+  "lines": 325,
+  "han": 3687
+ },
+ {
+  "file": "js/ui.js",
+  "part": "ja/parts/ui.js.00.txt",
+  "lines": 1134,
+  "han": 2565
+ },
+ {
+  "file": "index.html",
+  "part": "ja/parts/index.html.00.txt",
+  "lines": 345,
+  "han": 2031
+ }
+]

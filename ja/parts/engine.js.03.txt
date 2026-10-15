@@ -1,0 +1,689 @@
+    { id: 'pl_move', g: '谋划（每年一件）', plan: 1, n: '举家迁往太平些的地方', c: 1500, ok: function (L, y) { return L.planY !== y && isHead(L) && !L.soldier && !L.office && (chaos(y) > 1.05 || (L.reg && L.reg.order < 45)); }, fx: function (L, y) { L.planY = y; var gk = group(ctrl(L.zone, y)), cand = Object.keys(D.CTRL).filter(function (z) { return z !== L.zone && group(ctrl(z, y)) === gk; }); if (!cand.length) return '你打听了一圈，同一方治下没有更太平的地方，只好作罢。'; relocate(L, pick(L.R, cand), 2.1, '你变卖了家当，带着全家迁到了{dest}。', 0.02, y); return '你带着全家迁走了。'; } },
+    { id: 'pl_match', g: '谋划（每年一件）', plan: 1, n: '托媒人说一门好亲事', c: 600, ok: function (L, y) { return L.planY !== y && !L.married && !L.spouseK && L.age >= 16 && L.age <= 40 && L.cls !== 'slave' && !L.flags.palaceIn; }, fx: function (L, y) { L.planY = y; L.flags.wantWed = true; L.standing += 1; return '你备了礼，托了乡里最会说话的媒人。媒人拍着胸脯说，不出一年，准给你说成一门好亲事。'; } },
+    { id: 'pl_doctor', g: '谋划（每年一件）', plan: 1, n: '遍访名医，好好调养身子', c: 1500, ok: function (L, y) { return L.planY !== y && (L.body < 55 || L.chronic || L.injury); }, fx: function (L, y) { L.planY = y; L.body = clamp(L.body + 10, 1, 100); if (L.chronic === 'xulao' && L.R() < 0.3) { L.chronic = null; return '你访到了一位好医者，吃了半年的药，咳血竟渐渐止住了。'; } return '你访了几位医者，吃了好些药，身子慢慢好了一些。'; } },
+    { id: 'pl_reconcile', g: '谋划（每年一件）', plan: 1, n: '登门和闹翻的亲友和好', c: 300, ok: function (L, y) { return L.planY !== y && (L.kin.some(function (k) { return k.alive && !k.apart && k.aff != null && k.aff < 40; }) || (L.friends || []).some(function (f) { return f.alive && !f.apart && f.aff < 40; })); }, fx: function (L, y) { L.planY = y; var k = L.kin.filter(function (k) { return k.alive && !k.apart && k.aff != null && k.aff < 40; })[0] || (L.friends || []).filter(function (f) { return f.alive && !f.apart && f.aff < 40; })[0]; affAdd(k, 25); return '你提着一壶酒、一块肉，登门去见' + (k.rel ? kinLabel(L, k) : k.name) + '。话说开了，两个人都红了眼眶。'; } },
+    { id: 'pl_enlist', g: '谋划（每年一件）', plan: 1, n: '去营中投军', c: 0, ok: function (L, y) { return L.planY !== y && L.sex === 'M' && L.age >= 16 && L.age <= 40 && !L.soldier && !L.office && !(L.cond && D.CONDS[L.cond.k].noArmy); }, fx: function (L, y) { L.planY = y; enlist(L, y, 2.1, true); return L.soldier ? '你去营中报了名。' : '你去营中报名，没有被收下。'; } },
+    { id: 'pl_haoqiang', g: '谋划（每年一件）', plan: 1, n: '投靠豪强，求一处庇护', c: 0, ok: function (L, y) { return L.planY !== y && isHead(L) && L.cls === 'peasant' && chaos(y) > 1.05; }, fx: function (L, y) { L.planY = y; L.cls = 'tenant'; L.job = '部曲'; L.standing -= 3; L.flags.protected = true; return '你带着全家投到了豪强的坞壁里，做了他的佃客部曲。乱兵来了，坞壁的墙比自家的篱笆结实；可从此你家的田，也成了他的田。'; } }
+,
+    { id: 'coat', g: '日用', n: '添置一件厚冬衣', c: 650, ok: function () { return true; }, fx: function (L) { L.body += 2; return '你添置了一件厚实的冬衣。这个冬天没那么难熬了。'; } },
+    { id: 'chicken', g: '日用', n: '买一只鸡给家里补补', c: 220, ok: function (L) { return !L.band; }, fx: function (L) { L.body += 1; return '你买了一只鸡，炖了一锅汤，一家人吃得满嘴是油。'; } },
+    { id: 'wine', g: '日用', n: '买些酒肉与邻人共饮', c: 90, ok: function () { return true; }, fx: function (L) { L.standing += 1; return '你买了些酒肉，请邻人来喝了一回。'; } },
+    { id: 'doctor', g: '日用', n: '请医者来看旧疾', c: 360, ok: function (L) { return L.body < 50 || !!L.injury; }, fx: function (L) { L.body += 6; if (L.injury && L.R() < 0.3) { L.injury = null; return '医者给你针灸敷药，旧伤竟渐渐好了。'; } return '医者给你开了几服药，身子轻快了些。'; } },
+    { id: 'kidclothes', g: '日用', n: '给孩子们做身新衣', c: 400, ok: function (L) { return kidsWith(L, function (a) { return a < 15; }).length > 0; }, fx: function (L) { L.standing += 0.5; return '你给孩子们各做了一身新衣，他们高兴了好几天。'; } },
+    { id: 'tools', g: '农事', n: '添置一套新农具', c: 430, ok: function (L) { return farmerish(L) && !L.eco.tools; }, fx: function (L) { L.eco.tools = true; return '你添置了一套新的铁犁铧和锄头，往后耕作省力不少。'; } },
+    { id: 'ox', g: '农事', n: '买一头耕牛', c: 3000, ok: function (L) { return farmerish(L) && L.eco.ox < 2 && (L.land >= 10 || L.cls === 'tenant'); }, fx: function (L) { L.eco.ox++; return '你买回一头黄牛。村里人都来看，说这牛口齿好。'; } },
+    { id: 'land1', g: '农事', n: '买一亩田', c: LANDP, ok: function (L) { return ['peasant', 'clerk', 'gentry', 'merchant', 'artisan', 'soldier', 'tenant'].indexOf(L.cls) >= 0 && !L.band; }, fx: function (L) { L.land++; if (L.cls === 'tenant' && L.land >= 5) { L.cls = 'peasant'; return '你买下了一亩田。积攒了这么多年，你家终于又有了自己的地。'; } return '你买下了一亩田。'; } },
+    { id: 'land10', g: '农事', n: '买十亩田', c: LANDP * 10, ok: function (L) { return ['peasant', 'clerk', 'gentry', 'merchant', 'artisan'].indexOf(L.cls) >= 0 && !L.band; }, fx: function (L) { L.land += 10; return '你买下了十亩好田，立了田契。'; } },
+    { id: 'loom', g: '家业', n: '添置一架织机', c: 1500, ok: function (L) { return L.sex === 'F' && !L.eco.loom && L.cls !== 'gentry'; }, fx: function (L) { L.eco.loom = true; return '你添置了一架织机，往后织布快了许多。'; } },
+    { id: 'tutor', g: '子女', n: '给孩子请人启蒙', c: 800, ok: function (L) { return kidsWith(L, function (a, k) { return a >= 5 && a <= 12 && !k.lit; }).length > 0; }, fx: function (L) { var k = kidsWith(L, function (a, x) { return a >= 5 && a <= 12 && !x.lit; })[0]; k.lit = true; return '你请乡里的老先生教' + kinLabel(L, k) + '识字。'; } },
+    { id: 'sacrifice', g: '乡里', n: '祭祀祖先', c: 300, ok: function () { return true; }, fx: function (L) { L.standing += 1; return '你备了牲醴，祭祀祖先。'; } },
+    { id: 'charity', g: '乡里', n: '出钱赈济乡里贫户', c: 2000, ok: function (L) { return L.age >= 20; }, fx: function (L) { L.standing += 5; L.fame += 2; return '你拿出二千钱赈济乡里的贫户。乡人都说你仁厚。'; } },
+    { id: 'bridge', g: '乡里', n: '出资修桥补路', c: 5000, ok: function (L) { return L.age >= 25; }, fx: function (L) { L.standing += 6; L.fame += 3; return '你出钱修了村口的石桥。过往的人都知道这是谁修的。'; } },
+    { id: 'slips', g: '读书', n: '买些简牍和纸', c: 400, ok: function (L) { return L.literate; }, fx: function (L) { L.learn += 2; return '你买了些简牍和纸，抄书习字。'; } },
+    { id: 'copy', g: '读书', n: '请人抄录一部书', c: 600, ok: function (L) { return L.literate; }, fx: function (L) { L.learn += 3; return '你请人抄了一部《春秋》，日夜诵读。'; } },
+    { id: 'classmates', g: '读书', n: '宴请同窗', c: 1200, ok: function (L) { return L.literate && L.age < 50; }, fx: function (L) { L.standing += 3; return '你宴请了几位一同读书的朋友，谈到半夜。'; } },
+    { id: 'robe', g: '读书', n: '置办一袭像样的衣冠', c: 2400, ok: function (L) { return (L.literate || L.office) && !L.flags.robe; }, fx: function (L) { L.flags.robe = true; L.standing += 3; return '你置办了一袭像样的衣冠。穿上它去县廷，人家对你客气了许多。'; } },
+    { id: 'visit', g: '读书', n: '游学，拜访名师', c: 4000, ok: function (L) { return L.literate && L.age < 45; }, fx: function (L) { L.learn += 6; L.fame += 2; L.standing += 2; return '你出门游学，拜访了邻郡的名师，听他讲了三个月的经。'; } },
+    { id: 'books', g: '读书', n: '置办一批书籍', c: 3000, ok: function (L) { return L.literate && richish(L); }, fx: function (L) { L.learn += 5; return '你置办了一批书籍，满满装了两车。'; } },
+    { id: 'teacher', g: '读书', n: '延请名师到家中讲学', c: 5000, ok: function (L) { return L.cls === 'gentry' || L.cls === 'clerk'; }, fx: function (L) { L.learn += 8; kidsWith(L, function (a) { return a >= 5 && a <= 18; }).forEach(function (k) { k.lit = true; }); return '你延请名师到家中讲学，家中子弟都跟着读书。'; } },
+    { id: 'feast', g: '交游', n: '宴请宾客', c: 2000, ok: function (L) { return richish(L); }, fx: function (L) { L.standing += 4; L.fame += 2; return '你大宴宾客，席间有人赋诗，有人击剑。'; } },
+    { id: 'befriend', g: '交游', n: '出资结交地方豪杰', c: 5000, ok: function (L) { return richish(L) && L.sex === 'M'; }, fx: function (L) { L.flags.connected = true; L.standing += 6; return '你出资结交了郡中几位有名望的人物。往后办事方便多了。'; } },
+    { id: 'horse', g: '交游', n: '添置一匹良马', c: 15000, ok: function (L) { return richish(L) && !L.flags.horse; }, fx: function (L) { L.flags.horse = true; L.fame += 1; return '你买了一匹良马，骑出门时引得路人侧目。'; } },
+    { id: 'goods', g: '买卖', n: '扩充货物', c: 5000, ok: function (L) { return L.cls === 'merchant'; }, fx: function (L) { L.eco.stock += 5000; return '你进了一批布帛和盐，货本多了五千钱。'; } },
+    { id: 'porter', g: '买卖', n: '雇几个脚夫（三年）', c: 2000, ok: function (L) { return L.cls === 'merchant' && !L.eco.porter; }, fx: function (L) { L.eco.porter = 3; return '你雇了几个脚夫帮着运货。'; } },
+    { id: 'cart', g: '买卖', n: '买一辆货车', c: 8000, ok: function (L) { return L.cls === 'merchant' && !L.eco.cart; }, fx: function (L) { L.eco.cart = true; return '你买了一辆牛车，往后能跑更远的路了。'; } },
+    { id: 'venture', g: '买卖', n: '投入一次远途贩运', c: 10000, ok: function (L) { return L.cls === 'merchant'; }, fx: function (L) { var r = L.R(); if (r < 0.55) { L.eco.cash += 18000; return '你押了一批货到远方贩卖，赚回一万八千钱值。'; } if (r < 0.8) { L.eco.cash += 10000; return '远途贩运来回折腾了半年，刚好保本。'; } return '货在路上被劫，一万钱血本无归。'; } },
+    { id: 'shop', g: '买卖', n: '在市上租一间铺子', c: 1500, ok: function (L) { return (L.cls === 'merchant' || L.cls === 'artisan' || L.job === '工匠') && !L.flags.shop; }, fx: function (L) { L.flags.shop = true; L.eco.stock += 1500; return '你在县城的市上租了一间小铺子。'; } },
+    { id: 'armor', g: '军中', n: '添置一副好些的甲具', c: 3000, ok: function (L) { return !!L.soldier && !L.flags.armor; }, fx: function (L) { L.flags.armor = true; return '你花钱换了一副好些的皮甲和兜鍪。'; } },
+    { id: 'treat', g: '军中', n: '买酒肉犒劳同伴', c: 300, ok: function (L) { return !!L.soldier; }, fx: function (L) { L.standing += 2; return '你买了酒肉犒劳同伍的兄弟。'; } },
+    { id: 'sendhome', g: '军中', n: '把私蓄寄回家', c: function (L) { return Math.max(100, Math.round(L.eco.priv)); }, ok: function (L) { return !!L.soldier && L.eco.priv >= 100 && liveKin(L, function (k) { return !k.out; }).length > 0; }, fx: function (L, y, c) { L.eco.cash += c; return '你托同乡把' + fmt(c) + '钱值的私蓄捎回了家。'; } },
+    { id: 'hairpin', g: '日用', n: '给自己买一支铜钗', c: 200, ok: function (L) { return L.sex === 'F'; }, fx: function () { return '你给自己买了一支铜钗。'; } },
+    { id: 'coffin', g: '身后', n: '预备寿材', c: 3000, ok: function (L) { return L.age >= 55 && !L.flags.coffin; }, fx: function (L) { L.flags.coffin = true; return '你早早为自己备好了一副柏木寿材。'; } },
+    { id: 'piglet', g: '农事', n: '买一头猪崽来养', c: 300, ok: function (L) { return farmerish(L) && !L.band && !pendHas(L, 'piglet'); }, fx: function (L, y) { pendAdd(L, { id: 'piglet', y: y + 1, cash: 700, t: '去年买的猪崽养肥了，年底卖了七百钱。' }); return '你买了一头猪崽，打算养到年底卖钱。'; } },
+    { id: 'nourish', g: '日用', n: '买些补药养身', c: 2500, ok: function (L) { return richish(L) && L.age >= 35; }, fx: function (L) { L.body += 5; return '你买了些人参、茯苓，每天熬汤进补。'; } },
+    { id: 'medicine', g: '家人', n: '给年老的爹娘请医买药', c: 1200, ok: function (L) { return !!oldParent(L); }, fx: function (L, y) { var k = oldParent(L); k.cared = y; affAdd(k, 10); L.standing += 1; return '你请了医者来给' + kinLabel(L, k) + '看病，又抓了几服药。老人嘴上说不要花这个钱，眼眶却红了。'; } },
+    { id: 'redeem', g: '家人', n: '赎回被卖、被送走的亲人', c: 8000, ok: function (L) { return !!lostKin(L); }, fx: function (L) { var k = lostKin(L); k.apart = false; k.sold = k.given = k.bonded = false; affAdd(k, 25); L.standing += 2; return '你四处打听，终于找到了' + kinLabel(L, k) + '，花了八千钱把人赎了回来。一家人抱头痛哭。'; } },
+    { id: 'dowry', g: '子女', n: '给女儿备一份体面的嫁妆', c: 4000, ok: function (L) { return !!dowryGirl(L); }, fx: function (L) { var k = dowryGirl(L); k.dowry = true; affAdd(k, 15); L.standing += 2; return '你给' + kinLabel(L, k) + '备下了一份嫁妆：铜镜、漆奁、几匹绢。她将来到了夫家，腰杆能直一些。'; } },
+    { id: 'loan', g: '家业', n: '放一笔债（一万钱，两年后收回）', c: 10000, ok: function (L) { return richish(L) && L.age >= 20 && !pendHas(L, 'loan'); }, fx: function (L, y) { pendAdd(L, { id: 'loan', y: y + 2, cash: 13000, risk: 0.15, t: '两年前放出去的债收回来了，连本带利一万三千钱。', fail: '借债的那户人家举家逃走了，一万钱打了水漂。' }); return '你把一万钱借给了邻县的一户人家，约好两年后连本带利归还。'; } },
+    { id: 'land100', g: '农事', n: '买一百亩田', c: LANDP * 100, ok: function (L) { return ['clerk', 'gentry', 'merchant'].indexOf(L.cls) >= 0 && !L.band; }, fx: function (L) { L.land += 100; return '你买下了一百亩田，招了几户佃客来种。'; } },
+    { id: 'wubi', g: '家业', n: '修筑坞壁', c: 60000, ok: function (L, y) { return (L.cls === 'gentry' || L.wealth >= 60) && !L.flags.wubi && y >= 184 && !L.band; }, fx: function (L) { L.flags.wubi = true; L.standing += 4; return '你家征发佃客，在庄外筑起了高墙，四角立起望楼。乱兵来了，至少能关起门来守几天。'; } },
+    { id: 'retainers', g: '交游', n: '蓄养宾客部曲', c: 30000, ok: function (L) { return (L.cls === 'gentry' || L.wealth >= 65) && L.sex === 'M' && !L.flags.retainers; }, fx: function (L) { L.flags.retainers = true; L.flags.connected = true; L.standing += 8; L.fame += 3; return '你家门下养了几十个宾客、上百个部曲。出门时前呼后拥，郡里的人都要让你三分。'; } },
+    { id: 'salon', g: '交游', n: '招邀名士清谈雅集', c: 8000, ok: function (L) { return L.literate && (L.cls === 'gentry' || !!L.office || L.fame >= 30) && !L.flags.salon; }, fx: function (L) { L.flags.salon = true; L.fame += 3; L.standing += 2; return '你在家中设雅集，招邀郡中名士清谈。往后名士们路过本郡，常来你家坐坐。'; } },
+    { id: 'library', g: '读书', n: '修一座藏书楼', c: 40000, ok: function (L) { return L.cls === 'gentry' && L.literate && !L.flags.library; }, fx: function (L) { L.flags.library = true; L.learn += 10; L.fame += 4; kidsWith(L, function (a) { return a >= 5; }).forEach(function (k) { k.lit = true; }); return '你修了一座藏书楼，收藏了上千卷书。远近的读书人都来借抄，家中子弟也都读了书。'; } },
+    { id: 'tomb', g: '身后', n: '为先人修墓立碑', c: 20000, ok: function (L, y) { return richish(L) && !L.flags.tomb && deadParent(L) && !polsAt(L.zone, y).some(function (p) { return p.id === 'bozang'; }); }, fx: function (L) { L.flags.tomb = true; L.standing += 6; L.fame += 4; return '你为先人修了一座大墓，立了石阙，请人撰写碑文，颂扬先人的德行。乡里人都说你是孝子。'; } },
+    { id: 'jushi', g: '仕途', n: '上下打点，谋一个举荐', c: 15000, ok: function (L, y) { return y < 220 && L.sex === 'M' && L.age >= 18 && L.age <= 45 && !L.office && (L.cls === 'gentry' || L.cls === 'clerk' || L.learn >= 40) && !L.flags.jushi; }, fx: function (L) { L.flags.jushi = true; return '你带着厚礼去拜见郡中的功曹，又托人在太守面前说了好话。能不能被举荐，就看来年了。'; } },
+    { id: 'zzbribe', g: '仕途', n: '打点中正官', c: 30000, ok: function (L, y) { return y >= 220 && L.cls === 'gentry' && L.sex === 'M' && L.age >= 18 && L.age <= 45 && !L.office && !L.flags.zz; }, fx: function (L) { L.flags.zz = true; return '你托人给州里的中正官送去厚礼。不久，你的品第被评高了一等。'; } },
+    { id: 'trip', g: '游历', n: '出门游历', c: 0, ok: function (L) { return L.age >= 16 && !L.band && !L.soldier && L.cls !== 'slave' && (L.sex === 'M' || L.cls === 'gentry'); }, multi: tripOptions, fx: tripGo },
+    { id: 'temple', g: '捐资', n: '捐资修缮社祠、祖祠', c: 3000, ok: function (L) { return L.age >= 20 && L.cls !== 'slave'; }, fx: function (L) { L.standing += 4; return '你出钱修缮了乡里的社祠和祖祠。逢年过节祭祀时，总要念到你的名字。'; } },
+    { id: 'yishu', g: '捐资', n: '捐资办义塾', c: 6000, ok: function (L) { return richish(L) && L.age >= 25 && !L.flags.yishu; }, fx: function (L) { L.flags.yishu = true; L.standing += 5; L.fame += 2; kidsWith(L, function (a) { return a >= 5 && a <= 14; }).forEach(function (k) { k.lit = true; }); return '你出钱在乡里办了一所义塾，请先生教穷人家的孩子认字，自家的孩子也去了。'; } },
+    { id: 'junzi', g: '捐资', n: '向官府捐献军资', c: 10000, ok: function (L, y) { return richish(L) && L.age >= 20 && chaos(y) > 1.0 && !L.flags.donor; }, fx: function (L) { L.flags.donor = true; L.fame += 3; L.standing += 2; return '你捐了一万钱的粮草给官府充作军资。郡守亲自写信致谢，往后你家的事，官府都格外关照。'; } },
+    { id: 'bury', g: '捐资', n: '收葬路边的饿殍', c: 1500, ok: function (L) { return L.age >= 18 && L.reg && (L.reg.ref >= 5 || L.reg.price >= 1.5); }, fx: function (L) { L.standing += 4; L.fame += 1; return '你出钱买了几十口薄棺，把路边饿死的人收葬了。'; } },
+    { id: 'zhoupeng', g: '捐资', n: '设粥棚赈济流民', c: 4000, ok: function (L) { return richish(L) && L.reg && (L.reg.ref >= 4 || L.reg.price >= 1.4); }, fx: function (L) { L.standing += 5; L.fame += 2; L.reg.ref *= 0.9; return '你在门外设了粥棚。每天清早，门口都排着长长的队伍。'; } },
+    { id: 'xianli', g: '交游', n: '宴请县里的小吏', c: 1200, ok: function (L) { return L.age >= 20 && L.cls !== 'slave' && !L.office; }, fx: function (L) { L.standing += 2; L.flags.xianli = true; return '你请县里的几个小吏喝了一顿酒。往后去县廷办事，人家对你客气多了。'; } },
+    { id: 'sanlao', g: '交游', n: '拜会乡里的三老', c: 300, ok: function (L) { return L.age >= 18 && L.cls !== 'slave'; }, fx: function (L) { L.standing += 2; return '你提着酒肉去拜会乡里的三老，听他讲了半天的旧事。'; } },
+    { id: 'jiebai', g: '交游', n: '结为异姓兄弟', c: 500, ok: function (L) { return L.age >= 15 && friendsFor(L, 55).some(function (f) { return !f.sworn; }); }, multi: function (L) { return friendsFor(L, 55).filter(function (f) { return !f.sworn; }).map(function (f) { return { k: f.name, n: '与' + f.name + '结为异姓' + (L.sex === 'F' ? '姐妹' : '兄弟'), c: 500, sub: frSub(L, f) }; }); }, fx: function (L, y, c, k) { var f = friendByName(L, k); f.sworn = true; affAdd(f, 20); return '你和' + f.name + '杀鸡饮酒，结为异姓' + (L.sex === 'F' ? '姐妹' : '兄弟') + '，发誓有难同当。'; } },
+    { id: 'frgift', g: '交游', n: '给朋友送礼', c: 400, ok: function (L) { return friendsFor(L, 0).length > 0; }, multi: function (L) { return friendsFor(L, 0).map(function (f) { return { k: f.name, n: '给' + f.name + '送一份礼', c: 400, sub: frSub(L, f) }; }); }, fx: function (L, y, c, k) { var f = friendByName(L, k); affAdd(f, 12); return '你给' + f.name + '送去了一份礼。' + (f.aff >= 80 ? '两人的交情更深了。' : '对方很是高兴。'); } },
+    { id: 'frfeast', g: '交游', n: '请朋友来家中饮酒', c: 300, ok: function (L) { return friendsFor(L, 0).length > 0 && L.age >= 16; }, multi: function (L) { return friendsFor(L, 0).map(function (f) { return { k: f.name, n: '请' + f.name + '来家中饮酒', c: 300, sub: frSub(L, f) }; }); }, fx: function (L, y, c, k) { var f = friendByName(L, k); affAdd(f, 8); L.standing += 0.5; return '你请' + f.name + '来家里喝酒，两人从傍晚聊到了半夜。'; } },
+    { id: 'kingift', g: '家人', n: '给家人添置衣物', c: 500, ok: function (L) { return kinForGift(L).length > 0; }, multi: function (L) { return kinForGift(L).map(function (k) { return { k: String(k.id), n: '给' + kinLabel(L, k) + '添置一身新衣', c: 500, sub: '亲疏：' + relLabel(k.aff == null ? 60 : k.aff) }; }); }, fx: function (L, y, c, key) { var k = L.kin.filter(function (x) { return String(x.id) === key; })[0]; affAdd(k, 10); return '你给' + kinLabel(L, k) + '添置了一身新衣。' + (k.aff >= 80 ? '' : '对方嘴上说不要，回头却穿了好几天。'); } },
+    { id: 'youxia', g: '交游', n: '结交游侠', c: 3000, ok: function (L) { return L.sex === 'M' && L.age >= 16 && L.age <= 45 && !L.office && !L.flags.youxia && L.cls !== 'slave'; }, fx: function (L) { L.flags.youxia = true; L.standing += 2; L.tr.act = clamp(L.tr.act + 2, 5, 95); return '你出钱结交了几个游侠。他们拍着胸脯说，往后在这一带，没人敢动你家。'; } },
+    { id: 'gift', g: '身后', n: '给孙辈压岁钱', c: 100, ok: function (L) { return L.grandkids > 0; }, fx: function () { return '你给孙辈们每人串了一串压岁钱。'; } }
+  ];
+  // 游历之地：要看年代和是否同属一方
+  var SPOTS = [
+    { n: '洛阳', z: 'luoyang', y: [[150, 189], [205, 310]], t: '你到洛阳游历，在太学门外看了石经，又去白马寺看了西域来的僧人。' },
+    { n: '长安', z: 'guanzhong', y: [[150, 189], [220, 315]], t: '你到长安，看了未央宫的旧址，荒草长得比人还高。' },
+    { n: '许都', z: 'yu', y: [[196, 220]], t: '你到许都，城里车马喧阗，天子就住在这里。' },
+    { n: '邺城', z: 'ji', y: [[205, 350]], t: '你到邺城，登上铜雀台，漳水在台下静静地流。' },
+    { n: '泰山', z: 'yan', y: [[150, 350]], t: '你登了泰山，在日观峰上等了一夜，看到了日出。' },
+    { n: '曲阜', z: 'yu', y: [[150, 350]], t: '你到鲁国曲阜，拜了孔子的旧宅，看了孔子手植的桧树。' },
+    { n: '襄阳', z: 'jingbei', y: [[150, 350]], t: '你到襄阳，登了岘山，在汉水边坐了一下午。' },
+    { n: '江陵', z: 'jingnan', y: [[150, 350]], t: '你到江陵，看大江东去，船帆如林。' },
+    { n: '成都', z: 'shu', y: [[150, 350]], t: '你到成都，看了锦官城里织锦的作坊，又去看了李冰修的都江堰。' },
+    { n: '建业', z: 'jiangdong', y: [[229, 312]], t: '你到建业，石头城下江水滔滔，市上满是南来北往的客商。' },
+    { n: '建康', z: 'jiangdong', y: [[313, 350]], t: '你到建康，看秦淮河上的画舫，听南渡的士人清谈。' },
+    { n: '会稽', z: 'jiangdong', y: [[150, 350]], t: '你到会稽，拜了禹陵，又在镜湖上泛舟。' },
+    { n: '庐山', z: 'jiangdong', y: [[150, 350]], t: '你上了庐山，在山中住了几天，看瀑布从云里落下来。' },
+    { n: '汉中', z: 'hanzhong', y: [[150, 350]], t: '你到汉中，沿着栈道走了一段，又去看了定军山。' },
+    { n: '姑臧', z: 'liang', y: [[301, 350]], t: '你到凉州姑臧，城里讲学之风不绝，中原来的士人比本地人还多。' },
+    { n: '番禺', z: 'jiao', y: [[150, 350]], t: '你到番禺，看海船带来的犀角、象牙和香料，听人说海那边还有许多国家。' }
+  ];
+  function spotsFor(L, y) {
+    var g0 = group(ctrl(L.zone, y)), open = y < 190 || (y >= 280 && y < 291);
+    return SPOTS.filter(function (p) { return p.y.some(function (r) { return y >= r[0] && y <= r[1]; }) && (open || group(ctrl(p.z, y)) === g0) && (L.visited || []).indexOf(p.n) < 0; });
+  }
+  function visit(L, y) {
+    var sp = spotsFor(L, y);
+    if (!sp.length) return null;
+    var p = pick(L.R, sp);
+    (L.visited = L.visited || []).push(p.n);
+    return p;
+  }
+  function friendsFor(L, min) { return (L.friends || []).filter(function (f) { return f.alive && !f.apart && f.aff >= min; }).sort(function (a, b) { return b.aff - a.aff; }).slice(0, 6); }
+  function friendByName(L, n) { return (L.friends || []).filter(function (f) { return f.name === n; })[0]; }
+  function frSub(L, f) { return '交情：' + relLabel(f.aff) + (f.job ? ' · ' + f.job : '') + (f.sworn ? ' · 结义' : ''); }
+  function kinForGift(L) { var y = L.by + L.age; return liveKin(L, function (k) { return !k.out && ['father', 'mother', 'spouse', 'conc', 'child', 'sib', 'gp'].indexOf(k.rel) >= 0 && y - k.by >= 5; }).slice(0, 8); }
+  // 游历：每个去处都有治安、盘缠、路程、风险和能否成行
+  function tripInfo(L, p, y) {
+    var d = zoneDist(L.zone, p.z), days = Math.max(3, Math.round(d * 14)), P = regPressure(p.z, y);
+    var rich = richish(L), cost = Math.round(((rich ? 2000 : 300) + days * (rich ? 120 : 40)) / 100) * 100;
+    var risk = clamp((100 - P.order) / 100 * (0.4 + d * 0.15) * (rich ? 0.8 : 1), 0.02, 0.9);
+    var g0 = group(ctrl(L.zone, y)), g1 = group(ctrl(p.z, y)), open = y < 190 || (y >= 280 && y < 291) || g0 === g1;
+    var no = !p.y.some(function (r) { return y >= r[0] && y <= r[1]; }) ? '这个时候去不了' : !open ? '与' + fname(ctrl(p.z, y), y) + '分属敌国，关津不通' : P.order < 28 ? '那里正在打仗' : null;
+    return { days: days, cost: cost, risk: risk, order: P.order, no: no };
+  }
+  function riskLabel(r) { return r < 0.12 ? '低' : r < 0.25 ? '中' : r < 0.45 ? '高' : '极高'; }
+  function tripOptions(L, y) {
+    return SPOTS.filter(function (p) { return p.y.some(function (r) { return y >= r[0] - 20 && y <= r[1] + 20; }); }).map(function (p) {
+      var I = tripInfo(L, p, y);
+      return { k: p.n, n: '去' + p.n + ((L.visited || []).indexOf(p.n) >= 0 ? '（去过）' : ''), c: I.cost, no: I.no, sub: '治安' + orderLabel(I.order) + ' · 路上约' + cnNum(I.days) + '日 · 风险' + riskLabel(I.risk) };
+    }).sort(function (a, b) { return (a.no ? 1 : 0) - (b.no ? 1 : 0) || a.c - b.c; });
+  }
+  function tripGo(L, y, c, key) {
+    var R = L.R, p = SPOTS.filter(function (x) { return x.n === key; })[0];
+    if (!p) return '你出门走了一趟。';
+    var I = tripInfo(L, p, y), t = p.t + '一来一回，在路上走了' + cnNum(I.days * 2) + '天。';
+    if ((L.visited = L.visited || []).indexOf(p.n) < 0) L.visited.push(p.n);
+    L.learn += 2; L.standing += 1; L.body += 1; if (richish(L)) L.fame += 1;
+    var r = R();
+    if (r < I.risk * 0.08) { die(L, 'bandit', 1.2, { full: '你在去' + p.n + '的路上遇到了盗贼，再也没能回家。' }); return '你出发去了' + p.n + '。'; }
+    if (r < I.risk * 0.5) { var lost = Math.round(Math.min(L.eco.cash + L.eco.priv, 500 + R() * 2500)); payFrom(L, lost); L.body -= 3; t += '回来的路上遇到了劫道的，被抢走了' + fmt(lost) + '钱值，人倒是平安回来了。'; }
+    else if (r < I.risk * 0.7) { L.body -= 4; t += '路上染了风寒，回家躺了半个月。'; }
+    return t;
+  }
+  function pendHas(L, id) { return (L.pend || []).some(function (p) { return p.id === id; }); }
+  function pendAdd(L, p) { (L.pend = L.pend || []).push(p); }
+  function pendYear(L, y) {
+    if (!L.pend || !L.pend.length) return;
+    L.pend = L.pend.filter(function (p) {
+      if (p.y > y) return true;
+      if (p.risk && L.R() < p.risk) add(L, 3.6, 'bad', p.fail);
+      else { L.eco.cash += p.cash; add(L, 3.6, 'good', p.t); }
+      return false;
+    });
+  }
+  function oldParent(L) { return liveKin(L, function (k) { return (k.rel === 'father' || k.rel === 'mother') && !k.out && L.by + L.age - k.by >= 55; })[0] || null; }
+  function lostKin(L) { return L.kin.filter(function (k) { return k.alive && k.apart && (k.sold || k.given || k.bonded); })[0] || null; }
+  function deadParent(L) { return L.kin.some(function (k) { return (k.rel === 'father' || k.rel === 'mother') && !k.alive; }); }
+  function dowryGirl(L) { return kidsWith(L, function (a, k) { return k.sex === 'F' && a >= 12 && a <= 20 && !k.out && !k.dowry; })[0] || null; }
+
+  // 自动支用：按性情、眼下所重和家境，替你花一部分余财
+  var SP_G = { 日用: 1, 农事: 1, 子女: 3, 家人: 5, 读书: 1, 交游: 1, 乡里: 1, 家业: 2, 买卖: 1, 军中: 2, 身后: 1, 仕途: 1.5, 游历: 1, 捐资: 1 };
+  function smartSpend(L, y, fo) {
+    var R = L.R, t = L.tr;
+    if (L.age < 16 || L.cls === 'slave') return;
+    var opt = spendOptions(L), budget = opt.can * clamp(0.3 + (t.soc - t.cau) / 150 + (fo === 'save' ? -0.2 : 0), 0.1, 0.6);
+    if (budget < 80) return;
+    var seen = L.spentY = L.spentY || {}, done = 0, rich = L.wealth >= 55;
+    if (R() >= (rich ? 0.75 : 0.45)) return;
+    for (var n = 0; n < (rich && R() < 0.4 ? 2 : 1); n++) {
+      var items = opt.items.filter(function (it) { return !it.plan && it.st === 'ok' && it.c <= budget && (seen[it.id] == null || y - seen[it.id] >= 3); });
+      if (!items.length) break;
+      var it = wpick(R, items, function (it) {
+        var w = SP_G[it.g] || 1, G = it.g;
+        if (G === '日用') w *= L.body < 50 ? 3 : 0.8;
+        if (G === '农事') w *= farmerish(L) ? 2.5 : 0.6;
+        if (G === '读书') w *= L.literate ? 0.6 + t.cur / 50 : 0;
+        if (G === '交游' || G === '乡里' || G === '捐资') w *= 0.3 + t.soc / 50;
+        if (G === '游历') w *= (0.3 + (t.cur + t.act) / 100) * 0.4;
+        if (fo === 'travel' && G === '游历') w *= 3;
+        if (G === '买卖') w *= L.cls === 'merchant' ? 3 : 0;
+        if (G === '身后') w *= L.age >= 50 ? 2 : 0.3;
+        if (fo === 'career' && (G === '仕途' || G === '交游')) w *= 2.5;
+        if (fo === 'study' && G === '读书') w *= 2.5;
+        if ((fo === 'house' || fo === 'save') && (G === '农事' || G === '家业')) w *= 2;
+        if ((fo === 'social' || fo === 'fame') && (G === '交游' || G === '乡里')) w *= 2.5;
+        if (fo === 'kids' && G === '子女') w *= 2;
+        w *= 0.4 + Math.log10(Math.max(50, it.c)) / 3;
+        return Math.max(0.05, w);
+      });
+      var r = spend(L, it.id);
+      if (!r.ok) break;
+      seen[it.id] = y; budget -= it.c; done++;
+      add(L, 3.75, 'spend', '（自动支用 ' + fmt(it.c) + ' 钱值）' + r.t);
+      opt = spendOptions(L);
+    }
+    return done;
+  }
+  function spendRoom(L) {
+    var head = isHead(L), free = Math.max(0, Math.round(L.eco.cash - reserve(L)));
+    return { priv: Math.round(L.eco.priv), house: head ? free : 0, family: head ? 0 : free, head: head };
+  }
+  function spendOptions(L) {
+    var y = L.by + L.age, room = spendRoom(L), can = room.priv + room.house;
+    if (L.age < 15 || L.cls === 'slave') return { room: room, items: [], can: can };
+    var st = function (c) { return c <= can ? 'ok' : (!room.head && c <= can + room.family ? 'ask' : 'poor'); };
+    var items = [];
+    SPEND.filter(function (s) { return s.ok(L, y); }).forEach(function (s) {
+      if (s.multi) { s.multi(L, y).forEach(function (m) { items.push({ id: s.id + ':' + m.k, n: m.n, c: m.c, g: s.g, sub: m.sub || '', why: m.no || null, st: m.no ? 'no' : st(m.c) }); }); return; }
+      var c = typeof s.c === 'function' ? s.c(L) : s.c;
+      items.push({ id: s.id, n: s.n, c: c, g: s.g, st: st(c), plan: !!s.plan });
+    });
+    return { room: room, items: items, can: can };
+  }
+  function spend(L, id) {
+    var y = L.by + L.age;
+    var sid = id.split(':')[0], key = id.slice(sid.length + 1);
+    var s = SPEND.filter(function (x) { return x.id === sid; })[0];
+    var it = spendOptions(L).items.filter(function (x) { return x.id === id; })[0];
+    if (!s || !it || it.st === 'poor' || it.st === 'no') return { ok: false, t: it && it.why ? it.why + '。' : '余财不足。' };
+    var r;
+    if (it.st === 'ask') {
+      if (L.R() >= 0.2 + L.standing / 300 + (it.c < 1000 ? 0.25 : 0)) r = { ok: false, t: '你开口向家里要' + fmt(it.c) + '钱值，想' + s.n + '。家主没有答应。' };
+      else { var p = Math.min(L.eco.priv, it.c); L.eco.priv -= p; L.eco.cash -= it.c - p; r = { ok: true, t: '家主答应了你。' + s.fx(L, y, it.c, key) }; }
+    } else { payFrom(L, it.c); r = { ok: true, t: s.fx(L, y, it.c, key) }; }
+    r.c = it.c;
+    (L.spendLog = L.spendLog || []).push({ y: y, t: r.t, ok: r.ok });
+    L.wealth = wealthScore(L);
+    return r;
+  }
+  function ecoView(L) {
+    var y = L.by + L.age - (L.alive ? 1 : 0), E = L.eco, g = group(ctrl(L.zone, y));
+    var coin = L.eth ? 0.1 : (y >= 190 && y < 196) ? 0.15 : (g === 'wei' && y >= 221 && y < 227) ? 0.05 : (y >= 196 && y < 221) ? 0.3 : 0.45;
+    var cloth = 0.3, cash = Math.round(E.cash);
+    return {
+      slave: L.cls === 'slave', head: isHead(L), land: L.land, ox: E.ox, house: E.house, stock: E.stock,
+      assets: L.land * LANDP + E.ox * 3000 + E.house + E.stock, cash: cash, priv: Math.round(E.priv), debt: Math.round(E.debt),
+      comp: [['五铢钱', Math.round(cash * coin)], ['布帛', Math.round(cash * cloth)], ['粮谷', cash - Math.round(cash * coin) - Math.round(cash * cloth)]],
+      months: L.grainMonths, buyMonths: L.grainMonths != null && L.lastCons ? Math.floor(Math.max(0, cash - 0) / (L.lastCons * PRICE / 12)) : 0, coinNote: y >= 190 && y < 196 ? '董卓的小钱轻薄，钱几乎不值钱' : g === 'wei' && y >= 221 && y < 227 ? '朝廷罢五铢钱，交易多用谷帛' : ''
+    };
+  }
+
+  function splitHousehold(L, y) {
+    var R = L.R, a = L.age, f = L.kin[0], E = L.eco;
+    if (L.sex !== 'M' || L.split || L.cls === 'slave' || L.soldier || L.band || a < 18) return;
+    var home = f.alive && !f.apart && !f.out;
+    var bros = liveKin(L, function (k) { return k.rel === 'sib' && k.sex === 'M' && y - k.by >= 15 && !k.out; }).length;
+    if (home && L.married && a >= 20 && R() < 0.12) {
+      var share = Math.floor(L.land / (bros + 2));
+      L.split = true; L.land = share; E.cash = Math.round(E.cash / (bros + 2)); E.debt = Math.round(E.debt / (bros + 2));
+      E.ox = E.ox > 1 ? 1 : (R() < 0.4 ? E.ox : 0); E.house = Math.min(E.house, 2500);
+      liveKin(L, function (k) { return ['father', 'mother', 'dimu', 'sib', 'gp'].indexOf(k.rel) >= 0; }).forEach(function (k) { k.out = true; });
+      add(L, 2.9, 'life', '你与父亲分了家' + (share > 0 ? '，分得' + cnNum(share) + '亩田' : '') + '，从此自立门户，成了户主。');
+    } else if (!f.alive && f.dy === y && !L.inherited) {
+      L.inherited = true;
+      if (bros > 0) {
+        L.land = Math.floor(L.land / (bros + 1)); E.cash = Math.round(E.cash / (bros + 1));
+        liveKin(L, function (k) { return k.rel === 'sib' && k.sex === 'M' && y - k.by >= 15; }).forEach(function (k) { k.out = true; });
+        add(L, 3.1, 'life', '父亲去世后，你和兄弟们分了家产' + (L.land > 0 ? '，你分得' + cnNum(L.land) + '亩田' : '') + '，成了户主。');
+      } else add(L, 3.1, 'life', '父亲去世，你继承了家业，成了户主。');
+      L.split = true;
+    }
+  }
+  function sonOutcome(L, y, d) {
+    var R = L.R, son = d.son, nm = '儿子' + son.name;
+    if (!son.alive) return;
+    if (!d.give) { affAdd(son, -12); add(L, 0.6, 'life', nm + '怏怏不乐，好几个月不同你说话。'); return; }
+    affAdd(son, 8);
+    payFrom(L, 3000);
+    if (son.lav > 0.66) { var sp = 1800 + Math.round(R() * 8) * 100; add(L, 3.4, 'bad', '给' + nm + '的三千钱，他花了' + fmt(sp) + '宴客，说是结交朋友。剩下的也没拿回来。'); }
+    else if (son.lav > 0.3) { L.eco.cash += 3400; add(L, 3.4, 'good', nm + '倒也争气，年底连本带利还了你三千四百钱。'); }
+    else add(L, 3.4, 'bad', nm + '的买卖没做成，三千钱赔了个精光。他回来后好几天不敢见你。');
+  }
+
+
+  /* ================= 人生抉择 ================= */
+  function choiceMul(L) {
+    var m = { gentry: L.gate >= 3 ? 2.6 : 2.1, clerk: 1.7, merchant: 1.5, artisan: 1.1, peasant: 1, soldier: 1, tuntian: 0.9, tenant: 0.8, tribal: 0.8, slave: 0.7 }[L.cls] || 1;
+    if (L.office) m *= 1.5;
+    if (L.literate) m *= 1.2;
+    return m;
+  }
+  var LOCAL_OFF = { 亭长: 1, 里正: 1, 乡啬夫: 1, 游徼: 1 };
+  function realOffice(L) { return !!L.office && !LOCAL_OFF[L.office]; }
+  function isElite(L) { return L.cls === 'gentry' || L.cls === 'clerk' || realOffice(L) || L.learn >= 45 || L.fame >= 20; }
+  function ctxH(L, y) {
+    var fl = { war: 0, fam: 0, plag: 0 }, fk = ctrl(L.zone, y);
+    (EV_BY_Y[y] || []).forEach(function (ev) { var fx = localFx(L, ev, L.zone, y); if (fx && !fx._skip) { fl.war += fx.war || 0; fl.fam += fx.fam || 0; fl.plag += fx.plag || 0; } });
+    var camp = L.soldier && (CAMP_BY_Y[y] || []).some(function (c) { return c.a.indexOf(L.soldier.army) >= 0; });
+    return {
+      y: y, a: L.age, g: group(fk), fk: fk, fname: fname(fk, y), head: isHead(L), fl: fl, chaos: chaos(y), poor: poorNow(L), farm: farmerish(L), camp: camp,
+      kids: function (lo, hi, sex, f) { return liveKin(L, function (k) { var a = y - k.by; return k.rel === 'child' && a >= lo && a <= hi && (!sex || k.sex === sex) && (!f || f(k)); }); },
+      friend: function (min) { return bestFriend(L, min); },
+      school: (polsAt(L.zone, y).filter(function (p) { return p.fx.school; })[0] || {}).fx ? polsAt(L.zone, y).filter(function (p) { return p.fx.school; })[0] : null,
+      tier: lifeTier(L, y).k, order: L.reg ? L.reg.order : 70, ref: L.reg ? L.reg.ref : 0,
+      sib: function () { return liveKin(L, function (k) { return k.rel === 'sib' && !k.out && k.by > L.by && k.by < y; })[0] || null; },
+      someKin: function () { var ks = liveKin(L, function (k) { return !k.out && !k.famous && k.by < y; }); return ks.length ? ks[Math.floor(hash01(L.seed, y, 99) * ks.length)] : null; }
+    };
+  }
+  function fillC(L, t, meta) {
+    return t.replace('{kin}', meta.kin ? kinLabel(L, meta.kin) : '').replace(/\{kin\}/g, meta.kin ? kinLabel(L, meta.kin) : '')
+      .replace(/\{friend\}/g, meta.friend ? meta.friend.name : '一个多年不见的旧友').replace(/\{clan\}/g, L.clanName || '你家').replace(/\{school\}/g, meta.sc ? meta.sc.city + meta.sc.n : '').replace(/\{lord\}/g, meta.lord || '').replace(/\{birth\}/g, D.JUN[L.birthJun][0] + L.birthCounty).replace(/\{who\}/g, L.parentDiedName || '亲人');
+  }
+  function lifeChoice(L, y, free) {
+    var R = L.R, a = L.age;
+    var kid = a < 12;
+    if (a < 5 || (!free && !L.soldier)) return null;
+    var gapN = L.cls === 'gentry' || L.office || a >= 15 ? 1 : 2;
+    if (a - L.lastChoice < gapN) return null;
+    if (R() >= (kid ? 0.14 : 0.26) * choiceMul(L)) return null;
+    var H = ctxH(L, y), elite = isElite(L), pool = [];
+    D.CHOICES.forEach(function (c) {
+      if (c.elite && !elite) return;
+      if (kid && !c.kid) return;
+      // 诸侯府里的姬妾，不再操持外面的营生
+      if (L.flags.famousConc && L.spouseK && L.spouseK.alive && /^(call_|craft|apprentice|shop|f_tavern|f_master|f_levy|buyoffice|taixue)/.test(c.id)) return;
+      var seen = (L.choiceSeen || {})[c.id];
+      var REP = { sick: 5, plague: 6, storm: 3, relief: 4, lean: 3, extort: 6, kidsick: 4, haul: 5, pressgang: 6, taxdue: 5, hoard: 5, levy: 6, ration: 5, birthday: 8, case: 4, sellchild: 99, bondage: 8, rentup: 99 };
+      if (seen != null && (REP[c.id] == null || y - seen < REP[c.id])) return;
+      var meta = c.ok(L, H);
+      if (meta) pool.push({ c: c, meta: meta });
+    });
+    if (!pool.length) return null;
+    var pk = wpick(R, pool, function (x) { return x.c.w; });
+    var c = pk.c;
+    (L.choiceSeen = L.choiceSeen || {})[c.id] = y;
+    if (c.pre) c.pre(L, pk.meta, H);
+    var co = c.of ? c.of(L) : c.o;
+    var aw = c.aw ? c.aw(L).map(function (x) { return Math.max(1, x); }) : co.map(function () { return 1; });
+    var dis = co.map(function (o, i) {
+      if (L.sex === 'F' && c.r[i] && c.r[i].some(function (x) { return x.fx && x.fx.office; })) return '女子不得出仕';
+      return c.need && c.need[i] && !c.need[i](L, H, pk.meta) ? (c.why && c.why[i]) || '做不到' : null;
+    });
+    var w = aw.map(function (x, i) { return dis[i] ? 0 : x * x; });
+    if (!w.some(function (x) { return x > 0; })) return null;
+    return { key: 'life', id: c.id, meta: pk.meta, q: fillC(L, c.qf ? c.qf(L) : c.q, pk.meta), o: co.map(function (o) { return fillC(L, o, pk.meta); }), w: w, dis: dis };
+  }
+  /* ================= 回响：年轻时的选择，多年后回来找你 ================= */
+  var MEM_MAP = { 'foundling:0': 'foundling', 'friend:0': 'sheltered', 'friend:2': 'turned_away', 'plague:0': 'plague_saved', 'refugees:0': 'refugees', 'refugees:1': 'refugees', 'teachv:0': 'taught',
+    'dispute:0': 'feud', 'dispute:1': 'yielded', 'hide:0': 'hid_census', 'bandit:0': 'was_bandit', 'relief:0': 'relief_open',
+    'fr_jail:0': 'saved_friend', 'fr_jail:1': 'saved_friend', 'fr_jail:2': 'abandoned_friend', 'fr_dead:0': 'comfort_mother', 'fr_dead:1': 'revenge',
+    'fr_rich:1': 'owe_friend', 'fr_rich:2': 'slander_rich', 'fr_office:0': 'congrat_office', 'fr_office:1': 'envy_office', 'sib_rich:1': 'sued_sib', 'fr_scholar:1': 'rival_study',
+    'frloan:0': 'lent_friend', 'frloan:1': 'lent_friend', 'frloan:2': 'refused_friend', 'sellchild:0': 'sold_child', 'extort:3': 'defied', 'landgrab:3': 'sued_grab',
+    'lean:0': 'borrowed_grain', 'funeral:0': 'lavish_funeral', 'funeral:2': 'lavish_funeral', 'bondage:1': 'kid_bonded', 'apprentice:0': 'apprentice' };
+  function memRecord(L, y, ch, i, meta) {
+    var k = MEM_MAP[ch.id + ':' + i];
+    if (!k || !L.alive) return;
+    var who = meta.friend || meta.kin || meta.kid || null;
+    if (k === 'foundling') who = L.kin.filter(function (x) { return x.rel === 'child' && x.by === y; }).slice(-1)[0] || null;
+    (L.mem = L.mem || []).push({ k: k, y: y, a: L.age, who: who, q: ch.q, o: ch.o[i] });
+  }
+  function wn(L, w) { return !w ? '' : w.rel ? kinLabel(L, w) : w.name; }
+  var MEM_CB = {
+    saved_friend: { d: [4, 18], ok: function (L, m) { return m.who && m.who.alive && !m.who.apart; }, run: function (L, m) {
+      var w = m.who; affAdd(w, 5);
+      if (L.eco.debt > 0) { var g = Math.min(L.eco.debt, 3000); L.eco.debt -= g; return '当年你救出狱的' + w.name + '，听说你家欠了债，托人送来' + fmt(g) + '钱值，替你还上了。来人说："他说，这条命是你给的。"'; }
+      if (L.sex === 'M' && !L.office && !L.soldier && (L.literate || L.learn >= 25) && L.R() < 0.4) { L.office = '书佐'; L.job = '书佐'; L.officeMax = L.officeMax || '县书佐'; return '当年你救出狱的' + w.name + '，如今在县廷说得上话。他向县丞举荐了你，你做了书佐。'; }
+      L.eco.cash += 2000; return '当年你救出狱的' + w.name + '，这些年在外郡发了家。他托人送来两千钱和一封信，信上只有一句："不敢忘。"'; } },
+    abandoned_friend: { d: [4, 15], ok: function (L, m) { return m.who && m.who.alive; },
+      q: function (L, m) { return m.who.name + '从边地回来了，瘦得脱了形。当年他下狱，你闭门不出。如今你们在集上迎面撞见。'; }, o: ['上前叫住他，向他赔罪', '低下头，装作没看见'],
+      r: [[{ p: 0.5, t: '你叫住了他。他站了很久，最后叹了口气："那时候，谁不怕呢。"你们一起喝了一顿酒。', back: true, waff: 35 }, { p: 0.5, t: '你叫住了他。他看了你一眼，什么也没说，走开了。' }], [{ p: 1, t: '你低下头，从他身边走了过去。那天晚上，你很久没睡着。', tr: { cau: 3 } }]] },
+    comfort_mother: { d: [3, 12], ok: function () { return true; }, run: function (L, m) { L.standing += 2; L.eco.cash += 800; return '当年你去看望过的' + m.who.name + '的老母去世了。临终前，她让人把一对旧银镯送到你家，说："给你家的媳妇，算是他的一点心意。"'; } },
+    revenge: { d: [2, 10], ok: function (L) { return !!(L.soldier || L.milMax); }, run: function (L, m) { L.tr.cau = clamp(L.tr.cau + 3, 5, 95); return '你在军中已经几年了。夜里站岗时，你常想起' + m.who.name + '。仇报了没有？你自己也说不清。'; } },
+    owe_friend: { d: [2, 6], ok: function (L, m) { return m.who && m.who.alive && !m.who.apart && L.eco.debt > 0; },
+      q: function (L, m) { return m.who.name + '托人来问当年借给你的三千钱。'; }, o: ['砸锅卖铁也先还上', '求他再宽限几年'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 3000; }, null], why: ['你手头实在凑不出来', null],
+      r: [[{ p: 1, t: '你把钱还上了，还多送了一只鸡。他说："你这人，靠得住。"', cash: -3000, debt: -3000, waff: 10 }], [{ p: 0.6, t: '他答应再宽限几年，只是脸色不太好看。', waff: -10 }, { p: 0.4, t: '他当场翻了脸，说你忘恩负义。你们从此断了来往。', waff: -40 }]] },
+    slander_rich: { d: [3, 12], ok: function (L, m) { return m.who && m.who.alive && !m.who.apart; }, run: function (L, m) {
+      if (L.wealth < 35) { L.standing -= 1; return '荒年里你家去借粮。' + m.who.name + '——如今乡里数一数二的富户——让管家把你挡在了门外："当年的话，我家主人都记着呢。"'; }
+      return '你和' + m.who.name + '在县里的宴席上遇见。他客客气气，你也客客气气，当年那些话，谁也没提。'; } },
+    congrat_office: { d: [5, 15], ok: function (L, m) { return m.who && m.who.alive && !m.who.apart; }, run: function (L, m) { L.standing += 3; L.flags.connected = true; return '你家和邻家为一桩田产打官司。当年你真心去贺的' + m.who.name + '，如今在郡里说得上话，他替你说了句公道话。'; } },
+    envy_office: { d: [8, 15], ok: function () { return true; }, run: function (L, m) {
+      if (L.officeMax || L.milMax) { L.fame += 2; return '你终于也出人头地了。那天你想起许多年前' + m.who.name + '穿着吏服回乡的样子——那口气，你憋了' + cnNum(L.by + L.age - m.y) + '年。'; }
+      L.tr.cmp = clamp(L.tr.cmp - 8, 5, 95); L.tr.cau = clamp(L.tr.cau + 2, 5, 95);
+      return m.who.alive ? m.who.name + '已经做到了县丞，你还在原地。你渐渐不再和他比了。' : '当年让你眼红的' + m.who.name + '已经不在了。你想起那些较劲的年月，只觉得可笑。'; } },
+    sued_sib: { d: [5, 15], ok: function (L, m) { return m.who && m.who.alive && !m.who.apart; },
+      q: function (L, m) { return '你和' + kinLabel(L, m.who) + '自从当年为分家闹到族里，已经' + cnNum(L.by + L.age - m.y) + '年没有说过话了。这年冬天，他病倒了。'; }, o: ['提着一只鸡去看他', '不去'],
+      r: [[{ p: 1, t: '你去了。兄弟俩对坐着，谁也没提当年的事。临走时，他让侄子送你到了村口。', waff: 30, tr: { cmp: -3 } }], [{ p: 1, t: '你没有去。后来听说他好了，两家还是不说话。' }]] },
+    foundling: { d: [12, 22], ok: function (L, m) { return m.who && m.who.alive && !m.who.apart; }, run: function (L, m) { affAdd(m.who, 20); return '你当年在路边抱回来的' + kinLabel(L, m.who) + '，如今已经长大成人。那天他给你磕了个头，说："没有您，我早就死在路边了。"'; } },
+    sheltered: { d: [3, 15], ok: function () { return true; }, run: function (L) { L.eco.cash += 600; L.standing += 1; return '许多年前你收留过的那个旧友，托人带来了一封信和一匹绢——他在外郡站稳了脚跟。'; } },
+    turned_away: { d: [4, 15], ok: function (L) { return L.R() < 0.5; }, run: function (L) { L.tr.cau = clamp(L.tr.cau + 2, 5, 95); return '你听人说，当年你闭门不见的那个旧友，后来死在了逃难的路上。你想起那天他在门外站了很久。'; } },
+    plague_saved: { d: [3, 15], ok: function () { return true; }, run: function (L) { L.eco.cash += 400; L.standing += 2; return '当年你在疫中照料过的那户邻家，如今日子好过了。你家青黄不接时，他们送来了两石粟。'; } },
+    refugees: { d: [3, 12], ok: function () { return true; }, run: function (L) { L.standing += 3; L.flags.wubi = true; return '你当年收容的流民里，有人做了你家佃客的头目。乱兵过境那年，他带着众人守住了庄门。'; } },
+    taught: { d: [8, 20], ok: function () { return true; }, run: function (L) { L.standing += 3; return '你从前教过的学生里，有一个做了县吏，逢年过节都提着礼来看你。'; } },
+    feud: { d: [3, 12], ok: function (L) { return L.land > 0; }, run: function (L) { L.yHarvest = Math.min(L.yHarvest || 1, 0.85); return '当年和你争田界的那户邻家，这些年一直和你家别着劲。今年春耕，你家田边的水渠被人堵了。'; } },
+    yielded: { d: [3, 12], ok: function () { return true; }, run: function (L) { L.standing += 2; return '当年你在田界上让了一步。今年你家盖房缺人手，那户邻家的几个儿子二话不说就来帮忙了。'; } },
+    hid_census: { d: [2, 10], ok: function (L) { return L.R() < 0.45; }, run: function (L) { payFrom(L, 1500); return '县里重新核查户口，当年少报的人口被查了出来。你家被罚了一千五百钱。'; } },
+    was_bandit: { d: [3, 15], ok: function (L) { return !L.flags.outlaw; },
+      q: function () { return '有人认出了你——当年在山里一起落草的人。他如今在县里当差，暗示你给些钱，不然就把旧事抖出去。'; }, o: ['给他钱，堵住他的嘴', '不理他'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 1000; }, null], why: ['你拿不出钱来', null],
+      r: [[{ p: 1, t: '你给了他一千钱。他拍拍你的肩膀走了。你知道，这不会是最后一次。', cash: -1000 }], [{ p: 0.5, t: '他到底没敢声张——他自己也不干净。', tr: { ind: 2 } }, { p: 0.5, t: '旧事被抖了出来。县里把你抓去打了一顿，罚了钱，乡里人从此看你的眼神都变了。', cash: -1500, standing: -6, body: -4 }]] },
+    relief_open: { d: [2, 10], ok: function () { return true; }, run: function (L) { L.fame += 4; return '当年你擅自开仓的事，乡里人一直记着。你离任那天，百姓沿路相送，有人在路边摆了酒。'; } },
+    lent_friend: { d: [2, 15], ok: function (L, m) { return m.who && m.who.alive && !m.who.apart && m.who.aff >= 40; }, run: function (L, m) { L.eco.cash += 600; affAdd(m.who, 5); return '你家遭了难。当年向你借过钱的' + m.who.name + '听说了，二话不说扛着两袋粟上了门。'; } },
+    refused_friend: { d: [3, 15], ok: function (L, m) { return m.who && m.who.alive && L.R() < 0.6; }, run: function (L, m) { return '你在路上遇见了' + m.who.name + '——当年你没借钱给他。他如今日子好过了，看见你，把头扭了过去。'; } },
+    sold_child: { d: [6, 20], ok: function (L, m) { return m.who && m.who.alive && m.who.apart; },
+      q: function (L, m) { return '有人从邻县捎来消息：当年卖掉的' + kinLabel(L, m.who) + '还活着，在一户大户人家做奴仆。'; }, o: ['凑钱去把人赎回来', '远远去看一眼', '不去打扰了'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 6000; }, null, null], why: ['赎身要六千钱，你拿不出来', null, null],
+      r: [[{ p: 1, t: '你凑了六千钱，把孩子赎了回来。一家人抱头痛哭，孩子却怯生生的，好几天才肯叫你。', cash: -6000, back: true, waff: 20 }],
+        [{ p: 1, t: '你在那户人家的后门外等了一整天，终于远远看见了——长高了，穿着粗布衣裳，在井边打水。你没敢上前。' }], [{ p: 1, t: '你没有去。你想，也许那边的日子，比跟着你强。' }]] },
+    defied: { d: [3, 12], ok: function () { return true; }, run: function (L) { if (L.R() < 0.5) { payFrom(L, 600); return '当年被你顶撞过的那个亭长，如今升了游徼。他一直记着你，派到你家的徭役总比别人多。'; } L.standing += 3; return '当年你和亭长理论的事早就传开了。乡里人受了欺负，都爱来找你出头。'; } },
+    sued_grab: { d: [2, 10], ok: function () { return true; }, run: function (L) { if (L.R() < 0.6) { L.yHarvest = Math.min(L.yHarvest || 1, 0.8); return '当年你告到县里的那个豪强，这些年一直找你家的麻烦：放牛踩你家的苗，断你家的水。'; } L.standing += 3; return '当年你敢告豪强的事，乡里人至今说起来还竖大拇指。'; } },
+    borrowed_grain: { d: [1, 2], ok: function () { return true; }, run: function (L) { payFrom(L, 800); return '当年向豪强借的那几斗粮，秋后要加倍还。管事上门来收，连本带利拿走了你家半仓粟。'; } },
+    lavish_funeral: { d: [1, 8], ok: function () { return true; }, run: function (L) { L.standing += 3; return '乡里人至今说起你家当年给老人办的丧事，都说你是孝子。只是那笔债，你还了好多年。'; } },
+    kid_bonded: { d: [3, 6], ok: function (L, m) { return m.who && m.who.alive && m.who.apart; }, run: function (L, m) { m.who.apart = false; m.who.bonded = false; affAdd(m.who, -10); return '你送去抵债的' + kinLabel(L, m.who) + '期满回来了，比走的时候瘦了一圈。见了你，半天叫不出一声。'; } },
+    apprentice: { d: [6, 15], ok: function () { return true; }, run: function (L) { L.standing += 2; return '你当年收下的那个徒弟，如今自己开了作坊。逢年过节，他总要提着东西来看师父。'; } },
+    rival_study: { d: [6, 15], ok: function () { return true; }, run: function (L) { if (L.learn >= 50) { L.fame += 3; return '多年后，你与当年的同窗在郡里的宴席上论经，已经不输给他了。座中有人说："这两位，是本郡的双璧。"'; } return '你和当年的同窗早已不再比了。他开馆讲学，你在家里教儿子认字。'; } }
+  };
+  function memCheck(L, y, P) {
+    if (!L.mem || !L.mem.length) return;
+    for (var j = 0; j < L.mem.length; j++) {
+      var m = L.mem[j];
+      if (m.done) continue;
+      var cb = MEM_CB[m.k], dt = y - m.y;
+      if (!cb || dt > cb.d[1]) { m.done = true; continue; }
+      if (dt < cb.d[0] || L.R() >= 0.3) continue;
+      if (!cb.ok(L, m)) continue;
+      m.done = true;
+      if (cb.q) {
+        var dis = cb.o.map(function (o, i) { return cb.need && cb.need[i] && !cb.need[i](L) ? cb.why[i] : null; });
+        P.queue.push({ key: 'mem', mi: j, q: cb.q(L, m), o: cb.o.slice(), dis: dis, w: cb.o.map(function (o, i) { return dis[i] ? 0 : 1; }) });
+      } else P.dec.memRun = j;
+      return;
+    }
+  }
+  function memEcho(L, m, t) { (L.echoes = L.echoes || []).push({ y0: m.y, a0: m.a, o: m.o, y1: L.by + L.age, a1: L.age, t: t }); }
+  function memApply(L, y, d) {
+    if (d.memRun != null) {
+      var m = L.mem[d.memRun], t = MEM_CB[m.k].run(L, m);
+      if (t) { add(L, 1.5, 'life', t); memEcho(L, m, t); }
+    }
+    if (d.memC) {
+      var m2 = L.mem[d.memC.mi], cb = MEM_CB[m2.k], rs = cb.r[d.memC.i], x = L.R(), acc = 0, r = rs[rs.length - 1];
+      for (var k = 0; k < rs.length; k++) { acc += rs[k].p; if (x < acc) { r = rs[k]; break; } }
+      if (r.cash) { if (r.cash > 0) L.eco.cash += r.cash; else payFrom(L, -r.cash); }
+      if (r.debt) L.eco.debt = Math.max(0, L.eco.debt + r.debt);
+      if (r.waff && m2.who) affAdd(m2.who, r.waff);
+      if (r.back && m2.who) { m2.who.apart = false; m2.who.fate = ''; m2.who.sold = m2.who.given = m2.who.bonded = false; }
+      ['standing', 'body'].forEach(function (q) { if (r[q]) L[q] += r[q]; });
+      if (r.tr) for (var q in r.tr) L.tr[q] = clamp(L.tr[q] + r.tr[q], 5, 95);
+      add(L, 1.5, 'life', r.t); memEcho(L, m2, r.t);
+    }
+  }
+
+  function lifeOutcome(L, y, ch, i) {
+    var R = L.R, def = D.CHOICES.filter(function (c) { return c.id === ch.id; })[0];
+    var rs = def.r[i], r = rs[rs.length - 1], acc = 0, x = R();
+    for (var j = 0; j < rs.length; j++) { acc += rs[j].p; if (x < acc) { r = rs[j]; break; } }
+    var fx = r.fx || {}, s = 1.15, meta = ch.meta || {};
+    var rt = Array.isArray(r.t) ? pick(R, r.t) : r.t;
+    if (rt) add(L, s, 'life', fillC(L, rt, meta));
+    ['body', 'learn', 'standing', 'fame', 'craft'].forEach(function (k) { if (fx[k]) L[k] += fx[k]; });
+    var E = L.eco;
+    if (fx.cash) { if (fx.cash > 0) E.cash += fx.cash; else payFrom(L, -fx.cash); }
+    if (fx.priv) E.priv = Math.max(0, E.priv + fx.priv);
+    if (fx.affair) { var lsx = L.sex === 'M' ? 'F' : 'M', lsur = surname(R, L.cls === 'gentry' ? 'gentry' : 'peasant'); L.affair = { k: fx.affair, since: y, name: lsur + givenName(R, lsx) }; }
+    if (fx.vic) victimOutcome(L, y, fx.vic, s);
+    if (fx.crime) crimeStart(L, y, fx.crime, s + 0.05);
+    if (fx.love && meta.friend) { L.love = { name: meta.friend.name, sex: meta.friend.sex, y: y, mutual: fx.love === 2 }; if (fx.love === 2) meta.friend.lover = true; }
+    if (fx.side) L.side = { k: fx.side, from: y, until: y + 5 + Math.floor(R() * 6) };
+    if (fx.yHarvest) L.yHarvest = fx.yHarvest;
+    if (fx.harvestB) L.harvestB = Math.min(1.15, (L.harvestB || 1) * fx.harvestB);
+    if (fx.labor) E.labor = Math.max(E.labor || 0, fx.labor);
+    if (fx.kidDie && meta.kid && meta.kid.alive) kinDie(L, meta.kid, 'fam', s + 0.05, y);
+    if (fx.debt) E.debt = Math.max(0, E.debt + fx.debt);
+    if (fx.land) L.land = Math.max(0, L.land + fx.land);
+    if (fx.ox) E.ox = Math.max(0, E.ox + fx.ox);
+    if (fx.cls) { L.cls = fx.cls; if (fx.cls !== 'slave' && E.house === 0) E.house = 1500; }
+    if (fx.job) L.job = fx.job;
+    if (fx.mil) { L.mil = fx.mil; L.milMax = ['军卒', '屯长', '军司马', '校尉', '将军'][fx.mil]; L.job = L.milMax; }
+    if (fx.nobleConc) {
+      L.spouseK = null; var ocls = L.cls; L.cls = 'gentry'; L.gate = L.gate || 1;
+      var nsp = makeSpouse(L, y); nsp.age = L.age + 12 + Math.floor(R() * 20); nsp.from = fx.nobleConc;
+      doMarry(L, nsp, y, s + 0.1, '你被抬进了' + fx.nobleConc + '的府里。');
+      L.flags.isConc = true; L.cls0 = ocls; L.standing += 6;
+      add(L, s + 0.12, 'life', '你成了' + nsp.name + '的妾。府里锦衣玉食，可正室才是主母；你的孩子，生下来就是"庶出"。');
+    }
+    if (fx.gentryWed) { L.spouseK = null; doMarry(L, makeSpouse(L, y), y, s + 0.1, L.sex === 'F' ? '你奉父命出嫁。' : ''); }
+    if (fx.clanDie) liveKin(L, function (k) { return !k.out || k.rel === 'father' || k.rel === 'sib'; }).forEach(function (k) { if (R() < 0.6) kinDie(L, k, 'executed', s + 0.08, y); });
+    if (fx.office) { L.office = fx.office; L.officeMax = fx.office === '幕僚' ? (meta.lord || '') + '幕府的掾属' : fx.office; L.job = fx.office; }
+    var sv = fx.serve || (fx.office === '幕僚' && meta.fk ? lordFigAt(meta.fk, y) : null);
+    if (sv) serveLord(L, sv, y, fx.office ? '在' + figName(sv) + '幕府中任职' : '追随' + figName(sv));
+    if (fx.noOffice) { L.office = null; L.job = '农'; }
+    if (fx.flag) [].concat(fx.flag).forEach(function (f) { L.flags[f] = true; });
+    if (L.flags.duishi === true) L.flags.duishi = surname(R, 'peasant') + givenName(R, 'F', 'plain');
+    if (fx.tr) for (var t in fx.tr) L.tr[t] = clamp(L.tr[t] + fx.tr[t], 5, 95);
+    if (fx.kinLit && meta.kin) meta.kin.lit = true;
+    if (fx.kinAff && meta.kin) affAdd(meta.kin, fx.kinAff);
+    if (fx.kinSoldier && meta.kin && meta.kin.alive) meta.kin.soldier = armyOf(ctrl(L.zone, y));
+    if (fx.palace) { var pz = typeof fx.palace === 'string' ? fx.palace : 'ji'; L.cls = 'slave'; L.job = y < 190 ? '采女' : '宫人'; L.flags.palace = 0; L.flags.palaceIn = y; L.flags.palaceTop = L.job; L.eco.house = 0; if (pz !== L.zone) relocate(L, pz, s + 0.05, '你被押上了车，一路送进了{dest}的宫里。', 0.02, y); }
+    if (fx.sonsAff) liveKin(L, function (k) { return k.rel === 'child' && k.sex === 'M'; }).forEach(function (k) { affAdd(k, fx.sonsAff); });
+    if (fx.frAff && meta.friend) affAdd(meta.friend, fx.frAff);
+    if (fx.frGone && meta.friend) { meta.friend.apart = true; meta.friend.fate = fx.frGone; }
+    if (fx.kinWed && meta.kin) meta.kin.wed = true;
+    if (fx.kinGone && meta.kin) { meta.kin.apart = true; meta.kin.sold = true; L.rec.tags.push('loss'); }
+    if (fx.kidGone && meta.kid) { meta.kid.apart = true; meta.kid.bonded = true; }
+    if (fx.sonDie && meta.son && meta.son.alive) kinDie(L, meta.son, fx.sonDie, s + 0.05, y);
+    if (fx.kidsHarm) { var yk = liveKin(L, function (k) { return k.rel === 'child' && y - k.by < 8; })[0]; if (yk) kinDie(L, yk, 'fam', s + 0.05, y); }
+    if (fx.debtClear) E.debt = 0;
+    if (fx.landMul) L.land = Math.floor(L.land * fx.landMul);
+    if (fx.schooling) L.schooling = true;
+    if (fx.kidsLit) liveKin(L, function (k) { return k.rel === 'child' && (fx.kidsLit === 'all' || k.sex === 'M'); }).forEach(function (k) { k.lit = true; });
+    if (fx.concubine || fx.husbandConc) {
+      L.flags.concubine = y;
+      var csur = surname(R, 'peasant'), ck = newKin(L, 'conc', 'F', y - 16 - Math.floor(R() * 6), csur + givenName(R, 'F', 'plain'), { sur: csur });
+      ck.job = '侍妾';
+    }
+    if (fx.kinCare && meta.kin) { meta.kin.cared = y; affAdd(meta.kin, 8); }
+    if (fx.kinPath && meta.kin) meta.kin.path = fx.kinPath;
+    if (fx.edu && meta.sc) L.edu = { n: meta.sc.n, city: meta.sc.city, start: y, next: y + (meta.sc.exam || 2), tries: 0, sc: meta.sc.id };
+    if (fx.divorced && L.spouseK) {
+      L.spouseK.apart = true; L.married = false; L.spouseK = null; L.divorced = true;
+      liveKin(L, function (k) { return k.rel === 'child'; }).forEach(function (k) { k.apart = true; });
+      add(L, s + 0.05, 'bad', '按规矩，孩子留在夫家。你一个人回了娘家，从此再没见过他们。');
+      L.eco = initEco(L); L.land = 0;
+    }
+    if (fx.debtMul) E.debt = Math.round(E.debt * fx.debtMul);
+    if (fx.enlist) enlist(L, y, s + 0.1, false);
+    if (fx.kinOut && meta.kin) meta.kin.out = true;
+    if (fx.kinDie && meta.kin && meta.kin.alive) kinDie(L, meta.kin, fx.kinDie, s + 0.05, y);
+    if (fx.child) {
+      var sx = R() < 0.5 ? 'M' : 'F', k = newKin(L, 'child', sx, y, freshXiao(L, sx), { sur: kidSur(L, 'child') });
+      k.lav = R(); k.adopted = true; L.kidsBorn++;
+      add(L, s + 0.02, 'fam', '你给孩子取名' + k.name + '。');
+    }
+    if (fx.marry) { L.spouseK = null; doMarry(L, makeSpouse(L, y), y, s + 0.1); }
+    var mvz = fx.move ? fx.move.filter(function (z) { return z !== L.zone; }) : [];
+    if (mvz.length) relocate(L, pick(R, mvz), s + 0.2, '你们到了{dest}。', 0.03, y);
+    if (fx.die) die(L, fx.die, s + 0.1, fx.die === 'executed' ? { full: L.R() < 0.5 ? '几天后，你被押赴市曹斩首，年' + cnNum(L.age) + '。' : '你没能活着走出监狱，年' + cnNum(L.age) + '。' } : { a: cnNum(L.age), n: '先登攻城' });
+    L.rec.tags.push('choice');
+  }
+
+  /* ================= 传家：以子孙之身继续 ================= */
+  function heirOf(L) {
+    var kids = L.kin.filter(function (k) { return k.rel === 'child' && k.alive && !k.apart; }).sort(function (a, b) { return a.by - b.by; });
+    if (!kids.length || L.cls === 'slave') return null;
+    var k = kids.filter(function (x) { return x.sex === 'M'; })[0] || kids[0];
+    var sp = L.spouseK && (L.spouseK.alive || L.spouseK.dy >= k.by) ? L.spouseK : L.kin.filter(function (x) { return x.rel === 'spouse'; })[0];
+    var sur = k.sur != null ? k.sur : L.sex === 'M' ? L.sur : (sp && sp.sur != null ? sp.sur : sp ? sp.name.slice(0, 1) : L.sur);
+    var cls = L.cls === 'tribal' ? 'tribal' : (L.office || L.cls === 'gentry') ? (L.cls === 'gentry' ? 'gentry' : 'clerk') : L.cls;
+    return {
+      year: k.by, jun: L.jun, sex: k.sex, sur: sur, xiao: k.xiao || k.name, given: k.given || null, zi: k.zi || null, cls: cls, eth: L.eth, land: L.land,
+      parentSex: L.sex, parentName: L.name, parentBy: L.by, dy: L.dy, cause: L.cause, lit: L.literate,
+      otherName: sp ? sp.name : null, otherBy: sp ? sp.by : null, otherDy: sp && !sp.alive ? sp.dy : null, otherCause: sp ? sp.cause : null,
+      lineage: (L.lineage || []).concat([{ name: L.name, sex: L.sex, by: L.by, dy: L.dy }]), age: L.dy - k.by, gate: L.gate
+    };
+  }
+
+  /* ================= 身后与后记 ================= */
+  function afterlife(L) {
+    var out = [], z = L.zone, dy = L.dy, n = 0;
+    for (var y = dy + 1; y <= dy + 45 && n < 2; y++) {
+      (EV_BY_Y[y] || []).forEach(function (ev) {
+        var fx = ev.at && ev.at[z];
+        if (n >= 2 || !fx || !fx.t || !(fx.war || fx.fam || fx.plag || fx.move || fx.flee || fx.m15 || fx.flood)) return;
+        out.push('你死后第' + cnNum(y - dy) + '年（' + y + '），' + fx.t.replace(/。$/, '') + '。');
+        n++;
+      });
+    }
+    if (n) out.push(L.kidsBorn ? '你的子孙是否熬过了那些年，没有人记下。' : '那时，已经没有人记得你了。');
+    else if (dy < 280) out.push('你所在的地方，此后几十年里没有再遭大的兵祸。这在那个时代，已是难得的福分。');
+    return out;
+  }
+  var REFLECT = {
+    infant: '那一年出生的孩子，大约每五个就有一个活不过周岁。他们大多没有留下名字，只在母亲的记忆里活过几个月。',
+    child: '史书里的汉末，是群雄的汉末。可对于大多数人家来说，乱世首先意味着：孩子养不大。',
+    fam: '史书写饥荒，常常只用三个字："人相食"。在那三个字背后，是千千万万个和你一样的人。',
+    plag: '建安年间的疫病，让曹植写下"家家有僵尸之痛"。史书记下了文人的哀叹，没有记下他们身旁成千上万的寻常人家。',
+    battle: '史书记战争，用的是"斩首万级""溺死者数万"。你是那个数字里的一个。',
+    war: '乱兵过境，史书往往只留下一句"所过残灭"。',
+    massacre: '屠城在史书里只占一行字。那一行字里，有你。',
+    childbirth: '在那个时代，生育是女子一生中最凶险的关口。史书很少写这件事，因为执笔写史的，不是她们。',
+    road: '汉末的户口从五千多万跌到不足千万。消失的人里，有许多就倒在逃难的路上。',
+    corv: '城墙、宫殿、驰道，都是像你这样的人一筐土一筐土垒起来的。史书记下了它们的名字，没有记下垒它们的人。',
+    executed: '权力更迭的时候，史书记下的是胜负。被牵连的人，只是名单上的一行。',
+    fade: '户籍上的名字消失，并不一定是死了：逃亡、南渡、被掳、投靠豪强，都会让一个人从簿籍上不见。史书写到这里，你的故事也就停在这里。'
+  };
+  // 眼下的家境档位（随田产、人口、财力逐年变化）
+  var TIER_K = { 没有家产: 'slave', 赤贫: 'low', 贫寒: 'low', 温饱: 'mid', 小康: 'mid', 殷实: 'high', 富足: 'high', 豪富: 'top' };
+  function lifeTier(L, y) {
+    if (L.tierY === y && L.tierC) return L.tierC;
+    var f = famLevel(L, Math.max(1, household(L, y).length)), lv = f.lv;
+    if (L.cls !== 'slave' && !L.eth && L.age > 0) {
+      if (L.wealth < 6) lv = '赤贫';
+      else if (L.wealth < 12 && (TIER_K[lv] === 'mid' || TIER_K[lv] === 'high')) lv = '贫寒';
+      else if (L.wealth >= 62 && L.cls !== 'gentry' && TIER_K[lv] !== 'high') lv = '殷实';
+    }
+    L.tierY = y; L.tierC = { lv: lv, k: TIER_K[lv] || null };
+    return L.tierC;
+  }
+  // 后宫：采女、宫人，偶有得宠者
+  function palaceRanks(y) { return y < 190 ? ['采女', '美人', '贵人', '皇后'] : ['宫人', '才人', '美人', '贵人', '夫人', '皇后']; }
+  var PAL_T = { 美人: '天子在宴上多看了你一眼。第二天，你被封为美人，搬进了自己的宫院。', 才人: '你在宫中谨慎勤勉，被拔为才人，管着几个宫女。', 贵人: '你得了宠，被封为贵人。宫里的人见了你，都要低头行礼了。', 夫人: '你被晋封为夫人，位次只在皇后之下。你家的父兄，也都得了官。', 皇后: '你被立为皇后。后宫的出身，能走到这一步的，史书上只有寥寥几人——郭女王是婢女出身，卞夫人是倡家之女。你成了其中一个。' };
+  function palaceYear(L, y) {
+    var R = L.R, rk = palaceRanks(y), lv = L.flags.palace || 0;
+    if (L.cls !== 'slave' && !L.flags.palaceUp) return;
+    if (lv >= rk.length - 1) return;
+    var p = [0.012, 0.006, 0.0025, 0.0006, 0.0002][Math.min(lv, 4)] * (L.found.charm ? 2 : 1) * (0.5 + L.tr.soc / 100) * (L.age <= 25 ? 1.3 : L.age >= 35 ? 0.3 : 1);
+    if (rk[lv + 1] === '皇后') p = 0.0004;
+    if (R() < p) {
+      lv++; L.flags.palace = lv; L.flags.palaceUp = true; L.job = rk[lv]; L.flags.palaceTop = rk[lv]; L.fame += 4 + lv * 3; L.standing += 5;
+      if (lv >= 1) L.cls = 'gentry';
+      add(L, 1.8, 'good', PAL_T[rk[lv]] || '你被晋了位分。');
+      return;
+    }
+    if (lv >= 2 && R() < 0.012) { die(L, 'executed', 1.9, { full: '有人告你在宫中行巫蛊、诅咒宫闱。你被赐死，年' + cnNum(L.age) + '。' }); return; }
+  }
+
+  // 求学：太学、国子学、州郡学官
+  var EDU_LINES = ['太学里的博士讲《春秋》公羊义，你抄了满满一卷笔记。', '你和同窗在学舍外的槐树下辩论经义，争到天黑。', '太学生们私下议论朝政，你在一旁听着，不敢插嘴。', '你抄完了一部《尚书》，手指上磨出了茧。', '学舍里冬天没有炭火，你裹着被子读书，墨都冻住了。', '你的文章被博士在讲堂上念了一段，同窗们都回头看你。'];
+  function eduYear(L, y) {
+    var E = L.edu, R = L.R;
+    if (!E || E.done || !L.alive) return;
+    var pol = (D.POLICIES || []).filter(function (p) { return p.id === E.sc; })[0];
+    var still = polsAt(L.zone, y).some(function (p) { return p.id === E.sc; });
+    if (!still && y > E.start) { E.done = true; add(L, 1.6, 'life', '兵荒马乱，' + E.n + '散了。博士们各自逃命，你收拾书箱回了家。'); return; }
+    if (y <= E.start) return;
+    L.learn += (3 + R() * 3) * (L.found.memory ? 1.3 : 1);
+    if (!L.literate && L.learn >= 25 && !condNoRead(L)) L.literate = true;
+    if (R() < 0.45) add(L, 2.3, 'life', fresh(L, EDU_LINES));
+    if (R() < 0.3 && (L.friends || []).filter(function (f) { return f.alive && !f.apart; }).length < 8) {
+      var fs = surname(R, L.cls === 'gentry' ? 'gentry' : 'clerk'), fr = { name: fs + givenName(R, 'M', 'elite'), sex: 'M', by: L.by + Math.round((R() - 0.5) * 6), since: y, ctx: 'school', aff: Math.round(55 + R() * 25), alive: true, apart: false, job: '太学生', fate: '' };
+      (L.friends = L.friends || []).push(fr); add(L, 2.35, 'good', '你在' + E.n + '结识了同窗' + fr.name + '，两人很谈得来。');
+    }
+    if (y < E.next) return;
+    var score = L.learn + R() * 25 + (L.found.memory ? 8 : 0) + (L.cls === 'gentry' && y >= 220 ? 10 : 0);
+    if (score >= 72) {
+      E.done = true; E.passed = true; L.fame += 5;
+      var off = L.cls === 'gentry' ? '郎官' : '书佐';
+      if (!L.office && L.sex === 'M') { L.office = off; L.job = off; L.officeMax = L.officeMax || (off === '郎官' ? '郎中' : '郡文学掌故'); }
+      add(L, 2.4, 'good', (pol && pol.fx.school.pass) || ('你通过了' + E.n + '的考试，被授了官。'));
+    } else if (++E.tries >= 2) { E.done = true; add(L, 2.4, 'life', '你几次考试都没有通过。在' + E.city + '读了这些年书，你收拾书箱回了家。学问是长了，官却没有做成。'); }
+    else { E.next = y + 2; add(L, 2.4, 'bad', '这一年的考试，你没有通过。你咬咬牙，打算再读两年。'); }
+  }
+  function childEvent(L, y) {
+    var R = L.R, a = L.age;
+    if (a < 3 || a > 13 || L.eth || R() >= 0.2) return;
+    var tk = lifeTier(L, y).k, seen = L.childSeen = L.childSeen || {};
+    var pool = D.CHILD_EV.filter(function (e) { return !seen[e.id] && e.tiers.indexOf(tk) >= 0 && a >= e.age[0] && a <= e.age[1] && (!e.sex || e.sex === L.sex); });
+    if (!pool.length) return;
+    var e = pick(R, pool), fx = e.fx || {}, t = e.t;
+    seen[e.id] = y;
+    if (e.fn === 'giveSib') {
+      var sib = liveKin(L, function (k) { return k.rel === 'sib' && !k.out && k.by > L.by && y - k.by <= 4; })[0];
+      if (!sib) return;
+      sib.apart = true; sib.given = true;
+      t = '那年冬天，家里实在养不活了。父母把' + kinLabel(L, sib) + '送给了邻县一户没有孩子的人家。你追着牛车跑了很远，直到看不见。';
+      var mo = L.kin[1]; if (mo && mo.alive) affAdd(mo, -4);
+    } else if (e.fn === 'loseOx') {
+      if (!L.eco || L.eco.ox < 1) return;
+      L.eco.ox -= 1;
+    } else if (e.fn === 'momAway') {
+      var mo2 = L.kin[1]; if (!mo2 || !mo2.alive || mo2.apart) return;
+      mo2.apart = true; mo2.sold = true;
+    } else if (e.fn === 'momAff') {
+      if (L.kin[1] && L.kin[1].alive) affAdd(L.kin[1], 10);
+    } else if (e.fn === 'martialMaybe' && R() < 0.3) L.flags.martial = true;
+    add(L, 1.4, 'life', t);
+    ['body', 'learn', 'standing', 'fame'].forEach(function (k) { if (fx[k]) L[k] += fx[k]; });
+    if (fx.tr) for (var k in fx.tr) L.tr[k] = clamp(L.tr[k] + fx.tr[k], 5, 95);
+  }
+
+  // 结局页：一生所历
+  function lifeSummary(L) {
+    var T = [], seen = {}, regs = [];
+    (L.regimes || []).forEach(function (fk) { var n = fk === 'warlords' ? '群雄割据' : D.FACTIONS[fk].n; if (!seen[n]) { seen[n] = 1; regs.push(n); } });
+    if (regs.length) T.push({ l: '历经政权', v: regs.length + ' 个', s: regs.join(' → ') });
+    var jh = (L.junHist || [L.birthJun]).map(function (j) { return D.JUN[j][0]; });
+    T.push({ l: '居住过的地方', v: jh.length > 1 ? jh.length + ' 个郡' : '未曾离乡', s: jh.join('、') + (L.moves ? '（迁徙 ' + L.moves + ' 次）' : '') });
+    if ((L.visited || []).length) T.push({ l: '游历过的地方', v: L.visited.length + ' 处', s: L.visited.join('、') });
+    var H = L.regHist || [];
+    if (H.length) {
+      var hi = H.reduce(function (a, b) { return b.price > a.price ? b : a; }), lo = H.reduce(function (a, b) { return b.order < a.order ? b : a; });
+      var bad = H.filter(function (h) { return h.order < 42; }).length;
+      T.push({ l: '见过最贵的粮价', v: '每石 ' + fmt(Math.round(PRICE * hi.price)) + ' 钱', s: hi.y + ' 年；平年约 100 钱' });
+      T.push({ l: '动荡的年头', v: bad + ' 年', s: bad ? '最乱是 ' + lo.y + ' 年，' + orderLabel(lo.order) : '一生所在之地还算安定' });
+    }
+    var tax = 0;
+    (L.years || []).forEach(function (r) { if (r.ledger && r.ledger.exp) r.ledger.exp.forEach(function (x) { if (/赋|租|户调|口钱|修宫钱|纳贡/.test(x[0])) tax += x[1]; }); });
+    if (tax > 0) T.push({ l: '交给官府的', v: fmt(Math.round(tax)) + ' 钱值', s: '算赋、田租、户调等，按家计折算' });
+    var laws = Object.keys(L.lawSeen || {}).length;
+    if (laws) T.push({ l: '经历的法令', v: laws + ' 条', s: '' });
+    T.push({ l: '结识的人物', v: Object.keys(L.met || {}).length + ' 位', s: '收入名册的' });
+    var frs = (L.friends || []).length;
+    if (frs) T.push({ l: '交过的朋友', v: frs + ' 位', s: (L.friends || []).filter(function (f) { return !f.alive; }).length + ' 位先你而去' });
+    var kids = L.kin.filter(function (k) { return k.rel === 'child'; }), young = kids.filter(function (k) { return !k.alive && k.dy - k.by < 15; }).length;
+    if (kids.length) T.push({ l: '子女', v: kids.length + ' 人', s: young ? young + ' 人没能长大' : '都长大了' });
+    var ch = (L.choiceLog || []).filter(function (c) { return !c.narr; }).length;
+    if (ch) T.push({ l: '亲手做出的抉择', v: ch + ' 次', s: (L.echoes || []).length ? (L.echoes || []).length + ' 次在多年后有了回响' : '' });
+    return T;
+  }
+
+  // 出生时的家境说明：给不熟悉汉末的人一个参照
+  function famLevel(L, hh) {
+    var c = L.cls, per = hh ? L.land / hh : 0, debt = L.eco && L.eco.debt > 0, lv, t;
+    if (L.eth) return { lv: '化外', t: '你家不在汉人的户籍里，放牧、射猎、种山田为生，不交汉家的赋税，却要给部落的首领出马出人。官府的文书里，你们被称作"夷"。', r: '' };
+    if (c === 'slave') { lv = '没有家产'; t = '你家没有一寸地、一文钱，连人都是主人的。吃主人的饭，干主人的活，可以被买卖、赏赐、陪嫁。'; }
+    else if (c === 'tenant') { lv = debt ? '赤贫' : '贫寒'; t = '你家没有自己的田，租种豪强的地，收成要交一半给田主' + (debt ? '，家里还欠着债' : '') + '。丰年刚够糊口，一遇灾荒就要借贷、卖儿女。汉末失去土地的农民，大多成了这样的佃客。'; }
+    else if (c === 'tuntian') { lv = '贫寒'; t = '你家种的是官田，用官牛的收成要交官府六成，用自家牛的交五成。好处是不必另服兵役，坏处是不得随意离开屯田。'; }
+    else if (c === 'soldier') { lv = '贫寒'; t = '你家是士家（兵户）：男子世代当兵，家属留在后方，等于人质；不得与平民随意通婚，也不能改籍。'; }
+    else if (c === 'peasant') {
+      if (per < 4) { lv = debt ? '赤贫' : '贫寒'; t = '你家的田，每口人摊不到四亩。当时一亩地一年收两三石粮，一个大人一年要吃十几石——地里的收成填不饱一家人的肚子，要靠佣工、织布补贴。'; }

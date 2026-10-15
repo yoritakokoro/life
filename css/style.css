@@ -87,6 +87,8 @@ p { margin: 0; }
   font-family: var(--font-ui); font-size: var(--t-sm); background: none; border: 1px solid transparent; border-radius: 3px; padding: 4px 10px; color: var(--ink-2);
 }
 .nav button:hover, .ghost:hover { border-color: var(--rule); color: var(--ink); }
+.nav a.lang { font-family: var(--font-ui); font-size: var(--t-sm); padding: 4px 10px; border: 1px solid var(--rule); border-radius: 3px; color: var(--ink-2); text-decoration: none; }
+.nav a.lang:hover { color: var(--ink); border-color: var(--ink-3, var(--rule)); }
 
 .screen { padding-block: var(--s-5) var(--s-7); }
 

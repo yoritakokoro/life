@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>五千万分之一</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="五千万分之一：随机降生为汉末三国时代的一个普通人，看完你的一生。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!--BODY-->
+<header class="topbar">
+  <div class="wrap">
+    <button class="brand" id="btn-home" type="button">五千万分之一<small>汉末三国的一生</small></button>
+    <nav class="nav" aria-label="页面">
+      <button type="button" id="btn-codex">名册</button>
+      <button type="button" id="btn-lives">前世</button>
+      <button type="button" id="btn-about">说明</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- 开篇 -->
+  <section class="screen" id="intro">
+    <div class="wrap hero">
+      <h1 class="scroll-title">五千万分之一<span class="seal">生于汉末</span></h1>
+      <div class="hero-body">
+        <p class="kicker">汉末 · 三国 · 一个随机的普通人</p>
+        <div class="lede">
+          <p>建安的英雄会被史书记住。</p>
+          <p>可生在这个时代的绝大多数人，终其一生，也没有见过刘备、曹操或孙权。</p>
+          <p class="q">你会是谁？</p>
+        </div>
+
+        <div class="census" aria-label="户口记录">
+          <div><b class="num">5648<small>万口</small></b><span>永寿三年（157）<br>东汉在籍人口的顶点</span></div>
+          <div><b class="num">约767<small>万口</small></b><span>三国鼎立时<br>魏、蜀、吴在籍人口合计</span></div>
+          <div><b class="num">1616<small>万口</small></b><span>太康元年（280）<br>三国归晋后的统计</span></div>
+        </div>
+        <p class="footnote">户籍上消失的人，并不全是死者：许多人逃入豪强的庇荫，或成了兵户、屯田客，不再出现在编户之中。但死于兵祸、饥荒和瘟疫的人，确实多到难以计数。</p>
+
+        <fieldset class="modes" id="modes">
+          <legend>出生方式</legend>
+          <label class="mode"><input type="radio" name="mode" value="history" checked><b>史实人生</b><span>公元150～220年间，按人口加权随机出生</span></label>
+          <label class="mode"><input type="radio" name="mode" value="xiping"><b>生于熹平</b><span>168～178年出生，黄巾起时正当少壮</span></label>
+          <label class="mode"><input type="radio" name="mode" value="zhongping"><b>生于中平</b><span>184年前后出生，完整经历汉末</span></label>
+          <label class="mode"><input type="radio" name="mode" value="jianan"><b>生于建安</b><span>196年前后出生，长在乱世</span></label>
+          <label class="mode"><input type="radio" name="mode" value="sanguo"><b>三国鼎立</b><span>220～232年出生，汉亡之后，魏蜀吴分立</span></label>
+          <label class="mode"><input type="radio" name="mode" value="weijin"><b>魏晋之际</b><span>245～262年出生，司马氏渐得天下</span></label>
+          <label class="mode"><input type="radio" name="mode" value="taikang"><b>生于太康</b><span>266～280年出生，天下将归于一，又将再乱</span></label>
+          <label class="mode"><input type="radio" name="mode" value="chaos"><b>乱世之子</b><span>战乱之地的权重更高</span></label>
+          <label class="mode"><input type="radio" name="mode" value="blind"><b>真正的随机</b><span>连出生年份都不告诉你，只有干支（150～280）</span></label>
+        </fieldset>
+
+        <div class="actions">
+          <button class="btn-seal" id="btn-born" type="button">降生于大汉</button>
+          <span class="ledger-strip" id="intro-ledger"></span>
+          <label class="focus-chk" title="不勾选时，你本人在幼年会多一些运气；同时辰的其他人、你的家人与统计数字仍按史实"><input type="checkbox" id="harsh"> 史实夭折率（不加宽限）</label>
+        </div>
+
+        <details class="panel" id="mirror">
+          <summary>我若生于那个时代</summary>
+          <div class="inner">
+            <p class="footnote">填写你现代的出生条件，生成一个"东汉等价出生条件"。在东汉，能读书识字的人不足一成；家境与学历越高，越可能落在士族或县吏之家，但并无保证。</p>
+            <form id="mirror-form" class="form-grid">
+              <label class="field">性别
+                <select id="m-sex"><option value="M">男</option><option value="F">女</option></select>
+              </label>
+              <label class="field">出生地区
+                <select id="m-prov"></select>
+              </label>
+              <label class="field">家庭经济
+                <select id="m-tier"><option value="0">困难</option><option value="1" selected>普通</option><option value="2">小康</option><option value="3">富裕</option></select>
+              </label>
+              <label class="field">受教育程度
+                <select id="m-edu"><option value="none">未上学</option><option value="basic">初中及以下</option><option value="high">高中</option><option value="college" selected>大学</option><option value="grad">研究生</option></select>
+              </label>
+              <label class="field">想降生的年代
+                <select id="m-era"><option value="history" selected>随史实（150～220）</option><option value="xiping">熹平（168～178）</option><option value="zhongping">中平（182～186）</option><option value="jianan">建安（194～198）</option><option value="sanguo">三国鼎立（220～232）</option><option value="weijin">魏晋之际（245～262）</option><option value="taikang">太康（266～280）</option></select>
+              </label>
+              <label class="field">现在的职业方向
+                <select id="m-job"><option value="" selected>不填 / 学生</option><option value="army">军人、警察、保安</option><option value="civil">公务员、事业单位</option><option value="edu">教师、科研</option><option value="med">医护</option><option value="biz">经商、销售</option><option value="craft">工程、技术、手艺</option><option value="farm">农业、体力劳动</option><option value="art">文艺、设计</option></select>
+              </label>
+              <label class="field">性子
+                <select id="m-temper"><option value="" selected>说不清</option><option value="out">外向、爱热闹</option><option value="in">内向、好静</option><option value="cau">谨慎、怕事</option><option value="bold">胆大、爱冒险</option></select>
+              </label>
+              <label class="field">身体
+                <select id="m-body"><option value="12">结实，很少生病</option><option value="0" selected>一般</option><option value="-12">体弱多病</option></select>
+              </label>
+            </form>
+            <p class="footnote">职业与性子只改变天资、性情的倾向和出身的权重；想去从军的，在东汉更容易落在兵户、或者成年后选择「投军从戎」。</p>
+            <div class="actions"><button class="btn primary" id="btn-mirror" type="button">以此降生</button></div>
+          </div>
+        </details>
+
+        <details class="panel" id="seed-panel">
+          <summary>输入命数</summary>
+          <div class="inner">
+            <p class="footnote">每一世都有一个命数。同一命数，同样的出身；但你的选择不同，人生便会不同。</p>
+            <div class="actions">
+              <label class="field" style="flex:1 1 12rem">命数<input type="text" id="seed-input" placeholder="例如 H-1K3X9Q" autocomplete="off" spellcheck="false"></label>
+              <button class="btn" id="btn-seed" type="button">按此命数降生</button>
+            </div>
+          </div>
+        </details>
+
+        <p class="footnote">历史概率模拟，而非精确人口学重建。内容涉及战乱、饥荒、瘟疫与死亡，不含自杀情节。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 降生 -->
+  <section class="screen" id="birth" hidden>
+    <div class="wrap birth">
+      <div class="birth-head" id="birth-main"></div>
+      <div class="birth-side">
+        <div>
+          <h2 class="sect-title">初生<em>属性</em></h2>
+          <div class="attrs" id="birth-attrs"></div>
+        </div>
+        <div>
+          <h2 class="sect-title">同一时辰<em>另有三人降生</em></h2>
+          <div class="comps" id="birth-comps"></div>
+        </div>
+        <div class="actions">
+          <button class="btn-seal" id="btn-start" type="button">开始这一生</button>
+          <div class="seg" role="radiogroup" aria-label="速度" id="speed-birth"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 人生 -->
+  <section class="screen" id="life" hidden style="padding-top:0">
+    <div class="hud">
+      <div class="wrap">
+        <div class="hud-row">
+          <div class="hud-era"><b id="hud-era">—</b><span id="hud-sub"></span></div>
+          <div class="hud-age"><span class="hud-name" id="hud-name"></span><b id="hud-age">0</b> 岁</div>
+          <div class="hud-meta"><span id="hud-place"></span><span class="chip" id="hud-ctrl"><i></i><span></span></span><span class="num" id="hud-days"></span></div>
+          <div class="controls">
+            <button class="icon-btn" id="btn-play" type="button" aria-label="暂停"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg></button>
+            <div class="seg" role="radiogroup" aria-label="速度" id="speed-hud"></div>
+            <button class="btn" id="btn-skip" type="button">直接看结局</button>
+          </div>
+        </div>
+        <div class="focus-row" id="focus-row">
+          <label class="focus-sel" for="focus-select">眼下所重</label>
+          <select id="focus-select"></select>
+          <label class="focus-chk"><input type="checkbox" id="focus-auto" checked> 让系统决定</label>
+          <p class="focus-why" id="focus-why"></p>
+          <div class="focus-actions">
+            <button class="btn" id="btn-spend" type="button">谋划与支用</button>
+            <label class="focus-chk" title="开启后，每年按你的性情、眼下所重和家境，自动花掉一部分余财：添置、读书、交游、置产、打点仕途……"><input type="checkbox" id="auto-spend"> 自动支用</label>
+            <label class="focus-chk" title="开启后，逃难、婚事、借债等大事也由系统替你决定"><input type="checkbox" id="auto-choice"> 大事也交给命运</label>
+          </div>
+        </div>
+        <div class="season" id="season" aria-hidden="true"><span>春</span><span>夏</span><span>秋</span><span>冬</span></div>
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="ticker" id="ticker"><b>史书上的这一年</b><p></p></div>
+      <div class="tabs" role="tablist" id="tabs">
+        <button type="button" role="tab" data-tab="chron" aria-selected="true">编年</button>
+        <button type="button" role="tab" data-tab="reg" aria-selected="false">户籍</button>
+        <button type="button" role="tab" data-tab="side" aria-selected="false">舆图</button>
+        <button type="button" role="tab" data-tab="hanji" aria-selected="false">汉纪</button>
+      </div>
+      <div class="life-grid" id="life-grid" data-tab="chron">
+        <aside class="pane reg" aria-label="户籍">
+          <div>
+            <h2 class="sect-title">户籍<em>按虚岁</em></h2>
+            <div class="slips" id="slips"></div>
+            <p class="slip-note">大男、大女：十五岁以上；使男、使女：七至十四岁；未使：七岁以下。仿走马楼吴简户籍格式。</p>
+          </div>
+          <div>
+            <h2 class="sect-title">属性</h2>
+            <div class="attrs" id="attrs"></div>
+          </div>
+          <dl class="status" id="status"></dl>
+          <div>
+            <h2 class="sect-title">此地法令<em id="laws-ruler"></em></h2>
+            <ul class="laws" id="laws"></ul>
+          </div>
+          <div>
+            <h2 class="sect-title">家计<em id="eco-head"></em></h2>
+            <dl class="status eco" id="eco"></dl>
+            <details class="eco-more"><summary>详情</summary><div id="eco-detail"></div></details>
+          </div>
+          <div>
+            <h2 class="sect-title">亲人</h2>
+            <ul class="family" id="family"></ul>
+          </div>
+          <div>
+            <h2 class="sect-title">故交</h2>
+            <ul class="family" id="friends"></ul>
+          </div>
+        </aside>
+        <section class="pane chron-pane" aria-label="编年">
+          <div class="chron-tools"><span>编年</span><button type="button" class="ghost" id="chron-order" title="切换编年的排列方向">最新在上 ⇅</button></div>
+          <div class="chron" id="chron" aria-live="polite"></div>
+        </section>
+        <aside class="pane side" aria-label="舆图">
+          <div>
+            <h2 class="sect-title">舆图<em id="map-year"></em></h2>
+            <div class="map-wrap" id="map-wrap"></div>
+            <div class="legend" id="map-legend"></div>
+            <p class="pop-note" id="pop-note"></p>
+          </div>
+          <div>
+            <h2 class="sect-title">本郡情形<em id="reg-name"></em></h2>
+            <dl class="status reg" id="reg"></dl>
+            <p class="reg-note" id="reg-note"></p>
+          </div>
+          <div>
+            <h2 class="sect-title">同一时辰降生的另外三人</h2>
+            <div class="comps" id="comps"></div>
+          </div>
+        </aside>
+      </div>
+      <section class="hanji" id="hanji" aria-label="汉纪">
+        <h2 class="sect-title">汉纪<em>一格一年</em></h2>
+        <div class="hanji-scroll" id="hanji-scroll"></div>
+        <div class="legend" id="hanji-legend"></div>
+        <p class="hj-tip" id="hanji-tip"></p>
+      </section>
+    </div>
+  </section>
+
+  <!-- 终章 -->
+  <section class="screen" id="end" hidden>
+    <div class="wrap">
+      <div class="end-grid">
+        <div class="end-main" style="display:flex;flex-direction:column;gap:var(--s-5);min-width:0">
+          <div class="stele" id="stele"></div>
+          <div class="achs" id="achs"></div>
+          <div class="afterword" id="afterword"></div>
+          <div>
+            <h2 class="sect-title">一生所历</h2>
+            <div class="tiles" id="end-tiles"></div>
+          </div>
+          <div id="end-echo-wrap" hidden>
+            <h2 class="sect-title">人生的回响<em>年轻时的选择，多年后回来找你</em></h2>
+            <ul class="echoes" id="end-echo"></ul>
+          </div>
+          <div>
+            <h2 class="sect-title">家人<em id="family-sum"></em></h2>
+            <div class="lineage" id="lineage"></div>
+            <div class="end-family" id="end-family"></div>
+          </div>
+          <div>
+            <h2 class="sect-title">故交<em id="friends-sum"></em></h2>
+            <div class="end-family" id="end-friends"></div>
+          </div>
+          <div>
+            <h2 class="sect-title">与你同一时辰降生的人</h2>
+            <div class="comps" id="end-comps"></div>
+          </div>
+        </div>
+        <div class="end-side">
+          <p class="verdict" id="verdict"></p>
+          <div>
+            <h2 class="sect-title">生存曲线<em>每个年龄仍然活着的比例</em></h2>
+            <div class="key"><span><i class="han"></i>生于汉末（本模拟）</span><span><i class="mod"></i>现代中国（近似参考）</span></div>
+            <div class="chart-box" id="surv"></div>
+            <details><summary class="footnote">查看数据</summary><div id="surv-table"></div></details>
+          </div>
+          <div>
+            <h2 class="sect-title">同时代的人死于什么</h2>
+            <div class="causes" id="causes"></div>
+          </div>
+        </div>
+      </div>
+      <section class="hanji" id="end-hanji-wrap">
+        <h2 class="sect-title">汉纪<em>一格一年</em></h2>
+        <div class="hanji-scroll" id="end-hanji"></div>
+        <div class="legend" id="end-hanji-legend"></div>
+        <p class="hj-tip" id="end-hanji-tip"></p>
+      </section>
+      <div class="end-actions">
+        <button class="btn-seal" id="btn-again" type="button">再入轮回</button>
+        <button class="btn primary" id="btn-heir" type="button" hidden>以子孙之身继续</button>
+        <button class="btn" id="btn-copy" type="button">复制墓志</button>
+        <button class="btn" id="btn-back" type="button">回到开篇</button>
+        <span class="seed-code" id="seed-code"></span>
+      </div>
+      <details class="panel full-chron" id="full-chron">
+        <summary>完整编年</summary>
+        <div class="inner"><div class="chron" id="end-chron"></div></div>
+      </details>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg-codex" aria-labelledby="codex-h">
+  <div class="dlg-head"><h2 id="codex-h">名册</h2><button class="ghost" type="button" data-close>关闭</button></div>
+  <div class="dlg-body"><p class="footnote" id="codex-sum"></p><div class="codex" id="codex"></div></div>
+</dialog>
+<dialog id="dlg-lives" aria-labelledby="lives-h">
+  <div class="dlg-head"><h2 id="lives-h">前世</h2><button class="ghost" type="button" data-close>关闭</button></div>
+  <div class="dlg-body"><p class="footnote" id="lives-sum"></p><ul class="lives" id="lives"></ul></div>
+</dialog>
+<dialog id="dlg-spend" aria-labelledby="spend-h">
+  <div class="dlg-head"><h2 id="spend-h">谋划与支用</h2><button class="ghost" type="button" data-close>关闭</button></div>
+  <div class="dlg-body"><p class="spend-room" id="spend-room"></p><div id="spend-list"></div><p class="footnote">口粮、衣物、赋税这些必要的开销每年自动结算；这里只能动用结余下来的钱。价格以"钱值"计：钱币、布帛、谷物折算成钱后的总数。</p></div>
+</dialog>
+<dialog id="dlg-about" aria-labelledby="about-h">
+  <div class="dlg-head"><h2 id="about-h">说明</h2><button class="ghost" type="button" data-close>关闭</button></div>
+  <div class="dlg-body">
+    <p>你会随机降生为东汉末年到西晋末年之间的一个普通人，模拟的年代写到公元 350 年为止。出生地按《续汉书·郡国志》所载各郡人口加权抽取，再随战乱、逃亡与迁徙逐年修正；身份阶层、家境、亲属和寿命都按概率生成。</p>
+    <p>历史事件不是剧情，而是"天气"：它们按年份和地区改变战乱、饥荒、疫病、迁徙与征兵的风险。远方的大事，往往要过一两年才以传闻的形式传到你耳中。</p>
+    <p>偶尔你需要做出选择：逃难还是留守，应募还是回家，答应还是再等等。选择会改变概率，但不会决定结果。历史人物会出现，但概率很低；出身越高、做了官、识字或有名声的人，越可能遇见他们，有些人物也只有士人才见得到。</p>
+    <p>五项属性：体魄（疾病、饥荒、战争中的存活）、家业（土地、粮食、抗风险）、才学（识字、入仕）、人望（宗族、乡里、婚姻）、名声（中年后才可能出现）。此外还有看不见的性情与天资：幼时的一两个瞬间会悄悄塑造它们，天资要靠日后的行为才会显露。</p>
+    <p>「眼下所重」是这个人这一阶段把心力放在哪里。默认由系统按年龄、性情、家境、身份、眼前的难处和过去的习惯来判断；你可以拨一下方向，但人不一定全听你的。</p>
+    <p>家计每年自动结算：田收、纺织、佣作、俸禄，减去口粮、衣物、盐铁、赋税（汉之算赋口钱更赋、曹魏户调、西晋户调式），剩下的才是"岁余"。入不敷出就动用积蓄，积蓄用尽就欠债；债务压身时，才会让你做真正的大决定。家产、家中余财和你自己的私蓄是分开的——成了户主，才能动用家里的钱。</p>
+    <p>出身决定了一个人能走多远：世家大族的子弟有门第、联姻和门生故吏，也要在董卓、袁曹、高平陵这样的关头站队；寒门的天资，往往只换得一个书佐、一个匠籍。女子不能出仕从军，多半不得读书，要面对婆家、"七出"和守寡后的田产。南方多稻、多瘴疠、信巫鬼，北方多粟麦、多兵祸、近胡骑。</p>
+    <p>汉末大约每三四个孩子里，就有一个活不过五岁。为了让你能看到一生，默认给你本人在幼年留了些"宽限"；你的兄弟姐妹、子女、同一时辰降生的其他人和结局里的统计，仍按史实。想体验原本的残酷，可以在开篇勾选"史实夭折率"。</p>
+    <p><b>这是历史概率模拟，而非精确人口学重建。</b>三国时代没有完整的人口统计，许多数值是依据史料所作的估计。</p>
+    <ul class="sources">
+      <li>《后汉书》《续汉书·郡国志》（永和五年郡国户口）</li>
+      <li>《三国志》及裴松之注</li>
+      <li>《晋书》（地理志、食货志、宣帝纪等）</li>
+      <li>长沙走马楼三国吴简（户籍简格式）</li>
+      <li>葛剑雄《中国人口史》等现代研究（人口估算的数量级）</li>
+    </ul>
+    <p class="footnote">记录（前世与名册）只保存在你的浏览器里。</p>
+  </div>
+</dialog>
+<!--/BODY-->
+<script src="js/data.js"></script>
+<script src="js/history.js"></script>
+<script src="js/choices.js"></script>
+<script src="js/hardship.js"></script>
+<script src="js/laws.js"></script>
+<script src="js/region.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
