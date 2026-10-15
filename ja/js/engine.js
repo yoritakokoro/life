@@ -683,7 +683,7 @@ var SGE = (function (D) {
     if (m.sex && m.sex !== L.sex) return false;
     if (m.eth && m.eth.indexOf(L.eth) < 0) return false;
     if (m.lit && !L.literate) return false;
-    if (m.elite && !(L.cls === 'gentry' || L.office || L.cls === 'clerk' || L.learn >= 45 || L.fame >= 20)) return false;
+    if (m.elite && (L.flags.famousConc || !(L.cls === 'gentry' || L.office || L.cls === 'clerk' || L.learn >= 45 || L.fame >= 20))) return false;
     if (m.follow && (L.soldier || L.band)) return false;
     if (m.off && !realOffice(L)) return false;
     if (m.sol && !(L.soldier && (m.sol === true || L.soldier.army === m.sol))) return false;
@@ -740,7 +740,7 @@ var SGE = (function (D) {
   // y 可能被納的年份；d 卒年；b 生年（不詳則不写年歳）；seat 府邸所在；dt 死訊，拠本伝
   var FAMOUS_CONC = {
     caocao: { y: [192, 219], d: 220, b: 155, seat: function (y) { return y < 204 ? ['潁川郡', '許県'] : ['魏郡', '鄴県']; }, dt: '夫の曹操が洛陽で病没した。享年六十六。' },
-    liubei: { y: [194, 222], d: 223, b: 161, seat: function (y) { return y < 209 ? null : y < 214 ? ['南郡', '江陵'] : ['蜀郡', '成都']; }, dt: '夫の劉備が永安宮で病没した。享年六十三。' },
+    liubei: { y: [194, 222], d: 223, b: 161, seat: function (y) { return y < 201 ? ['下邳国', '下邳'] : y < 209 ? ['南陽郡', '新野'] : y < 214 ? ['南郡', '江陵'] : ['蜀郡', '成都']; }, dt: '夫の劉備が永安宮で病没した。享年六十三。' },
     sunce: { y: [195, 199], d: 200, b: 175, seat: function () { return ['呉郡', '呉県']; }, dt: '夫の孫策が狩りの最中に許貢の食客に襲われ、その深手がもとで死んだ。享年二十六。' },
     sunquan: { y: [200, 251], d: 252, b: 182, seat: function (y) { return y < 211 ? ['呉郡', '呉県'] : ['丹楊郡', y < 212 ? '秣陵' : '建業']; }, dt: '夫の孫権が病没した。享年七十一。' },
     yuanshao: { y: [191, 201], d: 202, seat: function () { return ['魏郡', '鄴県']; }, dt: '夫の袁紹は官渡で敗れたのち病を発して血を吐き、ほどなく死んだ。' },
@@ -750,6 +750,7 @@ var SGE = (function (D) {
   };
 
   // 名人府里的日子：随他的為人、妻室和経歴而定
+  function C2seat(id, y) { var C = FAMOUS_CONC[id]; return C && C.seat ? C.seat(y) : null; }
   function concLifeYear(L, y) {
     var id = L.flags.famousConc, k = L.spouseK, CL = id && (D.CONC_LIFE || {})[id], R = L.R;
     if (!CL || !k || !k.famous || !k.alive || k.apart || L.marriedAt === y) return;
@@ -758,7 +759,7 @@ var SGE = (function (D) {
     var TR = (D.CONC_TREAT || {})[id];
     if (TR && !L.flags.fcTreat && (y - L.marriedAt >= 2 || R() < 0.5)) {
       var ok = { charm: !!L.found.charm, lit: !!L.literate, soc: L.tr.soc >= 60, cau: L.tr.cau >= 60, per: L.tr.per >= 60, any: true };
-      var m = TR.filter(function (x) { return ok[x.c] && x.c !== 'any'; }), tt = m.length ? pick(R, m) : TR.filter(function (x) { return x.c === 'any'; })[0];
+      var m = TR.filter(function (x) { return ok[x.c] && x.c !== 'any' && (!x.y || (y >= x.y[0] && y <= x.y[1])); }), tt = m.length ? pick(R, m) : TR.filter(function (x) { return x.c === 'any'; })[0];
       L.flags.fcTreat = true; if (tt.fav) L.flags.fcFav = true;
       var tf = tt.fx || {};
       if (tf.learn) L.learn = Math.min(100, (L.learn || 0) + tf.learn);
@@ -767,6 +768,7 @@ var SGE = (function (D) {
       add(L, 1.39, tt.fav ? 'good' : 'life', tt.t);
       return;
     }
+    if (CL && C2seat(id, y)) seatMove(L, C2seat(id, y), 1.38, 'あなたは彼の家族とともに{dest}へ移った。', y);
     var must = [], opt = [];
     CL.ev.forEach(function (e, i) { if (!L.clDone[i] && y >= e.y[0] && y <= e.y[1]) (e.must ? must : opt).push(i); });
     var i = must.length ? must[0] : opt.length && R() < 0.4 ? pick(R, opt) : null;
@@ -779,6 +781,7 @@ var SGE = (function (D) {
     if (fx.seat) seatMove(L, fx.seat, 1.41, 'あなたは彼の家族とともに{dest}へ移り住んだ。', y);
     var r = R();
     if (fx.die && r < fx.die) { die(L, 'war', 1.42, { full: fx.dieT }); return; }
+    if (fx.lost && r >= (fx.die || 0) + fx.lost && fx.backT) add(L, 1.42, 'life', fx.backT);
     if (fx.lost && r < (fx.die || 0) + fx.lost) {
       add(L, 1.42, 'bad', fx.lostT);
       k.apart = true; L.married = false; L.widowed = true; L.flags.fcLost = true;
@@ -1167,7 +1170,7 @@ var SGE = (function (D) {
     if (L.soldier && R() < 0.5) return;
     Hb.lv = Math.min(100, Hb.lv + 3 + Hb.apt * 8 + (F === 'play' || F === 'leisure' ? 4 : 0));
     if (HD.body) L.body = clamp(L.body + HD.body, 1, 100);
-    if (R() < 0.18) add(L, 2.6, 'life', pick(R, HD.lines));
+    if (R() < 0.18 && !(L.flags.famousConc && HD.who === 'low')) add(L, 2.6, 'life', pick(R, HD.lines));
     if (!Hb.tal && Hb.lv >= 80 && Hb.apt >= 0.75 && L.age >= 14) {
       Hb.tal = true;
       var T = HD.tal, tk = lifeTier(L, y).k, hi = L.cls === 'gentry' || tk === 'high' || tk === 'top';
@@ -1291,7 +1294,7 @@ var SGE = (function (D) {
     if (L.flags.wenpo && L.age >= 25 && !/穏婆/.test(L.job || '') && !L.office && L.sex === 'F') { L.flags.wenpo = null; L.job = '穏婆'; L.standing += 3; add(L, 2.3, 'life', '村の年老いた産婆が亡くなった。それからは、子が生まれる家はみなあなたを呼びに来るようになった。'); }
   }
   function famousConcChoice(L, y, P) {
-    if (L.sex !== 'F' || L.married || L.widowed || L.age < 15 || L.age > 22 || L.flags.fcAsk || L.eth) return;
+    if (L.sex !== 'F' || L.married || L.widowed || L.age < 15 || L.age > 22 || L.flags.fcAsk || L.eth || L.flags.concubineOf || L.flags.isConc) return;
     var fk = ctrl(L.zone, y), id = lordFigAt(fk, y), C = FAMOUS_CONC[id];
     if (!C || y < C.y[0] || y > C.y[1]) return;
     if (L.R() >= 0.004 * (L.found.charm ? 2 : 1) * (L.urban ? 2 : 1)) return;
@@ -1517,7 +1520,7 @@ var SGE = (function (D) {
     var i = c.answer, d = P.dec;
     L.lastChoice = L.age;
     var lbl = c.o[i];
-    if (!L.auto && !c.forced) (L.choiceLog = L.choiceLog || []).push({ y: L.by + L.age, q: c.q, a: lbl, narr: !!c.narr });
+    if (!L.auto && !L.skip && !c.forced) (L.choiceLog = L.choiceLog || []).push({ y: L.by + L.age, q: c.q, a: lbl, narr: !!c.narr });
     P.chosen = P.chosen || [];
     P.chosen.push({ q: c.q, a: lbl, key: c.key });
     switch (c.key) {
@@ -1574,7 +1577,7 @@ var SGE = (function (D) {
     while (P.queue.length) {
       var c = P.queue[0];
       if (c.answer === undefined) {
-        if (L.auto || c.forced) c.answer = autoPick(L, c);
+        if (L.auto || L.skip || c.forced) c.answer = autoPick(L, c);
         else { L.pending = c; return { pending: c }; }
       }
       P.queue.shift();
@@ -2248,8 +2251,8 @@ var SGE = (function (D) {
     // 婚姻
     var unmarried = !L.married;
     if (dec.wedDelayOk) add(L, 1.45, 'life', '父母はあなたに根負けし、あと二年家に置くことを承知した。');
-    if (dec.marry) doMarry(L, dec.marry, y, 1.5, dec.wedForced ? '父は言った。「娘が自分で決めるなどということがあるものか」。縁談はそのまま決まった。' : '');
-    else if (unmarried && !L.spouseK && !L.band) {
+    if (dec.marry && !L.married) doMarry(L, dec.marry, y, 1.5, dec.wedForced ? '父は言った。「娘が自分で決めるなどということがあるものか」。縁談はそのまま決まった。' : '');
+    else if (unmarried && !L.spouseK && !L.band && !dec.fconc && !dec.wfig) {
       if (L.sex === 'F') {
         var pf = L.flags.wedDelay > y ? 0 : { 13: 0.08, 14: 0.18, 15: 0.3, 16: 0.35, 17: 0.35 }[a] || 0;
         if (L.cls === 'slave' && a >= 15) pf = 0.15;
@@ -2381,6 +2384,7 @@ var SGE = (function (D) {
   var LORD_END = { rebels: 190, dongzhuo: 192, lijue: 196, taoqian: 195, liuyan: 194, lvbu: 199, yuanshu: 199, gongsunzan: 199, sunce: 200, yuanshao: 205, liubiao: 208, xiliang: 214, liuzhang: 214, zhanglu: 215, caocao: 220, han: 220, liubei: 221, sunquan: 222, nzrebels: 225, shixie: 227, gongsun: 238, shu: 263, wei: 265, wu: 280, hanzhao: 329, chenghan: 347, houzhao: 350 };
   var LORD_NEXT = { caocao: 'wei', han: 'wei', liubei: 'shu', sunce: 'sunquan', sunquan: 'wu', liuyan: 'liuzhang', wei: 'jin', dongzhuo: 'lijue' };
   function famousConcOutcome(L, y, c, i) {
+    if (L.married || L.flags.isConc || L.flags.concubineOf) return;
     var R = L.R, id = c.fid, n = figName(id), C = FAMOUS_CONC[id];
     if (i === 1) {
       if (R() < 0.6) { add(L, 1.2, 'life', '父母は幾重にも伝手を頼り、あなたにはもう嫁ぎ先が決まっていると言い繕った。' + n + 'の部下は二度と来なかった。'); return; }
@@ -3108,6 +3112,8 @@ var SGE = (function (D) {
   function economyYear(L, y) {
     var R = L.R, E = L.eco, rec = L.rec, fo = rec.focus ? rec.focus.eff : null, a = L.age, c = L.cls;
     if (c === 'slave') { if (a >= 15) E.priv += Math.round(10 + R() * 50); rec.ledger = null; L.grainMonths = null; return; }
+    // 诸侯府中的姬妾：吃穿用度都由府里供给，不再有自家的账
+    if (L.flags.famousConc && L.spouseK && L.spouseK.famous && L.spouseK.alive && !L.spouseK.apart) { E.debt = 0; rec.ledger = null; L.grainMonths = null; L.crisis = false; return; }
     if (L.band || (L.soldier && liveKin(L, function (k) { return !k.out; }).length === 0)) {
       var pay = 2400, keep = Math.round(pay * (L.tr.cau > 55 ? 0.6 : 0.35));
       E.priv += keep;
@@ -3722,7 +3728,7 @@ var SGE = (function (D) {
     if (fx.cls) { L.cls = fx.cls; if (fx.cls !== 'slave' && E.house === 0) E.house = 1500; }
     if (fx.job) L.job = fx.job;
     if (fx.mil) { L.mil = fx.mil; L.milMax = ['軍卒', '屯長', '軍司馬', '校尉', '将軍'][fx.mil]; L.job = L.milMax; }
-    if (fx.nobleConc) {
+    if (fx.nobleConc && !L.flags.famousConc) {
       L.spouseK = null; var ocls = L.cls; L.cls = 'gentry'; L.gate = L.gate || 1;
       var nsp = makeSpouse(L, y); nsp.age = L.age + 12 + Math.floor(R() * 20); nsp.from = fx.nobleConc;
       doMarry(L, nsp, y, s + 0.1, 'あなたは' + fx.nobleConc + 'の屋敷に迎え入れられた。');

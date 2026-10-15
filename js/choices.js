@@ -114,7 +114,7 @@
         [{ p: 1, t: '你推辞了。', fx: {} }]],
       aw: function (L) { return [T(L, 'soc') + 10, 50]; } },
     /* ---------- 女子 ---------- */
-    { id: 'widow', w: 2, ok: function (L, H) { return L.sex === 'F' && L.widowed && !L.married && H.a < 45 && {}; },
+    { id: 'widow', w: 2, ok: function (L, H) { return L.sex === 'F' && L.widowed && !L.married && !L.flags.noRemarry && H.a < 45 && {}; },
       q: '你守寡已经一年多了。夫家的长辈催你改嫁，娘家也派人来说亲。', o: ['改嫁', '守着孩子过'],
       r: [[{ p: 1, t: '你改嫁了。', fx: { marry: true } }],
         [{ p: 1, t: '你守着孩子过日子，白天下田，夜里织布。乡里人说你是节妇。', fx: { standing: 4, fame: 1, flag: 'chaste' } }]],

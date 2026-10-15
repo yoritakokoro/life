@@ -439,7 +439,7 @@
 
   function skipToEnd() {
     if (!S.L) return;
-    S.L.auto = true;
+    S.L.skip = true; // 只是快进：不改变这一生的规则
     S.yearActive = false; S.queue = []; S.choiceOpen = false;
     if (S.L.pending) E.autoAnswer(S.L);
     if ($('dlg-spend').open) $('dlg-spend').close();

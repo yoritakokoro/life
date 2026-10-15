@@ -114,7 +114,7 @@
         [{ p: 1, t: '断った。', fx: {} }]],
       aw: function (L) { return [T(L, 'soc') + 10, 50]; } },
     /* ---------- 女子 ---------- */
-    { id: 'widow', w: 2, ok: function (L, H) { return L.sex === 'F' && L.widowed && !L.married && H.a < 45 && {}; },
+    { id: 'widow', w: 2, ok: function (L, H) { return L.sex === 'F' && L.widowed && !L.married && !L.flags.noRemarry && H.a < 45 && {}; },
       q: '夫を亡くして一年余りになる。夫の家の年長者は再嫁を急かし、実家からも縁談の使いが来た。', o: ['再嫁する', '子どもを守って暮らす'],
       r: [[{ p: 1, t: '再嫁した。', fx: { marry: true } }],
         [{ p: 1, t: '子どもを守って暮らした。昼は畑に出て、夜は機を織った。郷里の人々はあなたを節婦と呼んだ。', fx: { standing: 4, fame: 1, flag: 'chaste' } }]],
