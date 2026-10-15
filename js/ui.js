@@ -398,6 +398,7 @@
     }
     renderStatus(y);
     renderFamily(y);
+    renderFriends(y);
     renderEco();
   }
   function renderStatus(y) {
@@ -421,7 +422,7 @@
     if (v.stock) assets.push(L.cls === 'merchant' ? '货本' : L.cls === 'tribal' ? '牲畜' : '作坊');
     assets.push(L.cls === 'gentry' ? '坞壁宅院' : '屋舍');
     el.innerHTML = '<dt>家资</dt><dd>' + assets.join(' · ') + '<br><span class="sub">折 ' + E.fmt(v.assets) + ' 钱值</span></dd>' +
-      (v.months != null ? '<dt>粮储</dt><dd>' + (v.months >= 12 ? '足支一年有余' : '约可支撑 ' + v.months + ' 个月') + '</dd>' : '') +
+      (v.months != null ? '<dt>粮储</dt><dd>' + (v.months >= 12 ? '自家的粮足支一年' : (v.months > 0 ? '自家的粮约可支撑 ' + v.months + ' 个月' : '自家不产粮，靠买粮度日')) + (v.months < 12 ? '<br><span class="sub">余财还能买 ' + (v.buyMonths >= 24 ? '两年以上' : '约 ' + v.buyMonths + ' 个月') + '的口粮</span>' : '') + '</dd>' : '') +
       '<dt>余财</dt><dd class="num">' + E.fmt(v.cash) + ' 钱值</dd>' +
       '<dt>私蓄</dt><dd class="num">' + E.fmt(v.priv) + ' 钱值</dd>' +
       '<dt>债务</dt><dd class="num' + (v.debt ? ' neg' : '') + '">' + (v.debt ? E.fmt(v.debt) + ' 钱值' : '无') + '</dd>';
@@ -508,10 +509,23 @@
       else if (k.out) st = k.rel === 'child' ? '已嫁' : '娘家';
       else if (k.soldier) st = '从军 · ' + (y - k.by) + '岁';
       else st = (y - k.by) + '岁';
+      if (!dead && !k.apart) st += (k.job && !k.soldier ? ' · ' + k.job : '') + (k.aff != null && y - k.by >= 8 && L.age >= 8 ? ' · ' + E.relLabel(k.aff) : '');
       var li = h('li', dead ? 'dead' : '');
       li.innerHTML = '<span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + (k.zi ? '<small class="alias">字' + esc(k.zi) + '</small>' : '') + '</span><span class="s">' + st + '</span>';
       ul.appendChild(li);
     });
+  }
+
+  var FRC = { child: '玩伴', school: '同窗', army: '同伍', office: '同僚', trade: '伙伴', girl: '姐妹', village: '乡邻', band: '同袍', old: '老友' };
+  function renderFriends(y) {
+    var L = S.L, ul = $('friends');
+    var fs = (L.friends || []).filter(function (f) { return f.since <= y; });
+    if (!fs.length) { ul.innerHTML = '<li class="empty">还没有</li>'; return; }
+    ul.innerHTML = fs.map(function (f) {
+      var dead = !f.alive;
+      var st = dead ? '殁 · ' + f.fate : f.apart ? '音讯全无' : (y - f.by) + '岁' + (f.job ? ' · ' + f.job : '') + ' · ' + E.relLabel(f.aff);
+      return '<li class="' + (dead ? 'dead' : '') + '"><span class="r">' + FRC[f.ctx] + '</span><span class="n">' + esc(f.name) + '</span><span class="s">' + esc(st) + '</span></li>';
+    }).join('');
   }
 
   /* ---------- 同时辰 ---------- */
@@ -784,6 +798,7 @@
     var c = KIN_CAUSE[k.cause] || (age <= 1 ? '夭折' : age < 15 ? '夭折' : age >= 55 ? '寿终' : '病故');
     return k.dy + '年' + c + '，年' + age;
   }
+  function kinExtra(k) { return [k.job, k.aff != null && k.rel !== 'gp' && (k.alive || k.dy - k.by >= 8) ? '与你' + E.relLabel(k.aff) : ''].filter(Boolean).join(' · '); }
   function renderEndFamily(L) {
     var groups = [['父母', ['father', 'mother']], ['祖辈', ['gp']], ['配偶', ['spouse']], ['兄弟姐妹', ['sib']], ['子女', ['child']]];
     var box = $('end-family'), html = '', born = 0, lived = 0;
@@ -795,11 +810,17 @@
         var dead = !k.alive && k.dy <= L.dy;
         var marks = (k.adopted ? '<span class="mk">收养</span>' : '') + (k.lit ? '<span class="mk">识字</span>' : '');
         var alias = [k.xiao && k.xiao !== k.name ? '小名' + k.xiao : '', k.zi ? '字' + k.zi : ''].filter(Boolean).join('，');
-        return '<li class="' + (dead ? 'dead' : '') + '"><span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + (alias ? '<small class="alias">（' + esc(alias) + '）</small>' : '') + marks + '</span><span class="s">' + (k.by ? k.by + '年生 · ' : '') + esc(kinFate(L, k)) + '</span></li>';
+        return '<li class="' + (dead ? 'dead' : '') + '"><span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + (alias ? '<small class="alias">（' + esc(alias) + '）</small>' : '') + marks + '</span><span class="s">' + (k.by ? k.by + '年生 · ' : '') + esc(kinFate(L, k)) + (kinExtra(k) ? '<br>' + esc(kinExtra(k)) : '') + '</span></li>';
       }).join('') + '</ul></div>';
     });
     box.innerHTML = html || '<p class="empty">无</p>';
     $('family-sum').textContent = born ? '子女' + born + '人，' + lived + '人活过十五岁' : '';
+    var fs = L.friends || [];
+    $('friends-sum').textContent = fs.length ? '一生结交' + fs.length + '人' : '';
+    $('end-friends').innerHTML = fs.length ? '<div class="fam-group"><ul>' + fs.map(function (f) {
+      var fate = !f.alive ? f.dy + '年' + f.fate : f.apart ? f.fate || '音讯全无' : '你去世时仍在世' + (f.job ? '，做着' + f.job : '');
+      return '<li class="' + (!f.alive ? 'dead' : '') + '"><span class="r">' + FRC[f.ctx] + '</span><span class="n">' + esc(f.name) + '</span><span class="s">' + f.since + '年相识 · ' + esc(fate) + '<br>' + (f.alive && !f.apart ? '交情' : '最后的交情') + '：' + E.relLabel(f.aff) + '</span></li>';
+    }).join('') + '</ul></div>' : '<p class="empty">你这一生，没有留下可以称作朋友的人。</p>';
     var lin = (L.lineage || []).concat([{ name: L.name, by: L.by, dy: L.dy, me: true }]);
     $('lineage').innerHTML = lin.length > 1 ? '<p class="lineage-line">' + lin.map(function (x) { return '<span' + (x.me ? ' class="me"' : '') + '>' + esc(x.name) + '<small>' + x.by + '–' + x.dy + '</small></span>'; }).join('<i>→</i>') + '</p>' : '';
   }
