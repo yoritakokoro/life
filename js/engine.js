@@ -201,7 +201,7 @@ var SGE = (function (D) {
   }
 
   function newKin(L, rel, sex, by, name, extra) {
-    var k = { id: L.kin.length, rel: rel, sex: sex, by: by, name: name, alive: true, dy: null, cause: null, apart: false, out: false, soldier: null };
+    var k = { id: L.kin.length, rel: rel, sex: sex, by: by, name: name, xiao: (rel === 'child' || rel === 'sib') ? name : null, alive: true, dy: null, cause: null, apart: false, out: false, soldier: null };
     if (extra) for (var p in extra) k[p] = extra[p];
     L.kin.push(k);
     return k;
@@ -236,7 +236,7 @@ var SGE = (function (D) {
     if (L.eth) { var en = ethName(R, L.eth); L.sur = en.sur; L.given = en.given; }
     else { L.sur = surname(R, L.cls); L.given = givenName(R, L.sex); }
     L.xiao = L.sex === 'F' ? '阿' + L.given.slice(-1) : xiaoName(R);
-    if (HR) { L.sur = HR.sur; L.xiao = HR.xiao; if (L.sex === 'F') L.given = HR.xiao.slice(-1); }
+    if (HR) { L.sur = HR.sur; L.xiao = HR.xiao; if (HR.given) L.given = HR.given; else if (L.sex === 'F') L.given = HR.xiao.slice(-1); if (HR.zi) L.zi = HR.zi; }
     L.name = L.sur + L.given;
 
     // 属性
@@ -289,7 +289,8 @@ var SGE = (function (D) {
     for (var i = 0; i < births; i++) {
       if (R() < 0.42) { L.olderDead++; continue; }
       var sx = R() < 0.51 ? 'M' : 'F';
-      newKin(L, 'sib', sx, L.by - (births - i) * 2 - Math.floor(R() * 2), sx === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'));
+      var sb = newKin(L, 'sib', sx, L.by - (births - i) * 2 - Math.floor(R() * 2), sx === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'), { sur: L.sur });
+      if (eliteFam(L) || (L.by - sb.by >= 7 && (sx === 'M' || R() < 0.5))) giveName(L, sb);
     }
     // 祖父母
     var gp = Math.floor(R() * 3) - (fAge > 32 ? 1 : 0);
@@ -311,6 +312,22 @@ var SGE = (function (D) {
     return L;
   }
 
+  // 名与字：小名在家里叫，大名入户籍，表字在冠礼（女子笄礼）时取
+  function eliteFam(L) { return !L.eth && (L.cls === 'gentry' || L.cls === 'clerk' || L.cls === 'merchant'); }
+  function kidSur(L, rel) {
+    if (rel === 'sib') return L.sur;
+    return L.sex === 'M' ? L.sur : (L.spouseK && L.spouseK.sur != null ? L.spouseK.sur : L.sur);
+  }
+  function giveName(L, k) {
+    var R = L.R;
+    if (L.eth && !D.ETH[L.eth].sur) { k.full = ethName(R, L.eth).given; k.name = k.full; return; }
+    var g = givenName(R, k.sex);
+    if (k.sex === 'M' && R() < 0.12) g += pick(R, D.MALE);
+    k.sur = k.sur != null ? k.sur : '';
+    k.full = k.sur + g; k.given = g; k.name = k.full;
+  }
+  var ZI_F1 = ['文', '惠', '令', '淑', '季', '少', '孟', '仲', '幼', '德'], ZI_F2 = ['姬', '华', '容', '英', '君', '姜', '仪', '贞'];
+  function giveZi(L, sex) { var R = L.R; return sex === 'M' ? pick(R, D.ZI_HEAD) + pick(R, D.MALE) : pick(R, ZI_F1) + pick(R, ZI_F2); }
   function setPlace(L, ji) {
     var j = D.JUN[ji], R = L.R;
     L.jun = ji; L.zone = j[1]; L.county = pick(R, j[3]);
@@ -1086,7 +1103,7 @@ var SGE = (function (D) {
   var LOCAL = D.LOCAL;
 
   function doMarry(L, sp, y, s, prefix) {
-    var k = newKin(L, 'spouse', sp.sex, y - sp.age, sp.name);
+    var k = newKin(L, 'spouse', sp.sex, y - sp.age, sp.name, { sur: sp.sur });
     L.spouseK = k; L.married = true; L.widowed = false; L.marriedAt = y;
     add(L, s, 'good', (prefix || '') + (L.sex === 'M' ? '你娶了' + sp.from + '的' + sp.name + '为妻。' : '你嫁给了' + sp.from + '的' + sp.name + '。'));
     L.standing += 4;
@@ -1122,8 +1139,12 @@ var SGE = (function (D) {
     // 礼与税
     if (a === 7 && registered && y < 204) add(L, 0.5, 'note', '按汉制，你开始缴纳口钱，每年二十三钱。');
     if (a === 15) add(L, 0.5, 'note', registered && y < 204 && g === 'han' ? '你十五岁了，开始缴纳算赋，每年一百二十钱。' : '你十五岁了，在乡里人眼里，已经是大人了。');
-    if (a === 20 && L.sex === 'M' && L.literate) {
-      L.zi = pick(R, D.ZI_HEAD) + pick(R, D.MALE);
+    if (a === 15 && L.sex === 'F' && !L.zi && !L.eth && (L.cls === 'gentry' || (L.cls === 'clerk' && L.literate)) && R() < 0.7) {
+      L.zi = giveZi(L, 'F');
+      add(L, 0.8, 'life', '你行了笄礼，挽起了发髻，取字' + L.zi + '。');
+    }
+    if (a === 20 && L.sex === 'M' && !L.zi && !L.eth && L.cls !== 'slave' && R() < (L.literate || L.cls === 'gentry' || L.cls === 'clerk' ? 0.95 : 0.3)) {
+      L.zi = giveZi(L, 'M');
       add(L, 0.8, 'life', '你行了冠礼，取字' + L.zi + '。');
     }
     if (a === 56 && registered && y < 220) add(L, 0.5, 'note', '你五十六岁了，按例免除了算赋。');
@@ -1271,13 +1292,16 @@ var SGE = (function (D) {
 
   function birth(L, y) {
     var R = L.R, sx = R() < 0.51 ? 'M' : 'F';
-    var k = newKin(L, 'child', sx, y, sx === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'));
+    var k = newKin(L, 'child', sx, y, sx === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'), { sur: kidSur(L, 'child') });
     k.lav = R();
+    var xn = k.xiao;
+    if (eliteFam(L)) giveName(L, k);
     L.kidsBorn++;
     L.rec.tags.push('kid');
     var nth = L.kidsBorn;
-    if (L.sex === 'F') add(L, 2, 'good', '你生下了' + (nth === 1 ? '第一个孩子，' : '') + '一个' + (sx === 'M' ? '儿子' : '女儿') + '，取小名' + k.name + '。');
-    else add(L, 2, 'good', '妻子' + L.spouseK.name + '生下了一个' + (sx === 'M' ? '儿子' : '女儿') + '，取小名' + k.name + '。' + (nth === 1 ? '你第一次成为了父亲。' : ''));
+    var nm2 = k.full ? '取名' + k.full + '，小名' + xn : '取小名' + xn;
+    if (L.sex === 'F') add(L, 2, 'good', '你生下了' + (nth === 1 ? '第一个孩子，' : '') + '一个' + (sx === 'M' ? '儿子' : '女儿') + '，' + nm2 + '。');
+    else add(L, 2, 'good', '妻子' + L.spouseK.name + '生下了一个' + (sx === 'M' ? '儿子' : '女儿') + '，' + nm2 + '。' + (nth === 1 ? '你第一次成为了父亲。' : ''));
     var mother = L.sex === 'F' ? null : L.spouseK;
     var pm = 0.012 * (L.rec.tags.indexOf('hard') >= 0 ? 2 : 1) * (L.wealth >= 60 ? 0.6 : L.wealth < 15 ? 1.3 : 1);
     if (L.sex === 'F') { if (R() < pm * bodyMul(L)) die(L, 'childbirth', 2.05); }
@@ -1321,6 +1345,18 @@ var SGE = (function (D) {
       if (!k.alive) return;
       var ka = y - k.by;
       if (ka <= 0) return;
+      // 起名、取字
+      if ((k.rel === 'child' || k.rel === 'sib') && !k.apart) {
+        var mine = k.rel === 'child';
+        if (!k.full && ka === 7 && (k.sex === 'M' || R() < 0.5)) {
+          giveName(L, k);
+          if (mine) add(L, 1.05, 'fam', (k.sex === 'M' ? '儿子' : '女儿') + k.xiao + '七岁了，要入户籍。你给' + (k.sex === 'M' ? '他' : '她') + '取了个大名，叫' + k.full + '。');
+        }
+        if (!k.zi && k.full && !L.eth && ((k.sex === 'M' && ka === 20 && R() < (k.lit || L.literate || L.cls === 'gentry' || L.cls === 'clerk' ? 0.9 : 0.3)) || (k.sex === 'F' && ka === 15 && L.cls === 'gentry' && R() < 0.7))) {
+          k.zi = giveZi(L, k.sex);
+          if (mine) add(L, 1.1, 'fam', k.sex === 'M' ? '儿子' + k.full + '行了冠礼，取字' + k.zi + '。' : '女儿' + k.full + '行了笄礼，取字' + k.zi + '。');
+        }
+      }
       // 征兵
       if (!k.apart && k.sex === 'M' && ka >= 16 && ka <= 50 && !k.soldier && ['father', 'sib', 'spouse', 'child'].indexOf(k.rel) >= 0 && L.cls !== 'gentry' && L.cls !== 'slave') {
         if (R() < (conscriptRate(L.zone, y) + L.yConscript) * 0.8) {
@@ -1352,7 +1388,8 @@ var SGE = (function (D) {
       var nb = L.kin.filter(function (k) { return k.rel === 'sib' && k.by > L.by; }).length;
       if (nb < 6 && R() < 0.27) {
         var sx = R() < 0.51 ? 'M' : 'F';
-        var k = newKin(L, 'sib', sx, y, sx === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'));
+        var k = newKin(L, 'sib', sx, y, sx === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'), { sur: L.sur });
+        if (eliteFam(L)) giveName(L, k);
         add(L, 0.9, 'fam', '母亲生下了一个' + (sx === 'M' ? '弟弟' : '妹妹') + '，小名' + k.name + '。');
       }
     }
@@ -1982,7 +2019,7 @@ var SGE = (function (D) {
     if (fx.kinOut && meta.kin) meta.kin.out = true;
     if (fx.kinDie && meta.kin && meta.kin.alive) kinDie(L, meta.kin, fx.kinDie, s + 0.05, y);
     if (fx.child) {
-      var sx = R() < 0.5 ? 'M' : 'F', k = newKin(L, 'child', sx, y, sx === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'));
+      var sx = R() < 0.5 ? 'M' : 'F', k = newKin(L, 'child', sx, y, sx === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'), { sur: kidSur(L, 'child') });
       k.lav = R(); k.adopted = true; L.kidsBorn++;
       add(L, s + 0.02, 'fam', '你给孩子取名' + k.name + '。');
     }
@@ -1999,10 +2036,10 @@ var SGE = (function (D) {
     if (!kids.length || L.cls === 'slave') return null;
     var k = kids.filter(function (x) { return x.sex === 'M'; })[0] || kids[0];
     var sp = L.spouseK && (L.spouseK.alive || L.spouseK.dy >= k.by) ? L.spouseK : L.kin.filter(function (x) { return x.rel === 'spouse'; })[0];
-    var sur = L.sex === 'M' ? L.sur : (sp ? sp.name.slice(0, 1) : L.sur);
+    var sur = k.sur != null ? k.sur : L.sex === 'M' ? L.sur : (sp && sp.sur != null ? sp.sur : sp ? sp.name.slice(0, 1) : L.sur);
     var cls = L.cls === 'tribal' ? 'tribal' : (L.office || L.cls === 'gentry') ? (L.cls === 'gentry' ? 'gentry' : 'clerk') : L.cls;
     return {
-      year: k.by, jun: L.jun, sex: k.sex, sur: sur, xiao: k.name, cls: cls, eth: L.eth, land: L.land,
+      year: k.by, jun: L.jun, sex: k.sex, sur: sur, xiao: k.xiao || k.name, given: k.given || null, zi: k.zi || null, cls: cls, eth: L.eth, land: L.land,
       parentSex: L.sex, parentName: L.name, parentBy: L.by, dy: L.dy, cause: L.cause, lit: L.literate,
       otherName: sp ? sp.name : null, otherBy: sp ? sp.by : null, otherDy: sp && !sp.alive ? sp.dy : null, otherCause: sp ? sp.cause : null,
       lineage: (L.lineage || []).concat([{ name: L.name, sex: L.sex, by: L.by, dy: L.dy }]), age: L.dy - k.by, gate: L.gate

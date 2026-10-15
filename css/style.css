@@ -484,3 +484,4 @@ table.ledger tr.tot td { border-bottom: 0; font-weight: 600; color: var(--ink); 
 .choice-card .opts button.off { background: transparent; color: var(--ink-3); border-style: dashed; border-color: var(--rule); cursor: not-allowed; }
 .choice-card .opts button small { display: block; font-family: var(--font-ui); font-size: 11px; color: var(--ink-3); }
 .choice-card .opts button:first-child.off { background: transparent; color: var(--ink-3); }
+.alias { font-family: var(--font-ui); font-size: var(--t-xs); color: var(--ink-3); margin-left: 4px; font-weight: 400; }

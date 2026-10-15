@@ -506,7 +506,7 @@
       else if (k.soldier) st = '从军 · ' + (y - k.by) + '岁';
       else st = (y - k.by) + '岁';
       var li = h('li', dead ? 'dead' : '');
-      li.innerHTML = '<span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + '</span><span class="s">' + st + '</span>';
+      li.innerHTML = '<span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + (k.zi ? '<small class="alias">字' + esc(k.zi) + '</small>' : '') + '</span><span class="s">' + st + '</span>';
       ul.appendChild(li);
     });
   }
@@ -791,7 +791,8 @@
         if (k.rel === 'child') { born++; if ((k.alive ? L.dy : k.dy) - k.by >= 15) lived++; }
         var dead = !k.alive && k.dy <= L.dy;
         var marks = (k.adopted ? '<span class="mk">收养</span>' : '') + (k.lit ? '<span class="mk">识字</span>' : '');
-        return '<li class="' + (dead ? 'dead' : '') + '"><span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + marks + '</span><span class="s">' + (k.by ? k.by + '年生 · ' : '') + esc(kinFate(L, k)) + '</span></li>';
+        var alias = [k.xiao && k.xiao !== k.name ? '小名' + k.xiao : '', k.zi ? '字' + k.zi : ''].filter(Boolean).join('，');
+        return '<li class="' + (dead ? 'dead' : '') + '"><span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + (alias ? '<small class="alias">（' + esc(alias) + '）</small>' : '') + marks + '</span><span class="s">' + (k.by ? k.by + '年生 · ' : '') + esc(kinFate(L, k)) + '</span></li>';
       }).join('') + '</ul></div>';
     });
     box.innerHTML = html || '<p class="empty">无</p>';
