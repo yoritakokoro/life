@@ -437,7 +437,7 @@
     var who = L.sex === 'F' && L.married && L.spouseK ? esc(L.spouseK.name) + '之妻（' + clsName(L) + '）' : L.sex === 'F' && L.widowed ? '寡妇（' + clsName(L) + '）' : clsName(L);
     $('status').innerHTML = '<dt>身份</dt><dd>' + who + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>识字</dt><dd>' + (L.literate ? '识字' : '不识字') + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +
       (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '</dd>' : '') + (L.milMax ? '<dt>军职</dt><dd>' + L.milMax + '</dd>' : '') +
-      (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
+      (L.eth ? '' : '<dt>家境</dt><dd>' + E.lifeTier(L, y).lv + '</dd>') + (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
       (Object.keys(L.found).length ? '<dt>天资</dt><dd>' + Object.keys(L.found).map(function (k) { return E.TALENT[k].n; }).join('、') + '</dd>' : '');
   }
   function renderEco() {
@@ -533,7 +533,7 @@
       var dead = !k.alive && k.dy < y + 1 && k.dy <= y;
       var st;
       if (dead) st = '殁 · ' + (k.dy - k.by) + '岁';
-      else if (k.apart) st = '音讯全无';
+      else if (k.apart) st = k.given ? '送与他人' : k.sold ? '卖与他人' : k.bonded ? '为人奴婢' : '音讯全无';
       else if (k.out) st = k.rel === 'child' ? '已嫁' : '娘家';
       else if (k.soldier) st = '从军 · ' + (y - k.by) + '岁';
       else st = (y - k.by) + '岁';
