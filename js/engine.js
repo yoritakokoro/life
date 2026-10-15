@@ -209,6 +209,8 @@ var SGE = (function (D) {
       moves: 0, places: [], regimes: [], soldierYears: 0, kidsBorn: 0, grandkids: 0, lastChoice: -9,
       office: null, officeMax: null, job: null, injury: null, schooling: false, literate: false
     };
+    var HR = opts.heir;
+    if (HR) { opts.year = HR.year; opts.jun = HR.jun; opts.sex = HR.sex; opts.han = !HR.eth; opts.surviveUntil = HR.dy; }
     L.by = opts.year != null ? opts.year : pickYear(R, L.mode);
     var ji = opts.jun != null ? opts.jun : pickJun(R, L.by, opts);
     setPlace(L, ji);
@@ -218,13 +220,15 @@ var SGE = (function (D) {
     L.eth = null;
     if (!opts.han) (D.ETHNIC[L.zone] || []).forEach(function (e) { if (!L.eth && R() < e[1]) L.eth = e[0]; });
     L.sex = opts.sex || (R() < 0.51 ? 'M' : 'F');
-    L.cls = L.eth ? 'tribal' : pickClass(R, L.zone, L.by, opts);
+    if (HR) L.eth = HR.eth || null;
+    L.cls = HR ? HR.cls : L.eth ? 'tribal' : pickClass(R, L.zone, L.by, opts);
     var C = D.CLASSES[L.cls];
 
     // 姓名
     if (L.eth) { var en = ethName(R, L.eth); L.sur = en.sur; L.given = en.given; }
     else { L.sur = surname(R, L.cls); L.given = givenName(R, L.sex); }
     L.xiao = L.sex === 'F' ? '阿' + L.given.slice(-1) : xiaoName(R);
+    if (HR) { L.sur = HR.sur; L.xiao = HR.xiao; if (L.sex === 'F') L.given = HR.xiao.slice(-1); }
     L.name = L.sur + L.given;
 
     // 属性
@@ -253,8 +257,16 @@ var SGE = (function (D) {
     var litP = { gentry: 0.95, clerk: 0.9, merchant: 0.4, artisan: 0.1, peasant: 0.04, tenant: 0.02, tuntian: 0.03, soldier: 0.04, slave: 0.01, tribal: 0.01 }[L.cls];
     father.lit = R() < litP;
     var war = L.by >= 184 && L.by <= 210 || L.by >= 300;
-    if (R() < (war ? 0.04 : 0.015)) { father.alive = false; father.dy = L.by; father.cause = 'war'; L.flags.posthumous = true; }
-    if (R() < 0.015) { mother.alive = false; mother.dy = L.by; mother.cause = 'childbirth'; L.flags.motherDied = true; }
+    if (HR) {
+      var me = HR.parentSex === 'M' ? father : mother, other = HR.parentSex === 'M' ? mother : father;
+      me.name = HR.parentName; me.by = HR.parentBy; me.fixDy = HR.dy; me.fixCause = HR.cause; me.lit = !!HR.lit;
+      if (HR.otherName) { other.name = HR.otherName; other.by = HR.otherBy; }
+      if (HR.otherDy != null) { other.fixDy = HR.otherDy; other.fixCause = HR.otherCause || 'base'; } else other.guard = HR.dy;
+      if (HR.parentSex === 'F') father.lit = !!HR.otherLit;
+    } else {
+      if (R() < (war ? 0.04 : 0.015)) { father.alive = false; father.dy = L.by; father.cause = 'war'; L.flags.posthumous = true; }
+      if (R() < 0.015) { mother.alive = false; mother.dy = L.by; mother.cause = 'childbirth'; L.flags.motherDied = true; }
+    }
 
     // 兄姊
     var births = Math.max(0, Math.floor((mAge - 16) / 2.3 * (0.5 + R() * 0.6)));
@@ -274,7 +286,9 @@ var SGE = (function (D) {
     var olderSame = L.kin.filter(function (k) { return k.rel === 'sib' && k.sex === L.sex; }).length;
     L.rank = olderSame + 1;
     L.household = 1 + L.kin.filter(function (k) { return k.alive; }).length;
+    if (HR && HR.land != null) L.land = HR.land;
     L.eco = initEco(L);
+    L.lineage = HR ? HR.lineage : [];
     L.wealth = wealthScore(L);
     L.places.push(L.zone);
     L.regimes.push(ctrl(L.zone, L.by));
@@ -356,6 +370,10 @@ var SGE = (function (D) {
 
   function die(L, cause, s, map) {
     if (!L.alive) return;
+    if (L.opts.surviveUntil && L.rec.y <= L.opts.surviveUntil) {
+      if (!L.rec.spared) { L.rec.spared = true; L.body = clamp(L.body - 6, 5, 100); add(L, s, 'bad', '你大病一场，险些丧命，终究挺了过来。'); }
+      return;
+    }
     var t = fill(pick(L.R, DEATH[cause]), map || { a: L.age });
     var e = add(L, s, 'death', t);
     L.alive = false; L.cause = cause; L.causeText = t; L.deathS = s; L.deathI = e.i; L.dy = L.rec.y;
@@ -417,8 +435,8 @@ var SGE = (function (D) {
 
   // 地位越高，越可能见到名人
   function statusMul(L) {
-    var m = { gentry: 4, clerk: 2.5, merchant: 1.6, slave: 0.5, tenant: 0.8, tribal: 0.7 }[L.cls] || 1;
-    if (L.office) m *= 1.8;
+    var m = { gentry: 5, clerk: 3, merchant: 1.8, slave: 0.4, tenant: 0.8, tribal: 0.7 }[L.cls] || 1;
+    if (L.office) m *= 2;
     if (L.literate) m *= 1.3;
     return m * (1 + L.fame / 50);
   }
@@ -493,6 +511,9 @@ var SGE = (function (D) {
       P.queue.push({ key: 'crisis', q: '家中入不敷出，如今欠债' + fmt(E.debt) + '钱值，' + (E.cash < 300 ? '粮储也快见底了。' : '债主已经上门催了几回。') + (dec2 ? '' : who + '愁得整夜睡不着。'),
         o: opts, keys: keys, w: w.map(function (x) { return Math.max(0.1, x); }), n: n, lab: lab, dest: fd, who: who, forced: !dec2 });
     }
+    // 人生抉择：身份越高，越常遇到需要拿主意的事
+    var lc = lifeChoice(L, y, free);
+    if (lc) P.queue.push(lc);
     // 儿子要钱
     if (gap && free && isHead(L) && a >= 40) {
       var son = liveKin(L, function (k) { return k.rel === 'child' && k.sex === 'M' && !k.out && !k.soldier && y - k.by >= 18; })[0];
@@ -552,6 +573,7 @@ var SGE = (function (D) {
       case 'seed1': case 'seed2': applySeed(L, c.key, i); d.seedText = SEEDS[c.key].t[i]; break;
       case 'crisis': d.crisis = { c: c, k: c.keys[i] }; break;
       case 'sonAsk': d.sonAsk = { give: i === 0, son: c.son }; break;
+      case 'life': d.life = { c: c, i: i }; break;
     }
   }
 
@@ -596,6 +618,8 @@ var SGE = (function (D) {
     if (dec.seedText) add(L, 1.0, 'life', dec.seedText);
     if (dec.crisis) crisisAct(L, y, dec.crisis.c, dec.crisis.k);
     if (dec.sonAsk) sonOutcome(L, y, dec.sonAsk);
+    if (dec.life) lifeOutcome(L, y, dec.life.c, dec.life.i);
+    if (!L.alive) return finishYear(L, rec);
     if (L.band) bandYear(L, y);
 
     // 本年的历史事件
@@ -741,7 +765,7 @@ var SGE = (function (D) {
       else if (a < 14 && !L.soldier && R() < fx.flee) { fled = true; dest = pick(R, fx.to); L.parentsFled = true; }
     }
     if (!fled && fx.move && !L.soldier && !L.band && R() < fx.move) { moved = true; dest = pick(R, fx.to); }
-    var hm = fled ? 0.35 : 1;
+    var hm = (fled ? 0.35 : 1) * (L.flags.wubi ? 0.5 : 1);
     var em = fx.ethMul && L.eth && fx.ethMul[L.eth] ? fx.ethMul[L.eth] : 1;
     for (var h = 0; h < HZ.length; h++) {
       var kind = HZ[h];
@@ -1143,6 +1167,15 @@ var SGE = (function (D) {
 
   function career(L, y, dec) {
     var R = L.R, a = L.age, fk = ctrl(L.zone, y);
+    if (L.flags.corrupt && L.office && R() < 0.06) {
+      L.office = null; L.job = '农'; L.fame -= 6; L.flags.corrupt = false;
+      add(L, 2.6, 'bad', '你从前受贿的事被人告发，丢了官，家产也被罚没了大半。');
+      L.eco.cash = Math.round(L.eco.cash * 0.4);
+    }
+    if (L.flags.outlaw && R() < 0.12) {
+      L.flags.outlaw = false; L.job = '农'; L.standing += 4;
+      add(L, 2.6, 'life', '官府招抚山中的人，许他们下山归田。你回到了平地，重新编入户籍。');
+    }
     if (dec.clerk) { L.office = '书佐'; L.job = '书佐'; L.officeMax = '县书佐'; L.fame += 3; add(L, 1.4, 'good', '你到县廷当了书佐，每天抄写文书。'); }
     if (a < 16 || L.soldier || L.band || L.sex === 'F') return;
     if (L.office === '书佐' && L.learn >= 50 && R() < 0.06) {
@@ -1155,7 +1188,7 @@ var SGE = (function (D) {
     if (L.cls === 'gentry' && !L.office && a >= 18) {
       var p = 0;
       if (y < 220 && L.fame >= 5) p = 0.04; // 举孝廉
-      var cm = (L.lastFocus === 'career' ? 2 : 1) * (L.flags.robe ? 1.3 : 1) * (L.flags.connected ? 1.3 : 1);
+      var cm = (L.lastFocus === 'career' ? 2 : 1) * (L.flags.robe ? 1.3 : 1) * (L.flags.connected ? 1.3 : 1) * (L.flags.zz ? 2 : 1) * (L.flags.zzno ? 0.6 : 1) * (L.flags.disciple ? 1.4 : 1);
       if (y >= 220) p = L.gate >= 3 ? 0.12 : 0.05; // 九品中正
       if (y >= 190 && y < 230 && L.learn >= 55) p += 0.03; // 征辟
       if (R() < p * cm) {
@@ -1249,6 +1282,10 @@ var SGE = (function (D) {
         if (k.alive && R() < 0.1) { k.soldier = null; if (!k.apart) add(L, 3.4, 'fam', kinLabel(L, k) + '退伍回家了。'); }
       }
       if (!k.alive) return;
+      if (k.fixDy != null || k.guard) {
+        if (k.fixDy === y) kinDie(L, k, k.fixCause || 'base', 1.6, y);
+        if (k.fixDy != null || y <= k.guard) return;
+      }
       var q = (ka === 1 ? baseQ(0) : baseQ(ka)) * (CLS_Q[L.cls] || 1) * chaos(y) * (k.soldier ? 1.5 : 1) * (k.rel === 'child' && L.rec.focus && L.rec.focus.eff === 'kids' ? 0.85 : 1);
       if (R() < q) kinDie(L, k, 'base', 1 + Math.floor(R() * 3) + 0.5, y);
     });
@@ -1448,7 +1485,7 @@ var SGE = (function (D) {
   /* ================= 家计 ================= */
   var PRICE = 100, LANDP = 1000;
   var SAL = { 书佐: 9000, 计吏: 12000, 县长: 40000, 郎官: 30000, 县令: 60000, 幕僚: 30000, 郡守: 120000 };
-  var JOBINC = { 医者: 1500, 巫祝: 800, 门客: 2000 };
+  var JOBINC = { 医者: 1500, 巫祝: 800, 门客: 2000, 塾师: 900, 稳婆: 600, 山贼: 1500 };
   function fmt(n) { n = Math.round(n); return (n < 0 ? '-' : '') + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
   function initEco(L) {
     var R = L.R, E = { cash: 0, priv: 0, debt: 0, ox: 0, house: 3000, stock: 0, tools: false, loom: false, labor: 0, porter: 0, cart: false };
@@ -1761,6 +1798,139 @@ var SGE = (function (D) {
     else add(L, 3.4, 'bad', nm + '的买卖没做成，三千钱赔了个精光。他回来后好几天不敢见你。');
   }
 
+
+  /* ================= 人生抉择 ================= */
+  function choiceMul(L) {
+    var m = { gentry: 2.4, clerk: 1.8, merchant: 1.5, artisan: 1.1, peasant: 1, soldier: 1, tuntian: 0.9, tenant: 0.8, tribal: 0.8, slave: 0.7 }[L.cls] || 1;
+    if (L.office) m *= 1.5;
+    if (L.literate) m *= 1.2;
+    return m;
+  }
+  function isElite(L) { return L.cls === 'gentry' || L.cls === 'clerk' || !!L.office || L.learn >= 45 || L.fame >= 20; }
+  function ctxH(L, y) {
+    var fl = { war: 0, fam: 0, plag: 0 }, fk = ctrl(L.zone, y);
+    (EV_BY_Y[y] || []).forEach(function (ev) { var fx = localFx(L, ev, L.zone, y); if (fx && !fx._skip) { fl.war += fx.war || 0; fl.fam += fx.fam || 0; fl.plag += fx.plag || 0; } });
+    var camp = L.soldier && (CAMP_BY_Y[y] || []).some(function (c) { return c.a.indexOf(L.soldier.army) >= 0; });
+    return {
+      y: y, a: L.age, g: group(fk), fname: fname(fk, y), head: isHead(L), fl: fl, chaos: chaos(y), poor: poorNow(L), farm: farmerish(L), camp: camp,
+      kids: function (lo, hi, sex, f) { return liveKin(L, function (k) { var a = y - k.by; return k.rel === 'child' && a >= lo && a <= hi && (!sex || k.sex === sex) && (!f || f(k)); }); },
+      someKin: function () { var ks = liveKin(L, function (k) { return !k.out && k.by < y; }); return ks.length ? ks[Math.floor(hash01(L.seed, y, 99) * ks.length)] : null; }
+    };
+  }
+  function fillC(L, t, meta) {
+    return t.replace('{kin}', meta.kin ? kinLabel(L, meta.kin) : '').replace(/\{kin\}/g, meta.kin ? kinLabel(L, meta.kin) : '')
+      .replace(/\{lord\}/g, meta.lord || '').replace(/\{birth\}/g, D.JUN[L.birthJun][0] + L.birthCounty);
+  }
+  function lifeChoice(L, y, free) {
+    var R = L.R, a = L.age;
+    if (a < 12 || (!free && !L.soldier)) return null;
+    var gapN = L.cls === 'gentry' || L.office ? 1 : 2;
+    if (a - L.lastChoice < gapN) return null;
+    if (R() >= 0.17 * choiceMul(L)) return null;
+    var H = ctxH(L, y), elite = isElite(L), pool = [];
+    D.CHOICES.forEach(function (c) {
+      if (c.elite && !elite) return;
+      if ((L.choiceSeen || {})[c.id] && c.id !== 'sick' && c.id !== 'plague' && c.id !== 'storm' && c.id !== 'relief') return;
+      var meta = c.ok(L, H);
+      if (meta) pool.push({ c: c, meta: meta });
+    });
+    if (!pool.length) return null;
+    var pk = wpick(R, pool, function (x) { return x.c.w; });
+    var c = pk.c;
+    (L.choiceSeen = L.choiceSeen || {})[c.id] = true;
+    var aw = c.aw ? c.aw(L).map(function (x) { return Math.max(1, x); }) : c.o.map(function () { return 1; });
+    return { key: 'life', id: c.id, meta: pk.meta, q: fillC(L, c.q, pk.meta), o: c.o.slice(), w: aw.map(function (x) { return x * x; }) };
+  }
+  function lifeOutcome(L, y, ch, i) {
+    var R = L.R, def = D.CHOICES.filter(function (c) { return c.id === ch.id; })[0];
+    var rs = def.r[i], r = rs[rs.length - 1], acc = 0, x = R();
+    for (var j = 0; j < rs.length; j++) { acc += rs[j].p; if (x < acc) { r = rs[j]; break; } }
+    var fx = r.fx || {}, s = 1.15, meta = ch.meta || {};
+    if (r.t) add(L, s, 'life', fillC(L, r.t, meta));
+    ['body', 'learn', 'standing', 'fame', 'craft'].forEach(function (k) { if (fx[k]) L[k] += fx[k]; });
+    var E = L.eco;
+    if (fx.cash) { if (fx.cash > 0) E.cash += fx.cash; else payFrom(L, -fx.cash); }
+    if (fx.priv) E.priv = Math.max(0, E.priv + fx.priv);
+    if (fx.debt) E.debt += fx.debt;
+    if (fx.land) L.land = Math.max(0, L.land + fx.land);
+    if (fx.ox) E.ox = Math.max(0, E.ox + fx.ox);
+    if (fx.cls) { L.cls = fx.cls; if (fx.cls !== 'slave' && E.house === 0) E.house = 1500; }
+    if (fx.job) L.job = fx.job;
+    if (fx.office) { L.office = fx.office; L.officeMax = fx.office === '幕僚' ? (meta.lord || '') + '幕府的掾属' : fx.office; L.job = fx.office; }
+    if (fx.noOffice) { L.office = null; L.job = '农'; }
+    if (fx.flag) [].concat(fx.flag).forEach(function (f) { L.flags[f] = true; });
+    if (fx.tr) for (var t in fx.tr) L.tr[t] = clamp(L.tr[t] + fx.tr[t], 5, 95);
+    if (fx.kinLit && meta.kin) meta.kin.lit = true;
+    if (fx.kinOut && meta.kin) meta.kin.out = true;
+    if (fx.kinDie && meta.kin && meta.kin.alive) kinDie(L, meta.kin, fx.kinDie, s + 0.05, y);
+    if (fx.child) {
+      var sx = R() < 0.5 ? 'M' : 'F', k = newKin(L, 'child', sx, y, sx === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'));
+      k.lav = R(); k.adopted = true; L.kidsBorn++;
+      add(L, s + 0.02, 'fam', '你给孩子取名' + k.name + '。');
+    }
+    if (fx.marry) { L.spouseK = null; doMarry(L, makeSpouse(L, y), y, s + 0.1); }
+    if (fx.move) relocate(L, pick(R, fx.move.filter(function (z) { return z !== L.zone; })), s + 0.2, '你们到了{dest}。', 0.03, y);
+    if (fx.die) die(L, fx.die, s + 0.1, { a: cnNum(L.age), n: '先登攻城' });
+    L.rec.tags.push('choice');
+  }
+
+  /* ================= 传家：以子孙之身继续 ================= */
+  function heirOf(L) {
+    var kids = L.kin.filter(function (k) { return k.rel === 'child' && k.alive && !k.apart; }).sort(function (a, b) { return a.by - b.by; });
+    if (!kids.length || L.cls === 'slave') return null;
+    var k = kids.filter(function (x) { return x.sex === 'M'; })[0] || kids[0];
+    var sp = L.spouseK && (L.spouseK.alive || L.spouseK.dy >= k.by) ? L.spouseK : L.kin.filter(function (x) { return x.rel === 'spouse'; })[0];
+    var sur = L.sex === 'M' ? L.sur : (sp ? sp.name.slice(0, 1) : L.sur);
+    var cls = L.cls === 'tribal' ? 'tribal' : (L.office || L.cls === 'gentry') ? (L.cls === 'gentry' ? 'gentry' : 'clerk') : L.cls;
+    return {
+      year: k.by, jun: L.jun, sex: k.sex, sur: sur, xiao: k.name, cls: cls, eth: L.eth, land: L.land,
+      parentSex: L.sex, parentName: L.name, parentBy: L.by, dy: L.dy, cause: L.cause, lit: L.literate,
+      otherName: sp ? sp.name : null, otherBy: sp ? sp.by : null, otherDy: sp && !sp.alive ? sp.dy : null, otherCause: sp ? sp.cause : null,
+      lineage: (L.lineage || []).concat([{ name: L.name, sex: L.sex, by: L.by, dy: L.dy }]), age: L.dy - k.by
+    };
+  }
+
+  /* ================= 身后与后记 ================= */
+  function afterlife(L) {
+    var out = [], z = L.zone, dy = L.dy, n = 0;
+    for (var y = dy + 1; y <= dy + 45 && n < 2; y++) {
+      (EV_BY_Y[y] || []).forEach(function (ev) {
+        var fx = ev.at && ev.at[z];
+        if (n >= 2 || !fx || !fx.t || !(fx.war || fx.fam || fx.plag || fx.move || fx.flee || fx.m15 || fx.flood)) return;
+        out.push('你死后第' + cnNum(y - dy) + '年（' + y + '），' + fx.t.replace(/。$/, '') + '。');
+        n++;
+      });
+    }
+    if (n) out.push(L.kidsBorn ? '你的子孙是否熬过了那些年，没有人记下。' : '那时，已经没有人记得你了。');
+    else if (dy < 280) out.push('你所在的地方，此后几十年里没有再遭大的兵祸。这在那个时代，已是难得的福分。');
+    return out;
+  }
+  var REFLECT = {
+    infant: '那一年出生的孩子，大约每五个就有一个活不过周岁。他们大多没有留下名字，只在母亲的记忆里活过几个月。',
+    child: '史书里的汉末，是群雄的汉末。可对于大多数人家来说，乱世首先意味着：孩子养不大。',
+    fam: '史书写饥荒，常常只用三个字："人相食"。在那三个字背后，是千千万万个和你一样的人。',
+    plag: '建安年间的疫病，让曹植写下"家家有僵尸之痛"。史书记下了文人的哀叹，没有记下他们身旁成千上万的寻常人家。',
+    battle: '史书记战争，用的是"斩首万级""溺死者数万"。你是那个数字里的一个。',
+    war: '乱兵过境，史书往往只留下一句"所过残灭"。',
+    massacre: '屠城在史书里只占一行字。那一行字里，有你。',
+    childbirth: '在那个时代，生育是女子一生中最凶险的关口。史书很少写这件事，因为执笔写史的，不是她们。',
+    road: '汉末的户口从五千多万跌到不足千万。消失的人里，有许多就倒在逃难的路上。',
+    corv: '城墙、宫殿、驰道，都是像你这样的人一筐土一筐土垒起来的。史书记下了它们的名字，没有记下垒它们的人。',
+    executed: '权力更迭的时候，史书记下的是胜负。被牵连的人，只是名单上的一行。'
+  };
+  function afterword(L) {
+    var age = L.dy - L.by, t = [];
+    if (REFLECT[L.cause]) t.push(REFLECT[L.cause]);
+    else if (age >= 60) t.push('能活到这个年纪的人，在你的同代人里不到十分之一。你看着王朝更替、城头易帜，把这些都藏在了心里。');
+    if (L.cls === 'slave') t.push('律令把你和牛马写在同一页簿籍上。可你也有过自己的名字，自己的念想。');
+    else if (L.eth) t.push('汉人的户籍里没有你。史书提到你的族人，多半是在"叛""破""徙"这样的字旁边。');
+    else if (L.sex === 'F' && L.cause !== 'childbirth') t.push('史书里的女子，多半只留下一个姓氏，写作"某氏"。可你的名字，曾经被家里人叫了很多年。');
+    else if (L.moves >= 2 && age >= 15) t.push('你一生几度迁徙。汉末户籍上消失的千万人里，有许多就是像你这样的流民。');
+    else if (L.officeMax && age >= 20) t.push('你做过官，名字或许会刻在某块碑上、写进某卷簿书，然后在千年里慢慢风化。');
+    else if (age >= 15) t.push('你种出的粮食进了官仓，织出的布帛交了户调，你的名字写在里正的户籍简上。帝王将相的事业，就压在这些简牍上。');
+    t.push('《三国志》为数百人立了传。你不在其中——和那个时代的几千万人一样。');
+    return t;
+  }
   /* ================= 查询 ================= */
   function household(L, y) {
     // 户籍简：返回当前同户之人，第一位为户人（户主）
@@ -1811,7 +1981,7 @@ var SGE = (function (D) {
     era: era, ganzhi: ganzhi, reignText: reignText, ctrl: ctrl, group: group, fname: fname, zonePop: zonePop, totalPop: totalPop,
     cnNum: cnNum, slipNum: slipNum, zname: zname, household: household, slipText: slipText, kinLabel: kinLabel, relName: relName,
     placeText: placeText, focusOptions: focusOptions, setFocus: setFocus, FOCUS: FOCUS, traitWords: traitWords, TALENT: TALENT, ecoView: ecoView,
-    spendOptions: spendOptions, spend: spend, isHead: isHead, autoAnswer: autoAnswer, fmt: fmt, LANDP: LANDP, CAUSE_SHORT: CAUSE_SHORT, CAUSE_STAT: CAUSE_STAT, POP_SCALE: POP_SCALE, stats: stats
+    spendOptions: spendOptions, spend: spend, heirOf: heirOf, afterlife: afterlife, afterword: afterword, isHead: isHead, autoAnswer: autoAnswer, fmt: fmt, LANDP: LANDP, CAUSE_SHORT: CAUSE_SHORT, CAUSE_STAT: CAUSE_STAT, POP_SCALE: POP_SCALE, stats: stats
   };
 })(SGD);
 if (typeof module !== 'undefined') module.exports = SGE;

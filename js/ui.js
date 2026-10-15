@@ -17,8 +17,8 @@
   var store = load();
 
   var SPEEDS = [['慢', 12], ['中', 6], ['快', 2.5], ['极快', 0.7]];
-  var MODES = { history: 'H', zhongping: 'Z', jianan: 'J', chaos: 'C', blind: 'B', mirror: 'M' };
-  var MODE_NAME = { history: '史实人生', zhongping: '生于中平', jianan: '生于建安', chaos: '乱世之子', blind: '真正的随机', mirror: '我若生于那个时代' };
+  var MODES = { history: 'H', zhongping: 'Z', jianan: 'J', chaos: 'C', blind: 'B', mirror: 'M', heir: 'G' };
+  var MODE_NAME = { history: '史实人生', zhongping: '生于中平', jianan: '生于建安', chaos: '乱世之子', blind: '真正的随机', mirror: '我若生于那个时代', heir: '传家' };
   var GNAME = function (g, y) { return { han: '汉', wei: y < 220 ? '曹操' : '魏', shu: y < 221 ? '刘备' : '蜀汉', wu: y < 222 ? '孙氏' : '吴', jin: y >= 317 ? '东晋' : '晋', other: '其他势力' }[g]; };
 
   var S = { speed: store.speed || 6, playing: true, last: 0, t: 0, queue: [], yearActive: false, L: null, comps: [], statsCache: {} };
@@ -38,12 +38,12 @@
     var mode = Object.keys(MODES).filter(function (k) { return MODES[k] === m[1].toUpperCase(); })[0];
     var seed = parseInt(m[2], 36);
     if (!isFinite(seed)) return null;
-    return { seed: seed >>> 0, mode: mode === 'mirror' ? 'history' : mode };
+    return { seed: seed >>> 0, mode: mode === 'mirror' || mode === 'heir' ? 'history' : mode };
   }
   function compSeed(seed, i) { return (seed ^ Math.imul(0x9E3779B9, i + 1)) >>> 0; }
 
   /* ---------- 统计（同时代人） ---------- */
-  function statsMode(mode) { return mode === 'blind' || mode === 'mirror' ? 'history' : mode; }
+  function statsMode(mode) { return mode === 'blind' || mode === 'mirror' || mode === 'heir' ? 'history' : mode; }
   function ensureStats(mode) {
     if (S.statsCache[mode]) return;
     var st = { ages: [], causes: [], done: false, n: 0 };
@@ -158,6 +158,7 @@
       '<p class="kicker">' + (S.blind ? '真正的随机' : MODE_NAME[S.mode]) + '</p>' +
       '<h2 class="birth-name"><span>你是</span>' + esc(L.name) + '</h2>' +
       '<p class="birth-name-sub">' + nameNote(L) + '</p>' +
+      (S.opts.heir ? '<p class="mirror-note">你是' + esc(S.opts.heir.parentName) + '的' + (L.sex === 'M' ? '儿子' : '女儿') + '。上一世的你，' + (S.opts.heir.dy) + '年去世时，你' + cn(Math.max(0, S.opts.heir.age)) + '岁。' + lineageText(S.opts.heir.lineage, L) + '</p>' : '') +
       '<p class="era-big">' + el.big + '<small>' + (S.blind ? el.sub : '（' + y + '）' + E.ganzhi(y)) + '</small></p>' +
       '<p class="born-line">你出生了。</p>' +
       '<dl class="facts">' +
@@ -181,6 +182,10 @@
     renderSpeed($('speed-birth'));
   }
 
+  function lineageText(lin, L) {
+    if (!lin || lin.length < 2) return '';
+    return '家谱：' + lin.map(function (x) { return x.name + '（' + x.by + '–' + x.dy + '）'; }).join(' → ') + ' → 你。';
+  }
   function nameNote(L) {
     if (L.eth) return D.ETH[L.eth].n + '人。汉人的户籍上没有你的名字。';
     if (L.cls === 'slave') return '小名' + L.xiao + '。在主人家的簿籍上，你记作"户下' + (L.sex === 'M' ? '奴' : '婢') + L.given + '"。';
@@ -708,6 +713,7 @@
     }
     if (L.flags.coffin) lines.push('你早早为自己备好了寿材。');
     if (age >= 10) lines.push('你是一个' + E.traitWords(L).join('、') + '的人。');
+    if (L.lineage && L.lineage.length) { var pa = L.lineage[L.lineage.length - 1]; lines.splice(1, 0, '你是' + pa.name + '的' + (L.sex === 'M' ? '儿子' : '女儿') + '。'); }
     var last = '';
     if (L.by < 184 && L.dy >= 280) last = '你从黄巾之乱一直活到了三国归晋。';
     else if (L.by < 220 && L.dy >= 265) last = '你经历了两个王朝的终结。';
@@ -741,6 +747,14 @@
     var achs = achievements(L);
     $('achs').innerHTML = achs.map(function (t) { return '<p class="ach">【' + esc(t) + '】</p>'; }).join('');
     renderComps($('end-comps'), L.dy, true);
+    var aw = E.afterword(L), al = E.afterlife(L);
+    $('afterword').innerHTML = '<h2 class="sect-title">后记</h2>' + aw.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('') +
+      (al.length ? '<h2 class="sect-title">身后</h2>' + al.map(function (x) { return '<p class="after">' + esc(x) + '</p>'; }).join('') : '');
+    renderEndFamily(L);
+    S.heir = E.heirOf(L);
+    var hb = $('btn-heir');
+    hb.hidden = !S.heir;
+    if (S.heir) hb.textContent = '以' + (S.heir.sex === 'M' ? '儿子' : '女儿') + S.heir.xiao + '之身继续';
     $('seed-code').innerHTML = '命数 <code>' + codeOf(S.seed, S.mode) + '</code>';
     renderHanji($('end-hanji'), $('end-hanji-tip'), L.dy, L.dy, true);
     renderFullChron(L);
@@ -748,6 +762,35 @@
     if (st && st.done) renderStats(); else { $('verdict').textContent = '正在推演同时代的其他人生……'; S.onStats = renderStats; }
   }
 
+  var KIN_CAUSE = { plag: '死于疫病', fam: '死于饥荒', war: '死于兵祸', flood: '死于水灾', corv: '死于劳役', battle: '战死', massacre: '城破被杀', executed: '受牵连被杀', childbirth: '死于难产', road: '死于逃难途中' };
+  function kinFate(L, k) {
+    if (k.alive) {
+      if (k.apart) return '从此音讯全无';
+      var a = L.dy - k.by;
+      return '你去世时' + (a <= 0 ? '尚在襁褓' : a + '岁') + (k.out && k.rel === 'child' && k.sex === 'F' ? '，已出嫁' : '') + (k.soldier ? '，在军中' : '');
+    }
+    var age = k.dy - k.by;
+    var c = KIN_CAUSE[k.cause] || (age <= 1 ? '夭折' : age < 15 ? '夭折' : age >= 55 ? '寿终' : '病故');
+    return k.dy + '年' + c + '，年' + age;
+  }
+  function renderEndFamily(L) {
+    var groups = [['父母', ['father', 'mother']], ['祖辈', ['gp']], ['配偶', ['spouse']], ['兄弟姐妹', ['sib']], ['子女', ['child']]];
+    var box = $('end-family'), html = '', born = 0, lived = 0;
+    groups.forEach(function (g) {
+      var ks = L.kin.filter(function (k) { return g[1].indexOf(k.rel) >= 0 && k.by <= L.dy; }).sort(function (a, b) { return a.by - b.by; });
+      if (!ks.length) return;
+      html += '<div class="fam-group"><h3>' + g[0] + '</h3><ul>' + ks.map(function (k) {
+        if (k.rel === 'child') { born++; if ((k.alive ? L.dy : k.dy) - k.by >= 15) lived++; }
+        var dead = !k.alive && k.dy <= L.dy;
+        var marks = (k.adopted ? '<span class="mk">收养</span>' : '') + (k.lit ? '<span class="mk">识字</span>' : '');
+        return '<li class="' + (dead ? 'dead' : '') + '"><span class="r">' + E.relName(L, k) + '</span><span class="n">' + esc(k.name) + marks + '</span><span class="s">' + (k.by ? k.by + '年生 · ' : '') + esc(kinFate(L, k)) + '</span></li>';
+      }).join('') + '</ul></div>';
+    });
+    box.innerHTML = html || '<p class="empty">无</p>';
+    $('family-sum').textContent = born ? '子女' + born + '人，' + lived + '人活过十五岁' : '';
+    var lin = (L.lineage || []).concat([{ name: L.name, by: L.by, dy: L.dy, me: true }]);
+    $('lineage').innerHTML = lin.length > 1 ? '<p class="lineage-line">' + lin.map(function (x) { return '<span' + (x.me ? ' class="me"' : '') + '>' + esc(x.name) + '<small>' + x.by + '–' + x.dy + '</small></span>'; }).join('<i>→</i>') + '</p>' : '';
+  }
   function renderFullChron(L) {
     var box = $('end-chron');
     box.innerHTML = '';
@@ -881,7 +924,7 @@
   function copyEpitaph() {
     var L = S.L, ep = epitaph(L);
     var txt = ep.lines.join('\n') + (L.causeText ? '\n' + L.causeText : '') + (ep.last ? '\n' + ep.last : '') +
-      achievements(L).map(function (a) { return '\n【' + a + '】'; }).join('') + '\n—— 一世·汉末 · 命数 ' + codeOf(S.seed, S.mode);
+      achievements(L).map(function (a) { return '\n【' + a + '】'; }).join('') + '\n\n' + E.afterword(L).join('\n') + '\n—— 一世·汉末 · 命数 ' + codeOf(S.seed, S.mode);
     var done = function () { toast('墓志已复制'); };
     try {
       navigator.clipboard.writeText(txt).then(done, fallback);
@@ -911,6 +954,7 @@
     $('btn-skip').onclick = skipToEnd;
     $('btn-again').onclick = function () { startLife(newSeed(), S.mode === 'mirror' ? S.opts : { mode: S.mode }); };
     $('btn-copy').onclick = copyEpitaph;
+    $('btn-heir').onclick = function () { if (S.heir) startLife(newSeed(), { mode: 'heir', heir: S.heir }); };
     $('btn-codex').onclick = openCodex;
     $('btn-lives').onclick = openLives;
     $('btn-about').onclick = function () { $('dlg-about').showModal(); };

@@ -206,6 +206,12 @@
         <div class="end-main" style="display:flex;flex-direction:column;gap:var(--s-5);min-width:0">
           <div class="stele" id="stele"></div>
           <div class="achs" id="achs"></div>
+          <div class="afterword" id="afterword"></div>
+          <div>
+            <h2 class="sect-title">家人<em id="family-sum"></em></h2>
+            <div class="lineage" id="lineage"></div>
+            <div class="end-family" id="end-family"></div>
+          </div>
           <div>
             <h2 class="sect-title">与你同一时辰降生的人</h2>
             <div class="comps" id="end-comps"></div>
@@ -233,6 +239,7 @@
       </section>
       <div class="end-actions">
         <button class="btn-seal" id="btn-again" type="button">再入轮回</button>
+        <button class="btn primary" id="btn-heir" type="button" hidden>以子孙之身继续</button>
         <button class="btn" id="btn-copy" type="button">复制墓志</button>
         <button class="btn" id="btn-back" type="button">回到开篇</button>
         <span class="seed-code" id="seed-code"></span>
@@ -280,6 +287,7 @@
 <!--/BODY-->
 <script src="js/data.js"></script>
 <script src="js/history.js"></script>
+<script src="js/choices.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/ui.js"></script>
 </body>

@@ -461,3 +461,23 @@ table.ledger tr.tot td { border-bottom: 0; font-weight: 600; color: var(--ink); 
   .focus-why { grid-column: 1 / -1; }
   .focus-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
+
+/* ---------- 后记、家人、家谱 ---------- */
+.afterword { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-4) var(--s-5); border-left: 3px solid var(--ink-2); background: color-mix(in srgb, var(--silk-2) 70%, transparent); }
+.afterword .sect-title { border: 0; padding: 0; margin-top: var(--s-2); }
+.afterword .sect-title:first-child { margin-top: 0; }
+.afterword p { font-size: var(--t-md); line-height: 1.95; color: var(--ink); max-width: 38em; }
+.afterword p:last-of-type:not(.after) { font-family: var(--font-display); font-size: var(--t-lg); }
+.afterword p.after { color: var(--ink-2); font-size: var(--t-sm); }
+.lineage-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-family: var(--font-display); font-size: var(--t-lg); margin: var(--s-2) 0; }
+.lineage-line small { font-family: var(--font-ui); font-size: var(--t-xs); color: var(--ink-3); margin-left: 4px; }
+.lineage-line span.me { color: var(--cinnabar); }
+.lineage-line i { font-style: normal; color: var(--ink-3); }
+.end-family { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--s-3) var(--s-5); }
+.fam-group h3 { font-family: var(--font-ui); font-size: var(--t-xs); letter-spacing: .2em; color: var(--ink-3); font-weight: 500; margin-bottom: 2px; }
+.fam-group ul { list-style: none; margin: 0; padding: 0; }
+.fam-group li { display: grid; grid-template-columns: 3em minmax(0, 1fr); gap: 0 var(--s-2); padding: 4px 0; border-bottom: 1px dotted var(--rule); font-size: var(--t-sm); }
+.fam-group li .r { color: var(--ink-3); font-family: var(--font-ui); grid-row: span 2; }
+.fam-group li .s { grid-column: 2; font-family: var(--font-ui); font-size: var(--t-xs); color: var(--ink-2); }
+.fam-group li.dead .s { color: var(--cinnabar); }
+.fam-group .mk { font-family: var(--font-ui); font-size: 10px; border: 1px solid var(--rule); border-radius: 2px; padding: 0 3px; margin-left: 6px; color: var(--ink-2); vertical-align: 2px; }
