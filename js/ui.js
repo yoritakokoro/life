@@ -324,7 +324,7 @@
     var card = h('li', 'choice-card');
     var html = '';
     if (c.pre) html += '<p class="pre">' + esc(c.pre) + '</p>';
-    html += '<p>' + esc(c.q) + '</p><div class="opts"></div><p class="hint">' + esc(c.hint || '选择会改变概率，但不会决定结果。') + '</p>';
+    html += '<p>' + esc(c.q) + '</p>' + (c.info ? '<p class="info">' + esc(c.info) + '</p>' : '') + '<div class="opts"></div><p class="hint">' + esc(c.hint || '选择会改变概率，但不会决定结果。') + '</p>';
     card.innerHTML = html;
     var box = card.querySelector('.opts');
     c.o.forEach(function (label, i) {
@@ -428,6 +428,7 @@
     }
     renderStatus(y);
     renderLaws(y);
+    renderRegion(y);
     renderFamily(y);
     renderFriends(y);
     renderEco();
@@ -442,6 +443,18 @@
       (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '</dd>' : '') + (L.milMax ? '<dt>军职</dt><dd>' + L.milMax + '</dd>' : '') +
       (L.eth ? '' : '<dt>家境</dt><dd>' + E.lifeTier(L, y).lv + '</dd>') + (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
       (Object.keys(L.found).length ? '<dt>天资</dt><dd>' + Object.keys(L.found).map(function (k) { return E.TALENT[k].n; }).join('、') + '</dd>' : '');
+  }
+  function renderRegion(y) {
+    var L = S.L, v = E.regionView(L, y), el = $('reg');
+    if (!v || L.eth) { $('reg-name').textContent = ''; el.innerHTML = L.eth ? '<dt>本地</dt><dd>山野之中，没有郡县的簿籍。</dd>' : ''; $('reg-note').textContent = ''; return; }
+    $('reg-name').textContent = v.jun + ' · ' + v.ruler + '治下';
+    var arrow = v.trend === 'up' ? ' <span class="up">↑</span>' : v.trend === 'down' ? ' <span class="down">↓</span>' : '';
+    el.innerHTML =
+      '<dt>户口</dt><dd>约 <span class="num">' + (v.pop >= 10 ? Math.round(v.pop) : v.pop.toFixed(1)) + '</span> 万口</dd>' +
+      '<dt>治安</dt><dd><span class="meter"><i style="width:' + v.order + '%"></i></span> ' + v.orderL + '</dd>' +
+      '<dt>粮价</dt><dd>每石约 <span class="num">' + E.fmt(v.price) + '</span> 钱' + arrow + '<br><span class="sub">平年约 100 钱</span></dd>' +
+      '<dt>流民</dt><dd>' + v.refL + (v.refN >= 100 && !(v.out >= 0.1) ? '<br><span class="sub">约 ' + E.fmt(v.refN) + ' 人</span>' : '') + '</dd>';
+    $('reg-note').textContent = v.note || '';
   }
   function renderLaws(y) {
     var L = S.L, ul = $('laws'), ps = L.eth ? [] : E.polsAt(L.zone, y);
@@ -812,6 +825,10 @@
     var aw = E.afterword(L), al = E.afterlife(L);
     $('afterword').innerHTML = '<h2 class="sect-title">后记</h2>' + aw.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('') +
       (al.length ? '<h2 class="sect-title">身后</h2>' + al.map(function (x) { return '<p class="after">' + esc(x) + '</p>'; }).join('') : '');
+    $('end-tiles').innerHTML = E.lifeSummary(L).map(function (t) { return '<div class="tile"><span class="tl">' + esc(t.l) + '</span><b class="tv">' + esc(t.v) + '</b>' + (t.s ? '<span class="ts">' + esc(t.s) + '</span>' : '') + '</div>'; }).join('');
+    var ec = L.echoes || [];
+    $('end-echo-wrap').hidden = !ec.length;
+    $('end-echo').innerHTML = ec.map(function (e) { return '<li><p class="was">' + e.y0 + ' 年，你' + cn(e.a0) + '岁：「' + esc(e.o) + '」</p><p class="now">' + e.y1 + ' 年，你' + cn(e.a1) + '岁：' + esc(e.t) + '</p></li>'; }).join('');
     renderEndFamily(L);
     S.heir = E.heirOf(L);
     var hb = $('btn-heir');

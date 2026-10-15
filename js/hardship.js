@@ -208,4 +208,61 @@
         [{ p: 1, t: '你关上了门。从门缝里，你看见他在门槛上坐了很久。', fx: { tr: { cau: 3 } } }]],
       aw: function (L) { return [KT(L, 'soc'), KT(L, 'cau')]; } }
   ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 身边人的事：牵动心事的抉择（反应随性情而异） ---------- */
+  var FT = function (L, k) { return L.tr[k] == null ? 50 : L.tr[k]; };
+  function fr(L, H, f) {
+    var y = H.y;
+    return (L.friends || []).filter(function (x) { return x.alive && !x.apart && y - x.by >= 16 && (!f || f(x, y - x.by)); }).sort(function (a, b) { return b.aff - a.aff; })[0] || null;
+  }
+  [
+    { id: 'fr_office', w: 2.2, ok: function (L, H) { if (H.a < 18 || H.a > 50 || L.office || L.cls === 'slave') return false; var f = fr(L, H, function (x) { return x.aff >= 35 && !x.office && x.sex === 'M'; }); return f && { friend: f }; },
+      pre: function (L, m) { m.friend.office = true; m.friend.job = L.cls === 'gentry' ? '郎官' : '县吏'; },
+      q: '你的朋友{friend}在县廷谋了个差事，回乡时穿着吏服，乡里人都围着看，说他光宗耀祖了。', o: ['备一份礼，真心去贺他', '嘴上道贺，心里却很不是滋味', '托他在县里替你说句话'],
+      need: [null, null, function (L) { return L.literate || L.learn >= 25; }], why: [null, null, '你不识字，县廷用不上你'],
+      r: [[{ p: 1, t: '你提了一壶酒、一块肉去贺他。他拉着你的手说：富贵了也不会忘了你。', fx: { cash: -200, frAff: 10, tr: { soc: 3, cmp: -2 } } }],
+        [{ p: 0.6, t: '你回到家，一夜没睡着：凭什么是他？第二天一早，你比往常起得更早。你暗暗发誓，总有一天也要做出个样子来。', fx: { flag: 'spur', tr: { cmp: 6 } } },
+          { p: 0.4, t: '你嘴上说着恭喜，脸色却不好看。他看出来了，从此两人生分了许多。', fx: { frAff: -15, flag: 'spur', tr: { cmp: 5, soc: -2 } } }],
+        [{ p: 0.35, t: '他果然在县丞面前提了你。没过多久，县廷叫你去做了书佐。', fx: { office: '书佐', frAff: -3 } }, { p: 0.65, t: '他面露难色，说自己也是刚去，说不上话。你讪讪地回了家。', fx: { frAff: -5, standing: -1 } }]],
+      aw: function (L) { return [FT(L, 'soc'), FT(L, 'cmp') * 1.2, (FT(L, 'ind') + FT(L, 'act')) / 2]; } },
+    { id: 'fr_rich', w: 0.8, ok: function (L, H) { if (H.a < 20 || H.a > 55 || L.cls === 'gentry' || L.cls === 'slave') return false; var f = fr(L, H, function (x) { return x.aff >= 25 && x.job !== '富户'; }); return f && { friend: f }; },
+      pre: function (L, m) { m.friend.job = '富户'; },
+      q: '你的朋友{friend}这几年做买卖发了财，在乡里买了几十亩好田，盖了新屋，出门也骑上了马。', o: ['向他讨教门路，自己也去试试', '找他借一笔钱周转', '眼红得睡不着，逢人便说他的钱来路不正'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 1000; }, null, null], why: ['你连本钱都凑不出来', null, null],
+      r: [[{ p: 0.5, t: '你跟着他贩了一趟货，赚回一千多钱。', fx: { cash: 1500, frAff: 5 } }, { p: 0.3, t: '你学他做买卖，不懂行情，赔了个精光。', fx: { cash: -1500 } }, { p: 0.2, t: '你跟着他跑了几趟，竟也摸出了门道，从此做起了小买卖。', fx: { cash: 800, job: '商贩' } }],
+        [{ p: 0.6, t: '他二话不说借了你三千钱，说什么时候有了再还。', fx: { cash: 3000, debt: 3000, frAff: -2 } }, { p: 0.4, t: '他推说手头紧，只给了你五百钱。你拿着钱，心里说不出是什么滋味。', fx: { cash: 500, frAff: -6, tr: { cmp: 2 } } }],
+        [{ p: 1, t: '你在背后说他的闲话，传到了他耳朵里。两人从此不再往来，乡里人也觉得你小气。', fx: { frAff: -30, standing: -2, tr: { cmp: 5, soc: -3 } } }]],
+      aw: function (L) { return [(FT(L, 'act') + FT(L, 'ind')) / 2, 100 - FT(L, 'cau'), FT(L, 'cmp') * 1.1 - FT(L, 'soc') / 3]; } },
+    { id: 'fr_wed', w: 1.5, ok: function (L, H) { if (L.married || L.widowed || H.a < 18 || H.a > 32 || L.cls === 'slave') return false; var f = fr(L, H, function (x) { return x.sex === L.sex && x.aff >= 30; }); return f && { friend: f }; },
+      q: '{friend}成了亲，今年又添了个孩子，满月酒请了半个村子。席间有人问你：你什么时候成家？', o: ['回去就托人说一门亲事', '笑笑说不急', '一个人喝了很多酒，早早散了'],
+      r: [[{ p: 1, t: '你托了媒人，四处打听合适的人家。', fx: { flag: 'wantWed' } }], [{ p: 1, t: '你笑着说不急。可回家的路上，你想了很久。', fx: { tr: { cau: 2 } } }], [{ p: 1, t: '你喝得大醉，第二天头疼了一整天。', fx: { body: -1, tr: { soc: -2 } } }]],
+      aw: function (L) { return [FT(L, 'soc'), FT(L, 'cau'), 100 - FT(L, 'soc')]; } },
+    { id: 'fr_dead', w: 2, ok: function (L, H) { if (H.a < 16 || H.a > 60 || H.chaos < 1.05) return false; var f = fr(L, H, function (x, a) { return x.sex === 'M' && a <= 45 && x.aff >= 35; }); return f && { friend: f }; },
+      pre: function (L, m, H) { m.friend.alive = false; m.friend.dy = H.y; m.friend.fate = '战死'; },
+      q: '同乡的人捎回消息：{friend}被征去打仗，死在了战场上，连尸首都没能运回来。', o: ['去他家看望他的老母，留下些钱', '发誓要替他报仇', '一个人坐了很久，什么也没说'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 300; }, function (L) { return L.sex === 'M' && L.age <= 40 && !L.office && !L.soldier; }, null], why: ['你自己家里也揭不开锅了', '这条路你走不了', null],
+      r: [[{ p: 1, t: '你去他家里，跪在他的老母面前，留下了五百钱。老人拉着你的手，一句话也说不出来。', fx: { cash: -500, standing: 3, tr: { soc: 3 } } }],
+        [{ p: 0.5, t: '你去营中报了名。临走那天，你在他家门口站了一会儿。', fx: { enlist: true, flag: 'martial', tr: { act: 3, cmp: 2 } } }, { p: 0.5, t: '你去营中问了问，这一年没有募兵。这口气，你一直憋在心里。', fx: { flag: 'martial', tr: { act: 2 } } }],
+        [{ p: 1, t: '你一个人在他们常去的河边坐到天黑。从那以后，你很少再提打仗的事。', fx: { tr: { cau: 4 } } }]],
+      aw: function (L) { return [FT(L, 'soc'), (FT(L, 'act') + FT(L, 'cmp')) / 2, FT(L, 'cau')]; } },
+    { id: 'fr_jail', w: 0.55, ok: function (L, H) { if (H.a < 20 || H.a > 60 || L.cls === 'slave') return false; var f = fr(L, H, function (x) { return x.aff >= 50; }); return f && { friend: f }; },
+      q: '{friend}被人诬告，下了县狱。他家里人哭着来求你想办法。', o: ['拿钱上下打点，把人救出来', '去县廷替他作证', '这种事，躲还来不及'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 3000; }, null, null], why: ['你拿不出这么多钱', null, null],
+      r: [[{ p: 0.75, t: '你花了三千钱，托人在县丞面前说情，他被放了出来。出狱那天，他对着你家的门磕了三个头。', fx: { cash: -3000, frAff: 25 } }, { p: 0.25, t: '钱花出去了，人还是没放出来。后来听说他被判了徒刑，发往边地。', fx: { cash: -3000, frGone: '被判徒刑，发往边地' } }],
+        [{ p: 0.5, t: '你在县廷上替他作证，县令将信将疑，最后把人放了。', fx: { frAff: 20, standing: 3 } }, { p: 0.5, t: '你去作证，反被县吏呵斥了一顿，挨了几板子。他还是被判了徒刑。', fx: { body: -4, frAff: 10, frGone: '被判徒刑，发往边地' } }],
+        [{ p: 1, t: '你闭门不出。后来听说他被判了徒刑，发往边地。他家里人在路上遇见你，转过头去。', fx: { frGone: '被判徒刑，发往边地', standing: -2, tr: { cau: 3 } } }]],
+      aw: function (L) { return [FT(L, 'soc'), FT(L, 'ind'), FT(L, 'cau')]; } },
+    { id: 'fr_scholar', w: 1.4, ok: function (L, H) { if (H.a < 14 || H.a > 35 || !(L.literate || L.learn >= 15)) return false; var f = fr(L, H, function (x) { return x.aff >= 25 && x.ctx === 'school'; }) || fr(L, H, function (x) { return x.aff >= 40; }); return f && { friend: f }; },
+      pre: function (L, m) { m.friend.job = '儒生'; },
+      q: '你的同窗{friend}去外郡拜了名师，回来时已经能开馆讲经了，郡里的人都很敬重他。', o: ['也想出门游学', '在家里埋头苦读，不输给他', '读书有什么用，还是过日子实在'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 800; }, null, null], why: ['家里出不起游学的盘缠', null, null],
+      r: [[{ p: 1, t: '你也背起书箱出了门，在外郡一位经师门下学了一年。', fx: { cash: -800, learn: 6, fame: 1, tr: { cur: 3 } } }], [{ p: 1, t: '你关起门来，日夜诵读，灯油都多用了几斤。', fx: { learn: 4, tr: { cmp: 4, per: 2 } } }], [{ p: 1, t: '你把书简收进了箱底。', fx: { tr: { cur: -3 } } }]],
+      aw: function (L) { return [FT(L, 'cur') + FT(L, 'act') / 3, FT(L, 'cmp') + FT(L, 'per') / 3, 100 - FT(L, 'cur')]; } },
+    { id: 'sib_rich', w: 1.2, ok: function (L, H) { if (H.a < 25 || H.a > 60 || L.cls === 'gentry' || L.cls === 'slave' || !H.head) return false; var k = L.kin.filter(function (x) { return x.rel === 'sib' && x.alive && !x.apart && x.sex === 'M' && H.y - x.by >= 20; })[0]; return k && { kin: k }; },
+      q: '分家以后，{kin}的日子越过越好，添了牛，又买了地。你家却还是老样子。', o: ['去向他讨教，请他帮衬一把', '心里不平，找族中长辈说分家时不公', '各过各的日子'],
+      r: [[{ p: 0.7, t: '他给了你几斗种子，又借给你一头牛用了一季。', fx: { cash: 400, kinAff: 5 } }, { p: 0.3, t: '他嘴上答应，却什么也没给。嫂子在门里说："自家的日子还顾不过来呢。"', fx: { kinAff: -8, tr: { cmp: 3 } } }],
+        [{ p: 0.5, t: '族中长辈把你们兄弟叫到一起，各打五十大板。从此两家见面都不说话。', fx: { kinAff: -25, tr: { cmp: 4 } } }, { p: 0.5, t: '长辈判他补给你家几斗粮。粮是拿到了，他从此记恨在心。', fx: { cash: 400, kinAff: -20, tr: { cmp: 3 } } }],
+        [{ p: 1, t: '你没有去。日子是自己过的。', fx: { tr: { cau: 2, cmp: -2 } } }]],
+      aw: function (L) { return [FT(L, 'soc'), FT(L, 'cmp') * 1.1, FT(L, 'cau')]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
 })(SGD);
