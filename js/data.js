@@ -252,15 +252,24 @@ var SGD = (function () {
     yi: { n: '南中夷', tribe: '南中夷落（叟、濮）中的一户', sur: '孟爨毛雷李杨', syl: '获闿定褒琰', child: ['你在山间放牧牛羊，听老人唱古老的歌。', '你跟着大人到坝子里赶集，用盐巴换布。'], adult: ['部落的耆老与汉人大姓结了亲。', '你在高山上种荞麦。'] },
     man: { n: '武陵蛮', tribe: '五溪蛮人中的一户', sur: '沙相单程田向', syl: '摩柯詹', child: ['你跟着族人在五溪的山谷里打猎。'], adult: ['你在山里烧畲种地。'] },
     shanyue: { n: '山越', tribe: '山越宗部中的一户', sur: '费尤祖金毛陈潘', syl: '栈突郎奇甘仆', child: ['你跟着族人在山里烧畲种田，采集山货。', '你在溪涧里捉鱼，山里人很少下到平地。'], adult: ['你们的宗帅说，孙家的兵又在山外了。', '山里产铜铁，你们自己铸造兵器。'] },
-    yue: { n: '越人', tribe: '交趾越人村落中的一户', sur: '徵赵李黎', syl: '贰侧嫗', child: ['你学会了在水田里插秧，划着独木舟捕鱼。'], adult: ['你在水田里收割一年两熟的稻子。', '海船带来了犀角、象牙和香料，在番禺换取丝帛。'] }
+    yue: { n: '越人', tribe: '交趾越人村落中的一户', sur: '徵赵李黎', syl: '贰侧那', child: ['你学会了在水田里插秧，划着独木舟捕鱼。'], adult: ['你在水田里收割一年两熟的稻子。', '海船带来了犀角、象牙和香料，在番禺换取丝帛。'] }
   };
 
   /* ---------- 姓名 ---------- */
   var SURNAMES = '王李张刘陈杨赵黄周吴徐孙朱马胡郭何高罗郑梁谢宋唐许韩冯邓曹彭萧田董袁蔡杜程魏苏吕丁任卢姚钟姜崔陆范石贾夏傅邹孟秦江尹薛阎段雷侯史陶毛邵严戴孔向常文樊庞鲁左甘费尚桓华'.split('');
   var SURNAMES2 = ['诸葛', '司马', '夏侯', '公孙', '皇甫', '欧阳', '令狐'];
   var MALE = '安昌成定福光广汉弘嘉建京隆茂明平奇强庆仁尚寿顺泰通伟文武喜宪祥兴延阳宜益永勇元远赞彰忠宗遵霸褒宝秉博才超崇春达德登敦恩方丰奉扶富刚固贵国浩衡洪厚华怀欢辉惠基济坚节进敬举俊开康宽朗乐礼良亮烈林龙禄满敏农齐起谦钦青秋荣儒瑞盛胜石世叔舒硕思松腾望威卫温熙贤孝信雄秀训雅晏扬尧业义毅英雍友禹玉豫渊越云允则昭真正政志质仲众周著壮卓'.split('');
-  var FEMALE = '汝细姑思姜姬娥媚好贞宜媛婉珠凤兰桑绵养布妾取弟少容华芝英秀玉素香春'.split('');
+  var FEMALE = '汝细姑思姜姬娥媚好贞宜媛婉珠凤兰桑绵养布取弟少容华芝英秀玉素香春'.split('');
   var XIAO = '牛虎石宝福丑黑豚犬狗奴喜安春秋冬麦禾桑枣瓜斗蒲柳'.split('');
+  // 名随出身：寒门多用俗字、贱名（好养活），士族取雅字，奴婢之名由主家所起
+  var MALE_ELITE = '彧攸瑾瑜璋珪琮琳玮玄谟谌晔粲琬祎恪逊靖邈俨肃绍嵩邵瑗翊翼敞览模济泰凯巡朗晃徽'.split('');
+  var MALE_PLAIN = '平安福寿禄喜春秋冬丰达客龙虎牛石宝顺成兴旺满得仓谷大二三狗黑'.split('');
+  var FEMALE_ELITE = '琰婉徽蕙宪昭瑶瑛珮琼兰芷媛姝婧淑惠韶'.split('');
+  var FEMALE_PLAIN = '女弟取汝细养布思姑绵小大二三丑桑麻'.split('');
+  var XIAO_PLAIN = '狗豚犬丑黑石牛驴苟蛮虎奴'.split('');
+  var XIAO_ELITE = '宝福寿安喜麟凤璋珠斗瞒'.split('');
+  var SLAVE_M = ['奴福', '奴寿', '益寿', '延年', '来福', '安奴', '得来', '狗奴'];
+  var SLAVE_F = ['春桃', '秋菊', '翠', '珠', '环', '婢', '细', '小桃'];
   var ZI_HEAD = ['伯', '仲', '叔', '季', '子', '公', '元', '文', '德', '孝', '长', '幼', '承', '彦', '士'];
   var VILLAGES = ['宜阳', '高迁', '平乐', '东阳', '广成', '吉阳', '常迁', '安乐', '富贵', '石下', '小赤', '上和', '东乡', '西乡', '南阳', '新成', '利', '义成', '阳贵', '寿昌', '广', '平阳', '中', '北', '阳里', '桑', '杨溪', '东城', '柳'];
 
@@ -286,6 +295,7 @@ var SGD = (function () {
   return {
     ZONES: ZONES, JUN: JUN, POP_IDX: POP_IDX, FACTIONS: FACTIONS, CTRL: CTRL, ERAS: ERAS, EMPEROR: EMPEROR,
     ETHNIC: ETHNIC, ETH: ETH, SURNAMES: SURNAMES, SURNAMES2: SURNAMES2, MALE: MALE, FEMALE: FEMALE, XIAO: XIAO,
+    MALE_ELITE: MALE_ELITE, MALE_PLAIN: MALE_PLAIN, FEMALE_ELITE: FEMALE_ELITE, FEMALE_PLAIN: FEMALE_PLAIN, XIAO_PLAIN: XIAO_PLAIN, XIAO_ELITE: XIAO_ELITE, SLAVE_M: SLAVE_M, SLAVE_F: SLAVE_F,
     ZI_HEAD: ZI_HEAD, VILLAGES: VILLAGES, CLASSES: CLASSES, MILESTONES: MILESTONES, MARKS: MARKS
   };
 })();

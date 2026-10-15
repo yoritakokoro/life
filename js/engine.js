@@ -142,8 +142,14 @@ var SGE = (function (D) {
     var i = Math.floor(Math.pow(R(), 1.7) * arr.length); // 越靠前越常见
     return arr[i];
   }
-  function givenName(R, sex) { return pick(R, sex === 'M' ? D.MALE : D.FEMALE); }
-  function xiaoName(R) { return '阿' + pick(R, D.XIAO); }
+  function tierOf(cls) { return cls === 'gentry' || cls === 'clerk' ? 'elite' : cls === 'slave' ? 'slave' : cls === 'merchant' ? null : 'plain'; }
+  function givenName(R, sex, tier) {
+    if (tier === 'elite' && R() < 0.65) return pick(R, sex === 'M' ? D.MALE_ELITE : D.FEMALE_ELITE);
+    if (tier === 'slave') return sex === 'M' ? pick(R, D.SLAVE_M).slice(-1) : pick(R, D.SLAVE_F).slice(-1);
+    if (tier === 'plain' && R() < 0.55) return pick(R, sex === 'M' ? D.MALE_PLAIN : D.FEMALE_PLAIN);
+    return pick(R, sex === 'M' ? D.MALE : D.FEMALE);
+  }
+  function xiaoName(R, tier) { return '阿' + pick(R, tier === 'elite' ? D.XIAO_ELITE : tier === 'plain' && R() < 0.6 ? D.XIAO_PLAIN : D.XIAO); }
   function ethName(R, eth) {
     var E = D.ETH[eth], syl = E.syl.split('');
     var g = pick(R, syl) + (R() < 0.6 ? pick(R, syl) : '');
@@ -157,6 +163,10 @@ var SGE = (function (D) {
     else if (mode === 'jianan') { lo = 194; hi = 198; }
     else if (mode === 'chaos') { lo = 175; hi = 205; }
     else if (mode === 'blind') { lo = 150; hi = 262; }
+    else if (mode === 'xiping') { lo = 168; hi = 178; }
+    else if (mode === 'sanguo') { lo = 220; hi = 232; }
+    else if (mode === 'weijin') { lo = 245; hi = 262; }
+    else if (mode === 'taikang') { lo = 266; hi = 280; }
     var ys = []; for (var y = lo; y <= hi; y++) ys.push(y);
     return wpick(R, ys, function (y) { return totalPop(y); });
   }
@@ -196,6 +206,8 @@ var SGE = (function (D) {
     var EM = { none: { clerk: 0.4, gentry: 0.3 }, basic: {}, high: { clerk: 1.6, gentry: 1.4 }, college: { clerk: 2.5, gentry: 2.5 }, grad: { clerk: 3, gentry: 4 } };
     if (T != null) for (k in TM[T]) w[k] *= TM[T][k];
     if (E && EM[E]) for (k in EM[E]) w[k] *= EM[E][k];
+    var JM = { army: { soldier: 3, tenant: 1.2 }, civil: { clerk: 2.5 }, biz: { merchant: 3 }, craft: { artisan: 3 }, farm: { peasant: 1.6, tuntian: 1.5 }, edu: { clerk: 1.6, gentry: 1.3 } }[opts.mjob];
+    if (JM) for (k in JM) w[k] *= JM[k];
     var keys = Object.keys(w);
     return wpick(R, keys, function (k) { return w[k]; });
   }
@@ -221,7 +233,7 @@ var SGE = (function (D) {
     };
     var HR = opts.heir;
     if (HR) { opts.year = HR.year; opts.jun = HR.jun; opts.sex = HR.sex; opts.han = !HR.eth; opts.surviveUntil = HR.dy; }
-    L.by = opts.year != null ? opts.year : pickYear(R, L.mode);
+    L.by = opts.year != null ? opts.year : pickYear(R, opts.era || L.mode);
     var ji = opts.jun != null ? opts.jun : pickJun(R, L.by, opts);
     setPlace(L, ji);
     L.birthJun = ji; L.birthZone = L.zone; L.birthCounty = L.county;
@@ -236,8 +248,9 @@ var SGE = (function (D) {
 
     // 姓名
     if (L.eth) { var en = ethName(R, L.eth); L.sur = en.sur; L.given = en.given; }
-    else { L.sur = surname(R, L.cls); L.given = givenName(R, L.sex); }
-    L.xiao = L.sex === 'F' ? '阿' + L.given.slice(-1) : xiaoName(R);
+    else { L.sur = surname(R, L.cls); L.given = givenName(R, L.sex, tierOf(L.cls)); }
+    if (L.cls === 'slave' && !L.eth) L.given = pick(R, L.sex === 'M' ? D.SLAVE_M : D.SLAVE_F);
+    L.xiao = L.sex === 'F' ? '阿' + L.given.slice(-1) : xiaoName(R, tierOf(L.cls));
     if (HR) { L.sur = HR.sur; L.xiao = HR.xiao; if (HR.given) L.given = HR.given; else if (L.sex === 'F') L.given = HR.xiao.slice(-1); if (HR.zi) L.zi = HR.zi; }
     L.name = L.sur + L.given;
 
@@ -250,6 +263,11 @@ var SGE = (function (D) {
     L.learn = 0; L.fame = 0; L.craft = 0;
     L.tr = {}; ['cur', 'cau', 'act', 'per', 'soc', 'ind'].forEach(function (k) { L.tr[k] = Math.round(clamp(50 + (R() + R() + R() - 1.5) * 24, 15, 85)); });
     L.tal = { craft: R() * 0.3, memory: R() * 0.3, strength: R() * 0.3, charm: R() * 0.3 };
+    if (opts.mtr) for (var mk in opts.mtr) L.tr[mk] = clamp(L.tr[mk] + opts.mtr[mk], 5, 95);
+    if (opts.mtal) for (var mt in opts.mtal) L.tal[mt] = clamp(L.tal[mt] + opts.mtal[mt], 0, 1);
+    if (opts.mbody) L.body = clamp(L.body + opts.mbody, 10, 95);
+    L.flags = L.flags || {};
+    if (opts.mflag) L.flags[opts.mflag] = true;
     L.found = {}; L.focusManual = null; L.lastFocus = null; L.focusYears = 0; L.spendLog = []; L.crisis = false;
     var ST = { gentry: [60, 80], clerk: [40, 55], merchant: [28, 45], peasant: [25, 45], tenant: [15, 30], slave: [3, 12], tribal: [25, 45], tuntian: [18, 32], soldier: [20, 35], artisan: [25, 40] }[L.cls];
     L.standing = Math.round(ST[0] + R() * (ST[1] - ST[0]));
@@ -265,8 +283,8 @@ var SGE = (function (D) {
     // 父母
     var fAge = L.cls === 'gentry' ? 20 + Math.floor(R() * 20) : 18 + Math.floor(R() * 20);
     var mAge = 15 + Math.floor(R() * Math.min(20, fAge - 13));
-    var fn = L.eth ? ethName(R, L.eth) : { sur: L.sur, given: givenName(R, 'M') };
-    while (!L.eth && fn.given === L.given) fn.given = givenName(R, 'M');
+    var fn = L.eth ? ethName(R, L.eth) : { sur: L.sur, given: givenName(R, 'M', tierOf(L.cls)) };
+    while (!L.eth && fn.given === L.given) fn.given = givenName(R, 'M', tierOf(L.cls));
     var mSur = L.eth ? (D.ETH[L.eth].sur ? pick(R, D.ETH[L.eth].sur.split('')) : '') : surname(R, L.cls);
     if (mSur === L.sur && !L.eth) mSur = surname(R, L.cls) || '王';
     var father = newKin(L, 'father', 'M', L.by - fAge, fn.sur + fn.given, { lit: false });
@@ -320,7 +338,7 @@ var SGE = (function (D) {
   // 名与字：小名在家里叫，大名入户籍，表字在冠礼（女子笄礼）时取
   function freshXiao(L, sex) {
     var used = L.kin.map(function (k) { return k.xiao; }).concat([L.xiao]), R = L.R, t = 0, x;
-    do { x = sex === 'M' ? xiaoName(R) : '阿' + givenName(R, 'F'); } while (used.indexOf(x) >= 0 && t++ < 10);
+    do { x = sex === 'M' ? xiaoName(R, tierOf(L.cls)) : '阿' + givenName(R, 'F', tierOf(L.cls)); } while (used.indexOf(x) >= 0 && t++ < 10);
     return x;
   }
   function eliteFam(L) { return !L.eth && (L.cls === 'gentry' || L.cls === 'clerk' || L.cls === 'merchant'); }
@@ -332,9 +350,9 @@ var SGE = (function (D) {
     var R = L.R;
     if (L.eth && !D.ETH[L.eth].sur) { k.full = ethName(R, L.eth).given; k.name = k.full; return; }
     var used = [L.given].concat(L.kin.map(function (x) { return x.given || (x.name || '').slice(-1); }));
-    var g = givenName(R, k.sex), tries = 0;
-    while (used.indexOf(g) >= 0 && tries++ < 8) g = givenName(R, k.sex);
-    if (k.sex === 'M' && R() < 0.12) g += pick(R, D.MALE);
+    var tr = tierOf(L.cls), g = givenName(R, k.sex, tr), tries = 0;
+    while (used.indexOf(g) >= 0 && tries++ < 8) g = givenName(R, k.sex, tr);
+    if (k.sex === 'M' && R() < (tr === 'elite' ? 0.2 : 0.08)) g += pick(R, tr === 'elite' ? D.MALE_ELITE : D.MALE);
     k.sur = k.sur != null ? k.sur : '';
     k.full = k.sur + g; k.given = g; k.name = k.full;
   }
@@ -537,7 +555,7 @@ var SGE = (function (D) {
         P.queue.push({ key: 'school', q: '乡里的老先生愿意教你识字，学费是每年一斗粟。父母问你想不想去。', o: ['去读书', '帮家里干活'], auto: 0.5 });
       } else if (a >= 16 && a <= 35 && L.learn >= 35 && !L.office && L.sex === 'M' && R() < 0.25) {
         P.queue.push({ key: 'clerk', q: '县里缺一个书佐，县丞问你愿不愿意到县廷当差。', o: ['去县廷', '留在家中'], auto: 0.6 });
-      } else if (L.sex === 'M' && a >= 16 && a <= 35 && y >= 186 && y <= 235 && ['peasant', 'tenant', 'artisan'].indexOf(L.cls) >= 0 && R() < 0.07) {
+      } else if (L.sex === 'M' && a >= 16 && a <= 38 && ((y >= 186 && y <= 235) || y >= 291) && ['peasant', 'tenant', 'artisan', 'clerk', 'merchant'].indexOf(L.cls) >= 0 && R() < (L.flags.martial || L.found.strength ? 0.25 : 0.1)) {
         P.queue.push({ key: 'recruit', q: fname(ctrl(z, y), y) + '的军队在郡里募兵，应募者每月给粮。', o: ['应募从军', '留在家中'], auto: 0.3 });
       } else if (a >= 18 && y >= 190 && y <= 205 && ['yu', 'yan', 'xu', 'luoyang', 'guanzhong', 'qing'].indexOf(z) >= 0 && R() < 0.1) {
         var md = pick(R, ['jingbei', 'jingnan', 'jiangdong', 'liaodong', 'shu', 'jiao']);
@@ -589,7 +607,7 @@ var SGE = (function (D) {
     var age = L.sex === 'M' ? clamp(L.age - Math.floor(R() * 7), 14, 40) : L.age + Math.floor(R() * 9);
     var sur = L.eth && !D.ETH[L.eth].sur ? '' : surname(R, L.cls);
     if (sur === L.sur) sur = surname(R, L.cls);
-    var given = L.eth ? ethName(R, L.eth).given : givenName(R, sex);
+    var given = L.eth ? ethName(R, L.eth).given : givenName(R, sex, tierOf(L.cls));
     var from = pick(R, ['邻村', '同里', '邻县', '本县' + pick(R, D.VILLAGES) + '里']);
     var descs = sex === 'M' ? ['家里有几亩薄田', '是个老实的庄稼人', '父亲是个木匠', '家境比你家好一些', '比你大几岁，人还算本分'] : ['手很巧，会织布', '家里兄弟多', '性子温和', '家境和你家差不多'];
     if (L.cls === 'gentry') { var oj = pick(R, D.JUN)[0].replace(/(郡|国|尹)$/, ''); from = oj + sur + '氏'; descs = L.gate >= 3 ? ['门第与你家相当', '祖上做过太守', '家中藏书万卷'] : ['也是郡中的著姓', '家中有田数百顷', '父兄都在州郡任职']; }
@@ -1107,15 +1125,15 @@ var SGE = (function (D) {
     if (L.eth && D.ETH[L.eth]) pool = pool.concat(a < 14 ? D.ETH[L.eth].child : D.ETH[L.eth].adult);
     else if (a < 3) return a === 0 ? null : pick(R, ['你学会了走路。', '你会叫"阿母"了。', '你断了奶，开始吃粟米粥。']);
     else if (a < 14) {
-      pool = pool.concat(L.cls === 'gentry' ? DD.childGentry : L.cls === 'clerk' ? DD.childClerk.concat(DD.child) : L.cls === 'merchant' ? DD.childMerchant.concat(DD.child) : L.cls === 'artisan' ? DD.childArtisan.concat(DD.child) : L.cls === 'slave' ? DD.childSlave : DD.child);
+      pool = pool.concat(L.cls === 'gentry' ? DD.childGentry.concat(L.sex === 'M' && DD.gentryChild ? DD.gentryChild : []) : L.cls === 'clerk' ? DD.childClerk.concat(DD.child) : L.cls === 'merchant' ? DD.childMerchant.concat(DD.child) : L.cls === 'artisan' ? DD.childArtisan.concat(DD.child) : L.cls === 'slave' ? DD.childSlave : DD.child);
       if (L.sex === 'F') pool = pool.concat(DD.childF);
     } else if (a >= 62) pool = pool.concat(DD.old);
     else if (L.soldier) pool = pool.concat(DD.soldier);
     else if (L.office) pool = pool.concat(DD.clerkJob);
-    else if (L.cls === 'gentry') pool = pool.concat(DD.gentry);
+    else if (L.cls === 'gentry') pool = pool.concat(L.sex === 'F' && DD.gentryF ? DD.gentryF : DD.gentry);
     else if (L.cls === 'merchant') pool = pool.concat(DD.merchant);
     else if (L.cls === 'artisan') pool = pool.concat(DD.artisan);
-    else if (L.cls === 'slave') pool = pool.concat(DD.slave);
+    else if (L.cls === 'slave') pool = pool.concat(L.sex === 'F' && DD.slaveF ? DD.slaveF.concat(DD.slave) : DD.slave);
     else if (L.cls === 'tuntian') pool = pool.concat(DD.tuntian, L.sex === 'F' ? DD.farmerF : DD.farmer);
     else pool = pool.concat(L.sex === 'F' ? DD.farmerF : DD.farmer, L.cls === 'tenant' && DD.tenantLines ? DD.tenantLines : []);
     if (L.sex === 'F' && a >= 16 && L.married) {
@@ -1194,7 +1212,7 @@ var SGE = (function (D) {
         doMarry(L, makeSpouse(L, y), y, 1.5);
       }
     } else if (L.widowed && !L.married) {
-      if (L.sex === 'F' && a < 40 && R() < (g === 'wei' && L.cls === 'soldier' ? 0.6 : 0.15)) {
+      if (L.sex === 'F' && a < 40 && R() < (g === 'wei' && L.cls === 'soldier' ? 0.6 : L.cls === 'gentry' ? 0.05 : 0.18)) {
         L.spouseK = null;
         doMarry(L, makeSpouse(L, y), y, 2.2, g === 'wei' && L.cls === 'soldier' ? '按士家的规矩，军士的寡妻要配嫁给其他士卒。' : '守寡一段时间后，你改嫁了。');
       } else if (L.sex === 'M' && a < 55 && R() < 0.2) { L.spouseK = null; doMarry(L, makeSpouse(L, y), y, 2.2, '你续娶了。'); }
@@ -1474,12 +1492,13 @@ var SGE = (function (D) {
     village: { n: '乡里事务', v: '操心乡里的事', pull: '乡里的事总找上门来' },
     rest: { n: '清闲度日', v: '清闲度日', pull: '你实在累了' },
     army: { n: '军中立足', v: '在军中立足', pull: '军令如山' },
+    enlist: { n: '投军从戎', v: '投军', pull: '你一心想去从军' },
     weave: { n: '纺绩织作', v: '纺纱织布', pull: '家里等着布交户调' },
     travel: { n: '游历四方', v: '出门游历', pull: '你按捺不住出门的念头' },
     leisure: { n: '琴书自娱', v: '读书弹琴', pull: '你只想清清静静地过日子' },
     estate: { n: '经营产业', v: '经营田庄产业', pull: '田庄上的事离不开你' }
   };
-  var WHY = { play: '你还小，正是贪玩的年纪', help: '家里缺人手', study: '你好问爱学', craft: '你手巧，总爱摆弄器物', body: '你闲不住', social: '你生性随和，喜欢热闹', livelihood: '你得自己挣口饭吃', house: '一家老小都指望着你', save: '你生性谨慎，总想着留些余粮', career: '你心里一直想做出一番事业', kids: '孩子还小', fame: '你很在意乡里的评价', health: '你近来身体不如从前', family: '儿孙绕膝', teach: '你肚子里有些学问', village: '乡里人信得过你', rest: '你年纪大了', army: '身在军中', grow: '你还在襁褓之中', weave: '一家人的衣裳和户调的绢帛，都指望你的一双手', travel: '家中殷实，你不必为生计发愁', leisure: '家中殷实，你有闲暇', estate: '家中田产众多，总得有人照看' };
+  var WHY = { play: '你还小，正是贪玩的年纪', help: '家里缺人手', study: '你好问爱学', craft: '你手巧，总爱摆弄器物', body: '你闲不住', social: '你生性随和，喜欢热闹', livelihood: '你得自己挣口饭吃', house: '一家老小都指望着你', save: '你生性谨慎，总想着留些余粮', career: '你心里一直想做出一番事业', kids: '孩子还小', fame: '你很在意乡里的评价', health: '你近来身体不如从前', family: '儿孙绕膝', teach: '你肚子里有些学问', village: '乡里人信得过你', rest: '你年纪大了', army: '身在军中', enlist: '你不甘心一辈子守着几亩地', grow: '你还在襁褓之中', weave: '一家人的衣裳和户调的绢帛，都指望你的一双手', travel: '家中殷实，你不必为生计发愁', leisure: '家中殷实，你有闲暇', estate: '家中田产众多，总得有人照看' };
   function teacherAt(L) { var f = L.kin[0]; return L.schooling || L.cls === 'gentry' || L.cls === 'clerk' || (f.lit && f.alive && !f.apart && !f.out); }
   function kidsUnder(L, n) { var y = L.by + L.age; return L.kin.filter(function (k) { return k.rel === 'child' && k.alive && !k.apart && y - k.by < n; }).length; }
   function focusOptions(L) {
@@ -1496,6 +1515,7 @@ var SGE = (function (D) {
     if (a < 45 && (teacherAt(L) || L.literate)) o.splice(1, 0, 'study');
     if (a >= 18 && a < 60 && kidsUnder(L, 15) > 0) o.push('kids');
     if (L.sex === 'M' && a >= 18 && a < 65 && (L.office || L.cls === 'gentry' || L.learn >= 35)) o.push('career');
+    if (L.sex === 'M' && a >= 16 && a <= 40 && !L.office && L.cls !== 'slave' && !L.eth) o.push('enlist');
     var rich = L.cls === 'gentry' || L.wealth >= 60 || !!L.office;
     if (L.sex === 'F') {
       o = o.filter(function (k) { return k !== 'body' && k !== 'career' && k !== 'livelihood' && k !== 'fame'; });
@@ -1539,6 +1559,7 @@ var SGE = (function (D) {
       case 'rest': s += (a - 60) / 10; break;
       case 'army': s += 3; break;
       case 'weave': s += 2 + (poor ? 1 : 0); break;
+      case 'enlist': s += (t.act - 50) / 10 + (t.ind - 50) / 15 + (L.flags.martial ? 3 : 0) + (L.found.strength ? 1.5 : 0) - 1.5; break;
       case 'travel': s += (t.cur - 50) / 10 + (t.act - 50) / 15; break;
       case 'leisure': s += (t.cau - 50) / 15 + (a > 40 ? 1 : 0); break;
       case 'estate': s += 1.5 + (t.per - 50) / 15; break;
@@ -1608,6 +1629,12 @@ var SGE = (function (D) {
       case 'village': L.standing += 2; break;
       case 'rest': L.body += 0.4; break;
       case 'weave': L.eco.priv += Math.round(150 + R() * 250); break;
+      case 'enlist':
+        if (!L.soldier && R() < (chaos(y) > 1.05 ? 0.7 : 0.45)) {
+          enlist(L, y, 1.3, true);
+          if (L.cls === 'gentry' || (L.flags.martial && L.found.strength)) { L.mil = 1; L.job = '屯长'; L.milMax = '屯长'; add(L, 1.35, 'good', '凭着出身和一身本事，你一入营便做了屯长。'); }
+        } else if (!L.soldier) add(L, 1.3, 'life', '你去营中打听从军的事，这一年没有募兵。');
+        break;
       case 'travel': L.learn += 2; L.fame += 1; L.standing += 1; payFrom(L, 2000); if (R() < 0.25) add(L, 2.2, 'life', fresh(L, ['你出门游历，到过洛阳、许都，见过太学的石经。', '你乘车游历了邻近几个郡，结识了不少名士。', '你沿着江水走了一趟，见识了许多从未见过的风物。'])); break;
       case 'leisure': L.body += 1; L.learn += 1; L.standing += 0.5; break;
       case 'estate': L.eco.cash += Math.round(L.land * 4); if (R() < 0.15) { L.land += 10; add(L, 2.2, 'life', '你又置下了十亩良田。'); } break;

@@ -17,8 +17,8 @@
   var store = load();
 
   var SPEEDS = [['慢', 12], ['中', 6], ['快', 2.5], ['极快', 0.7]];
-  var MODES = { history: 'H', zhongping: 'Z', jianan: 'J', chaos: 'C', blind: 'B', mirror: 'M', heir: 'G' };
-  var MODE_NAME = { history: '史实人生', zhongping: '生于中平', jianan: '生于建安', chaos: '乱世之子', blind: '真正的随机', mirror: '我若生于那个时代', heir: '传家' };
+  var MODES = { history: 'H', zhongping: 'Z', jianan: 'J', chaos: 'C', blind: 'B', xiping: 'X', sanguo: 'S', weijin: 'W', taikang: 'T', mirror: 'M', heir: 'G' };
+  var MODE_NAME = { history: '史实人生', zhongping: '生于中平', jianan: '生于建安', chaos: '乱世之子', blind: '真正的随机', xiping: '生于熹平', sanguo: '三国鼎立', weijin: '魏晋之际', taikang: '生于太康', mirror: '我若生于那个时代', heir: '传家' };
   var GNAME = function (g, y) { return { han: '汉', wei: y < 220 ? '曹操' : '魏', shu: y < 221 ? '刘备' : '蜀汉', wu: y < 222 ? '孙氏' : '吴', jin: y >= 317 ? '东晋' : '晋', other: '其他势力' }[g]; };
 
   var S = { speed: store.speed || 6, playing: true, last: 0, t: 0, queue: [], yearActive: false, L: null, comps: [], statsCache: {} };
@@ -33,7 +33,7 @@
   function newSeed() { return (Math.random() * 4294967296) >>> 0; }
   function codeOf(seed, mode) { return MODES[mode] + '-' + seed.toString(36).toUpperCase(); }
   function parseCode(s) {
-    var m = /^\s*([HZJCBM])\s*-?\s*([0-9A-Z]+)\s*$/i.exec(s || '');
+    var m = /^\s*([HZJCBXSWTM])\s*-?\s*([0-9A-Z]+)\s*$/i.exec(s || '');
     if (!m) return null;
     var mode = Object.keys(MODES).filter(function (k) { return MODES[k] === m[1].toUpperCase(); })[0];
     var seed = parseInt(m[2], 36);
@@ -91,7 +91,31 @@
       var p = PROV[+$('m-prov').value];
       var opts = { mode: 'mirror', sex: $('m-sex').value, tier: +$('m-tier').value, edu: $('m-edu').value };
       if (p[1]) opts.juns = p[1];
-      opts.mirror = { prov: p[0], note: p[2] || '', tier: $('m-tier').selectedOptions[0].textContent, edu: $('m-edu').selectedOptions[0].textContent };
+      var job = $('m-job').value, tmp = $('m-temper').value, bd = +$('m-body').value;
+      if ($('m-era').value !== 'history') opts.era = $('m-era').value;
+      var JOB = {
+        army: { mjob: 'army', mflag: 'martial', mtal: { strength: 0.3 }, mtr: { act: 6 } },
+        civil: { mjob: 'civil', mtr: { cau: 6 } },
+        edu: { mjob: 'edu', mtal: { memory: 0.25 }, mtr: { cur: 6 } },
+        med: { mjob: 'edu', mtal: { memory: 0.15 }, mtr: { cur: 10, cau: 4 } },
+        biz: { mjob: 'biz', mtal: { charm: 0.25 }, mtr: { soc: 6 } },
+        craft: { mjob: 'craft', mtal: { craft: 0.3 }, mtr: { per: 6 } },
+        farm: { mjob: 'farm', mtal: { strength: 0.15 }, mtr: { per: 4 } },
+        art: { mtal: { craft: 0.15, charm: 0.1 }, mtr: { cur: 8, ind: 6 } }
+      }[job] || {};
+      var TMP = { out: { soc: 12, act: 8 }, 'in': { soc: -10, cau: 8 }, cau: { cau: 15, act: -4 }, bold: { ind: 10, act: 10, cau: -10 } }[tmp] || {};
+      var mtr = {}; [JOB.mtr || {}, TMP].forEach(function (o) { for (var k in o) mtr[k] = (mtr[k] || 0) + o[k]; });
+      if (Object.keys(mtr).length) opts.mtr = mtr;
+      if (JOB.mtal) opts.mtal = JOB.mtal;
+      if (JOB.mjob) opts.mjob = JOB.mjob;
+      if (JOB.mflag) opts.mflag = JOB.mflag;
+      if (bd) opts.mbody = bd;
+      var extra = [];
+      if (opts.era) extra.push($('m-era').selectedOptions[0].textContent.replace(/（.*$/, ''));
+      if (job) extra.push($('m-job').selectedOptions[0].textContent);
+      if (tmp) extra.push($('m-temper').selectedOptions[0].textContent);
+      if (bd) extra.push($('m-body').selectedOptions[0].textContent);
+      opts.mirror = { prov: p[0], note: p[2] || '', tier: $('m-tier').selectedOptions[0].textContent, edu: $('m-edu').selectedOptions[0].textContent, extra: extra.join(' · ') };
       startLife(newSeed(), opts);
     };
     $('btn-seed').onclick = function () {
@@ -99,7 +123,7 @@
       if (!c) { toast('命数的格式像这样：H-1K3X9Q'); return; }
       startLife(c.seed, { mode: c.mode });
     };
-    var hm = /^#m([HZJCB][0-9A-Z]+)$/i.exec(location.hash || '');
+    var hm = /^#m([HZJCBXSWT][0-9A-Z]+)$/i.exec(location.hash || '');
     if (hm) { $('seed-input').value = hm[1].slice(0, 1) + '-' + hm[1].slice(1); $('seed-panel').open = true; }
     $('btn-home').onclick = goHome;
     $('btn-back').onclick = goHome;
@@ -125,7 +149,8 @@
       c.cseed = compSeed(seed, i);
       return E.runToEnd(c);
     });
-    ensureStats(statsMode(opts.mode));
+    S.sk = opts.era || statsMode(opts.mode);
+    ensureStats(S.sk);
     renderBirth();
     show('birth');
     $('btn-start').focus({ preventScroll: true });
@@ -154,7 +179,7 @@
     var mirror = '';
     if (S.opts.mirror) {
       var M = S.opts.mirror;
-      mirror = '<p class="mirror-note">你填写的是：' + esc(M.prov) + ' · 家境' + esc(M.tier) + ' · ' + esc(M.edu) + '。' + esc(M.note) +
+      mirror = '<p class="mirror-note">你填写的是：' + esc(M.prov) + ' · 家境' + esc(M.tier) + ' · ' + esc(M.edu) + (M.extra ? ' · ' + esc(M.extra) : '') + '。' + esc(M.note) +
         '在东汉，大约八成人口是农民和佃客，士族不到百分之三。你的现代条件改变了抽签的权重，但签还是要抽的——这一次，你落在了「' + clsName(L) + '」。</p>';
     }
     $('birth-main').innerHTML =
@@ -783,7 +808,7 @@
     $('seed-code').innerHTML = '命数 <code>' + codeOf(S.seed, S.mode) + '</code>';
     renderHanji($('end-hanji'), $('end-hanji-tip'), L.dy, L.dy, true);
     renderFullChron(L);
-    var st = S.statsCache[statsMode(S.mode)];
+    var st = S.statsCache[S.sk];
     if (st && st.done) renderStats(); else { $('verdict').textContent = '正在推演同时代的其他人生……'; S.onStats = renderStats; }
   }
 
@@ -852,7 +877,7 @@
 
   function renderStats() {
     S.onStats = null;
-    var L = S.L, st = S.statsCache[statsMode(S.mode)], ages = st.ages, N = ages.length;
+    var L = S.L, st = S.statsCache[S.sk], ages = st.ages, N = ages.length;
     var my = L.dy - L.by;
     var under5 = ages.filter(function (a) { return a < 5; }).length / N;
     var mean = ages.reduce(function (s, a) { return s + a; }, 0) / N;

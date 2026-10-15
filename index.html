@@ -47,8 +47,12 @@
         <fieldset class="modes" id="modes">
           <legend>出生方式</legend>
           <label class="mode"><input type="radio" name="mode" value="history" checked><b>史实人生</b><span>公元150～220年间，按人口加权随机出生</span></label>
+          <label class="mode"><input type="radio" name="mode" value="xiping"><b>生于熹平</b><span>168～178年出生，黄巾起时正当少壮</span></label>
           <label class="mode"><input type="radio" name="mode" value="zhongping"><b>生于中平</b><span>184年前后出生，完整经历汉末</span></label>
           <label class="mode"><input type="radio" name="mode" value="jianan"><b>生于建安</b><span>196年前后出生，长在乱世</span></label>
+          <label class="mode"><input type="radio" name="mode" value="sanguo"><b>三国鼎立</b><span>220～232年出生，汉亡之后，魏蜀吴分立</span></label>
+          <label class="mode"><input type="radio" name="mode" value="weijin"><b>魏晋之际</b><span>245～262年出生，司马氏渐得天下</span></label>
+          <label class="mode"><input type="radio" name="mode" value="taikang"><b>生于太康</b><span>266～280年出生，天下将归于一，又将再乱</span></label>
           <label class="mode"><input type="radio" name="mode" value="chaos"><b>乱世之子</b><span>战乱之地的权重更高</span></label>
           <label class="mode"><input type="radio" name="mode" value="blind"><b>真正的随机</b><span>连出生年份都不告诉你，只有干支</span></label>
         </fieldset>
@@ -76,7 +80,20 @@
               <label class="field">受教育程度
                 <select id="m-edu"><option value="none">未上学</option><option value="basic">初中及以下</option><option value="high">高中</option><option value="college" selected>大学</option><option value="grad">研究生</option></select>
               </label>
+              <label class="field">想降生的年代
+                <select id="m-era"><option value="history" selected>随史实（150～220）</option><option value="xiping">熹平（168～178）</option><option value="zhongping">中平（182～186）</option><option value="jianan">建安（194～198）</option><option value="sanguo">三国鼎立（220～232）</option><option value="weijin">魏晋之际（245～262）</option><option value="taikang">太康（266～280）</option></select>
+              </label>
+              <label class="field">现在的职业方向
+                <select id="m-job"><option value="" selected>不填 / 学生</option><option value="army">军人、警察、保安</option><option value="civil">公务员、事业单位</option><option value="edu">教师、科研</option><option value="med">医护</option><option value="biz">经商、销售</option><option value="craft">工程、技术、手艺</option><option value="farm">农业、体力劳动</option><option value="art">文艺、设计</option></select>
+              </label>
+              <label class="field">性子
+                <select id="m-temper"><option value="" selected>说不清</option><option value="out">外向、爱热闹</option><option value="in">内向、好静</option><option value="cau">谨慎、怕事</option><option value="bold">胆大、爱冒险</option></select>
+              </label>
+              <label class="field">身体
+                <select id="m-body"><option value="12">结实，很少生病</option><option value="0" selected>一般</option><option value="-12">体弱多病</option></select>
+              </label>
             </form>
+            <p class="footnote">职业与性子只改变天资、性情的倾向和出身的权重；想去从军的，在东汉更容易落在兵户、或者成年后选择「投军从戎」。</p>
             <div class="actions"><button class="btn primary" id="btn-mirror" type="button">以此降生</button></div>
           </div>
         </details>
