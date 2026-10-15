@@ -196,6 +196,7 @@
       '<dt>性别</dt><dd>' + (L.sex === 'M' ? '男' : '女') + '</dd>' +
       '<dt>家庭</dt><dd>' + (L.eth ? D.ETH[L.eth].tribe : clsName(L)) + '</dd>' +
       (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '，' + L.gateName + '</dd>' : '') +
+      (L.dishu ? '<dt>嫡庶</dt><dd>' + (L.shu ? '庶出（生母' + esc(mother.name) + '是父亲的妾）' : '嫡出（正室所生）') + '</dd>' : '') +
       '<dt>家中排行</dt><dd>' + rank + '</dd>' +
       '<dt>父亲识字</dt><dd>' + (father.alive ? (father.lit ? '是' : '否') : '父亲已殁') + '</dd>' +
       '<dt>母亲存活</dt><dd>' + (mother.alive ? '是' : '否') + '</dd>' +
@@ -452,7 +453,7 @@
     var land = L.land > 0 ? L.land + ' 亩' : '无';
     var who = L.sex === 'F' && L.married && L.spouseK ? esc(L.spouseK.name) + '之妻（' + clsName(L) + '）' : L.sex === 'F' && L.widowed ? '寡妇（' + clsName(L) + '）' : clsName(L);
     $('status').innerHTML = '<dt>身份</dt><dd>' + who + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>学业</dt><dd>' + eduText(L) + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +
-      (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '</dd>' : '') + (L.milMax ? '<dt>军职</dt><dd>' + L.milMax + '</dd>' : '') +
+      (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '</dd>' : '') + (L.dishu ? '<dt>嫡庶</dt><dd>' + L.dishu + '</dd>' : '') + (L.milMax ? '<dt>军职</dt><dd>' + L.milMax + '</dd>' : '') +
       (L.eth ? '' : '<dt>家境</dt><dd>' + E.lifeTier(L, y).lv + '</dd>') + (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
       (Object.keys(L.found).length ? '<dt>天资</dt><dd>' + Object.keys(L.found).map(function (k) { return E.TALENT[k].n; }).join('、') + '</dd>' : '');
   }
@@ -782,7 +783,8 @@
     lines.push(E.reignText(L.birthZone, L.by) + '生。');
     if (L.cause === 'fade') lines.push(E.reignText(L.zone, L.dy) + '以后，不知所终。');
     else if (age > 0) lines.push(E.reignText(L.zone, L.dy) + '卒。');
-    if (L.clanName) lines.splice(1, 0, '出身' + L.clanName + '。');
+    if (L.clanName || L.dishu) lines.splice(1, 0, (L.clanName ? '出身' + L.clanName + (L.dishu ? '，' + L.dishu : '') : (L.dishu === '庶出' ? '庶出' : '')) + '。');
+    if (lines[1] === '。') lines.splice(1, 1);
     var F = L.flags || {};
     if (F.palaceIn) lines.push(F.palaceIn + '年入宫为' + (F.palaceIn < 190 ? '采女' : '宫人') + ((F.palace || 0) >= 1 ? '，位至' + F.palaceTop : '') + '。' + (F.palaceOut ? F.palaceOut + '年放出宫。' : ''));
     if (F.isConc) lines.push('为' + (L.kin.filter(function (k) { return k.rel === 'spouse'; })[0] || { name: '显贵' }).name + '之妾。');

@@ -439,8 +439,9 @@ var SGE = (function (D) {
 
     // 庶出：富家、士族多有妾室，你可能是妾所生
     var shuP = L.eth || HR ? 0 : L.cls === 'gentry' ? (L.gate >= 3 ? 0.25 : 0.18) : L.cls === 'merchant' && L.wealth >= 50 ? 0.12 : L.wealth >= 62 ? 0.08 : 0;
+    if (shuP > 0) L.dishu = '嫡出';
     if (R() < shuP) {
-      L.shu = true;
+      L.shu = true; L.dishu = '庶出';
       var cs = surname(R, 'peasant'); if (cs === L.sur) cs = '李';
       mother.name = cs + '氏'; mother.concMom = true; mAge = 15 + Math.floor(R() * 8); mother.by = L.by - mAge;
       var ds = surname(R, L.cls); if (ds === L.sur || ds === cs) ds = '张';
