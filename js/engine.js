@@ -1111,6 +1111,72 @@ var SGE = (function (D) {
       else sentence(L, y, 2.31, '罚作', 2);
     }
   }
+
+  /* ---------- 爱好与才艺：家境决定你能爱好什么 ---------- */
+  function hobbyOk(L, k, y) {
+    var H = D.HOBBY[k], tk = lifeTier(L, y).k, hi = L.cls === 'gentry' || tk === 'high' || tk === 'top';
+    if (H.sex && H.sex !== L.sex) return false;
+    if (H.y && (y < H.y[0] || y > H.y[1])) return false;
+    if (L.cls === 'slave') return H.who === 'any' && !H.cost;
+    if (H.who === 'low') return !hi;
+    if (H.who === 'hi') return hi;
+    if (H.who === 'lit') return !!L.literate || L.cls === 'gentry';
+    return true;
+  }
+  function hobbyChoice(L, y, P) {
+    var a = L.age, R = L.R;
+    if (L.hobby || L.eth) return;
+    var kid = a >= 8 && a <= 16 && !L.flags.hobAsk, adult = a >= 18 && a <= 45 && !L.flags.hobAsk2 && L.flags.hobAsk;
+    if (!(kid && R() < 0.25) && !(adult && R() < 0.05)) return;
+    L.flags[kid ? 'hobAsk' : 'hobAsk2'] = true;
+    var ks = Object.keys(D.HOBBY || {}).filter(function (k) { return hobbyOk(L, k, y); }), pk = [];
+    while (ks.length && pk.length < 3) pk.push(ks.splice(Math.floor(R() * ks.length), 1)[0]);
+    if (!pk.length) return;
+    P.queue.push({ key: 'hobby', ks: pk, q: kid ? '闲下来的时候，你最喜欢做什么？' : '日子安稳了些，你想找点消遣。', o: pk.map(function (k) { return D.HOBBY[k].n; }).concat(['没什么特别的爱好']), w: pk.map(function () { return 2; }).concat([1]) });
+  }
+  function hobbyPick(L, y, c, i) {
+    if (i >= c.ks.length) return;
+    var k = c.ks[i];
+    L.hobby = { k: k, lv: 5, apt: L.R(), since: y };
+    add(L, 2.5, 'life', '你迷上了' + D.HOBBY[k].n + '。');
+  }
+  function hobbyYear(L, y) {
+    var Hb = L.hobby, R = L.R;
+    if (!Hb || !L.alive) return;
+    var HD = D.HOBBY[Hb.k], F = L.rec.focus ? L.rec.focus.eff : null;
+    if (HD.cost) {
+      if (L.eco.cash < HD.cost * 2 && R() < 0.4) { L.hobbyPast = Hb; L.hobby = null; add(L, 2.6, 'life', '家里的日子紧了，你再也顾不上' + HD.n + '了。'); return; }
+      if (L.eco.cash >= HD.cost) payFrom(L, HD.cost);
+    }
+    if (L.soldier && R() < 0.5) return;
+    Hb.lv = Math.min(100, Hb.lv + 3 + Hb.apt * 8 + (F === 'play' || F === 'leisure' ? 4 : 0));
+    if (HD.body) L.body = clamp(L.body + HD.body, 1, 100);
+    if (R() < 0.18) add(L, 2.6, 'life', pick(R, HD.lines));
+    if (!Hb.tal && Hb.lv >= 80 && Hb.apt >= 0.75 && L.age >= 14) {
+      Hb.tal = true;
+      var T = HD.tal, tk = lifeTier(L, y).k, hi = L.cls === 'gentry' || tk === 'high' || tk === 'top';
+      var t = (hi ? T.th : T.tl) || T.t || T.th || T.tl, fx = T.fx || {};
+      add(L, 2.55, 'good', t);
+      if (fx.cash) L.eco.cash += fx.cash;
+      if (fx.fame) L.fame += fx.fame;
+      if (fx.standing) L.standing += fx.standing;
+      if (fx.learn) L.learn += fx.learn;
+      if (fx.craft) L.craft += fx.craft;
+      if (fx.body) L.body = clamp(L.body + fx.body, 1, 100);
+      if (fx.side) L.side = { k: fx.side, from: y, until: y + 15 };
+      if (fx.job && !L.office && !L.soldier && L.cls !== 'gentry') L.job = fx.job;
+      if (fx.flag === 'strongman') L.found.strength = true;
+      if (fx.flag === 'needle') L.side = { k: 'xiu', from: y, until: y + 20 };
+      if (fx.flag === 'calligrapher' && !hi && L.sex === 'M' && !L.office && !L.soldier) { L.office = '书佐'; L.officeMax = L.officeMax || '书佐'; L.job = '书佐'; }
+      if (fx.flag === 'reckoner' && !hi && L.sex === 'M' && !L.office && !L.soldier && R() < 0.5) { L.office = '计吏'; L.officeMax = L.officeMax || '计吏'; L.job = '计吏'; }
+      if (Hb.k === 'hua' && !hi && !L.office) L.job = '画工';
+      if (fx.flag === 'archer') L.flags.archer = true;
+    }
+  }
+  function hobbyText(L) {
+    var Hb = L.hobby; if (!Hb) return '';
+    return D.HOBBY[Hb.k].n + '（' + (Hb.lv < 30 ? '初学' : Hb.lv < 60 ? '略通' : Hb.lv < 85 ? '娴熟' : '精擅') + (Hb.tal ? '，有名' : '') + '）';
+  }
   function famousConcChoice(L, y, P) {
     if (L.sex !== 'F' || L.married || L.widowed || L.age < 15 || L.age > 22 || L.flags.fcAsk || L.eth) return;
     var fk = ctrl(L.zone, y), id = lordFigAt(fk, y), C = FAMOUS_CONC[id];
@@ -1292,6 +1358,7 @@ var SGE = (function (D) {
     if (free) memCheck(L, y, P);
     battleChoice(L, y, P);
     if (free) civWarChoice(L, y, P);
+    if (free) hobbyChoice(L, y, P);
     if (free) famousConcChoice(L, y, P);
     if (free) youthChoice(L, y, P);
     if (free) wedFigChoice(L, y, P);
@@ -1367,6 +1434,7 @@ var SGE = (function (D) {
       case 'yfr': d.yfr = { c: c, i: i }; break;
       case 'bpov': L.bpovDec = { k: c.pk, i: i }; break;
       case 'crimeAfter': d.crimeAfter = i; break;
+      case 'hobby': d.hobby = { c: c, i: i }; break;
       case 'civwar': d.civwar = { c: c, i: i }; break;
       case 'wfig': d.wfig = { c: c, i: i }; break;
       case 'purge': (d.purge = d.purge || {})[c.ev] = { i: i, tie: c.tie, pn: c.pn }; break;
@@ -1430,9 +1498,11 @@ var SGE = (function (D) {
     if (dec.yfr) youthOutcome(L, y, dec.yfr.c, dec.yfr.i);
     if (dec.civwar) civWarOutcome(L, y, dec.civwar.c, dec.civwar.i);
     if (dec.crimeAfter != null) crimeAfter(L, y, dec.crimeAfter);
+    if (dec.hobby) hobbyPick(L, y, dec.hobby.c, dec.hobby.i);
     if (dec.wfig) wedFigOutcome(L, y, dec.wfig.c, dec.wfig.i);
     if (!L.alive) return finishYear(L, rec);
     concLifeYear(L, y);
+    hobbyYear(L, y);
     crimeYear(L, y);
     affairYear(L, y);
     clanYear(L, y);
@@ -2824,8 +2894,8 @@ var SGE = (function (D) {
   var PRICE = 100, LANDP = 1000;
   var SAL = { 里正: 1500, 亭长: 3000, 游徼: 4000, 乡啬夫: 5000, 书佐: 9000, 计吏: 12000, 县长: 40000, 郎官: 30000, 县令: 60000, 幕僚: 30000, 郡守: 120000, 尚书郎: 50000, 刺史: 150000, 九卿: 200000 };
   // 平民的副业：名目与一年大约的进项
-  var SIDE_JOB = { sang: ['桑麻', 500], veg: ['卖菜', 700], tan: ['烧炭', 900], xie: ['编草鞋、织席', 450], yu: ['捕鱼', 650], fang: ['纺线', 500], zhu: ['养猪、养鸡', 600], feng: ['缝补浆洗', 350] };
-  var JOBINC = { 里父老: 300, 医者: 1500, 巫祝: 800, 门客: 2000, 塾师: 900, 稳婆: 600, 山贼: 1500, 官匠: 1800, 代书先生: 1000, 游侠: 1200, 中人: 1200, 方士: 1000, 媒人: 600, 经师: 3000 };
+  var SIDE_JOB = { xiu: ['绣活', 900], sang: ['桑麻', 500], veg: ['卖菜', 700], tan: ['烧炭', 900], xie: ['编草鞋、织席', 450], yu: ['捕鱼', 650], fang: ['纺线', 500], zhu: ['养猪、养鸡', 600], feng: ['缝补浆洗', 350] };
+  var JOBINC = { 歌者: 900, 画工: 1300, 里父老: 300, 医者: 1500, 巫祝: 800, 门客: 2000, 塾师: 900, 稳婆: 600, 山贼: 1500, 官匠: 1800, 代书先生: 1000, 游侠: 1200, 中人: 1200, 方士: 1000, 媒人: 600, 经师: 3000 };
   function fmt(n) { n = Math.round(n); return (n < 0 ? '-' : '') + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
   function initEco(L) {
     var R = L.R, E = { cash: 0, priv: 0, debt: 0, ox: 0, house: 3000, stock: 0, tools: false, loom: false, labor: 0, porter: 0, cart: false };
@@ -3852,6 +3922,7 @@ var SGE = (function (D) {
     if ((L.echoes || []).length >= 3) a.push('你年轻时的选择，有' + cnNum(L.echoes.length) + '次在多年后有了回响。');
     if (L.purgeLog) a.push('你在' + L.purgeLog.pn + '一案中活了下来。');
     if (F.loyal) a.push('旧主败亡后，你没有改换门庭。');
+    if (L.hobby && L.hobby.tal) a.push('你以' + D.HOBBY[L.hobby.k].n + '闻名' + (L.cls === 'gentry' ? '一时' : '乡里') + '。');
     if ((L.battles || []).length) a.push('你作为一名无名士卒，经历过' + L.battles.slice(0, 3).join('、') + (L.battles.length > 3 ? '等' + cnNum(L.battles.length) + '场战事' : '') + '。');
     if (F.famousConc) a.push('你曾是' + figName(F.famousConc) + '的妾。');
     if (L.youthFig) a.push('你和' + figName(L.youthFig) + '是少年时的朋友。' + (F.yfServed ? '后来你投奔了他。' : ''));
@@ -4056,7 +4127,7 @@ var SGE = (function (D) {
     rng: rng, create: create, step: step, answer: answer, runToEnd: runToEnd,
     era: era, ganzhi: ganzhi, reignText: reignText, ctrl: ctrl, group: group, fname: fname, zonePop: zonePop, totalPop: totalPop,
     cnNum: cnNum, slipNum: slipNum, zname: zname, household: household, slipText: slipText, kinLabel: kinLabel, relName: relName,
-    placeText: placeText, focusOptions: focusOptions, setFocus: setFocus, FOCUS: FOCUS, traitWords: traitWords, TALENT: TALENT, ecoView: ecoView,
+    placeText: placeText, focusOptions: focusOptions, setFocus: setFocus, FOCUS: FOCUS, traitWords: traitWords, hobbyText: hobbyText, TALENT: TALENT, ecoView: ecoView,
     spendOptions: spendOptions, spend: spend, relLabel: relLabel, famLevel: famLevel, lifeTier: lifeTier, polsAt: polsAt, regionView: regionView, lifeSummary: lifeSummary, heirOf: heirOf, afterlife: afterlife, afterword: afterword, endAch: endAch, isHead: isHead, autoAnswer: autoAnswer, fmt: fmt, LANDP: LANDP, CAUSE_SHORT: CAUSE_SHORT, CAUSE_STAT: CAUSE_STAT, POP_SCALE: POP_SCALE, stats: stats
   };
 })(SGD);

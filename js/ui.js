@@ -454,7 +454,7 @@
     var who = L.sex === 'F' && L.married && L.spouseK ? esc(L.spouseK.name) + '之妻（' + clsName(L) + '）' : L.sex === 'F' && L.widowed ? '寡妇（' + clsName(L) + '）' : clsName(L);
     $('status').innerHTML = '<dt>身份</dt><dd>' + who + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>学业</dt><dd>' + eduText(L) + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +
       (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '</dd>' : '') + (L.dishu ? '<dt>嫡庶</dt><dd>' + L.dishu + '</dd>' : '') + (L.milMax ? '<dt>军职</dt><dd>' + L.milMax + '</dd>' : '') +
-      (L.eth ? '' : '<dt>家境</dt><dd>' + E.lifeTier(L, y).lv + '</dd>') + (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
+      (L.eth ? '' : '<dt>家境</dt><dd>' + E.lifeTier(L, y).lv + '</dd>') + (L.hobby ? '<dt>爱好</dt><dd>' + E.hobbyText(L) + '</dd>' : '') + (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
       (Object.keys(L.found).length ? '<dt>天资</dt><dd>' + Object.keys(L.found).map(function (k) { return E.TALENT[k].n; }).join('、') + '</dd>' : '');
   }
   function renderRegion(y) {
@@ -579,7 +579,7 @@
     });
   }
 
-  var FRC = { child: '玩伴', school: '同窗', army: '同伍', office: '同僚', trade: '伙伴', girl: '姐妹', village: '乡邻', band: '同袍', old: '老友' };
+  var FRC = { childHi: '玩伴', girlHi: '姐妹', scholar: '同道', child: '玩伴', school: '同窗', army: '同伍', office: '同僚', trade: '伙伴', girl: '姐妹', village: '乡邻', band: '同袍', old: '老友' };
   function renderFriends(y) {
     var L = S.L, ul = $('friends');
     var fs = (L.friends || []).filter(function (f) { return f.since <= y; });
@@ -587,7 +587,7 @@
     ul.innerHTML = fs.map(function (f) {
       var dead = !f.alive;
       var st = dead ? '殁 · ' + f.fate : f.apart ? '音讯全无' : (y - f.by) + '岁' + (f.job ? ' · ' + f.job : '') + ' · ' + E.relLabel(f.aff);
-      return '<li class="' + (dead ? 'dead' : '') + '"><span class="r">' + FRC[f.ctx] + '</span><span class="n">' + esc(f.name) + '</span><span class="s">' + esc(st) + '</span></li>';
+      return '<li class="' + (dead ? 'dead' : '') + '"><span class="r">' + (f.lover ? '心上人' : FRC[f.ctx] || '朋友') + '</span><span class="n">' + esc(f.name) + '</span><span class="s">' + esc(st) + '</span></li>';
     }).join('');
   }
 
@@ -899,7 +899,7 @@
     $('friends-sum').textContent = fs.length ? '一生结交' + fs.length + '人' : '';
     $('end-friends').innerHTML = fs.length ? '<div class="fam-group"><ul>' + fs.map(function (f) {
       var fate = !f.alive ? f.dy + '年' + f.fate : f.apart ? f.fate || '音讯全无' : '你去世时仍在世' + (f.job ? '，做着' + f.job : '');
-      return '<li class="' + (!f.alive ? 'dead' : '') + '"><span class="r">' + FRC[f.ctx] + '</span><span class="n">' + esc(f.name) + '</span><span class="s">' + f.since + '年相识 · ' + esc(fate) + '<br>' + (f.alive && !f.apart ? '交情' : '最后的交情') + '：' + E.relLabel(f.aff) + '</span></li>';
+      return '<li class="' + (!f.alive ? 'dead' : '') + '"><span class="r">' + (f.lover ? '心上人' : FRC[f.ctx] || '朋友') + '</span><span class="n">' + esc(f.name) + '</span><span class="s">' + f.since + '年相识 · ' + esc(fate) + '<br>' + (f.alive && !f.apart ? '交情' : '最后的交情') + '：' + E.relLabel(f.aff) + '</span></li>';
     }).join('') + '</ul></div>' : '<p class="empty">你这一生，没有留下可以称作朋友的人。</p>';
     var lin = (L.lineage || []).concat([{ name: L.name, by: L.by, dy: L.dy, me: true }]);
     $('lineage').innerHTML = lin.length > 1 ? '<p class="lineage-line">' + lin.map(function (x) { return '<span' + (x.me ? ' class="me"' : '') + '>' + esc(x.name) + '<small>' + x.by + '–' + x.dy + '</small></span>'; }).join('<i>→</i>') + '</p>' : '';
