@@ -494,7 +494,7 @@
       (v.coinNote ? '<p class="sub">' + v.coinNote + '。</p>' : '');
     var sp = $('btn-spend');
     sp.disabled = !L.alive || L.age < 15 || L.cls === 'slave';
-    sp.title = L.age < 15 ? '十五岁以后才能自己支用钱财' : '';
+    sp.title = L.age < 15 ? '十五岁以后才能自己谋划、支用钱财' : '每年可以主动谋划一件事，也可以支用余财';
   }
 
   /* ---------- 眼下所重 ---------- */
@@ -542,7 +542,7 @@
       groups[g].forEach(function (it) {
         var row = h('div', 'spend-row ' + it.st);
         row.innerHTML = '<span class="n">' + esc(it.n) + (it.sub || it.why ? '<small>' + esc(it.why ? it.why + (it.sub ? ' · ' + it.sub : '') : it.sub) + '</small>' : '') + '</span><span class="c num">' + E.fmt(it.c) + '</span>';
-        var b = h('button', 'btn', it.st === 'ok' ? '支用' : it.st === 'ask' ? '请家主出钱' : it.st === 'no' ? '去不了' : '买不起');
+        var b = h('button', 'btn', it.plan && it.st === 'ok' ? '去做' : it.st === 'ok' ? '支用' : it.st === 'ask' ? '请家主出钱' : it.st === 'no' ? '去不了' : '买不起');
         b.type = 'button'; b.disabled = it.st === 'poor' || it.st === 'no';
         b.onclick = function () {
           var res = E.spend(L, it.id);
