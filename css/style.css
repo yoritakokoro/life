@@ -204,7 +204,7 @@ details.panel > .inner { padding: 0 var(--s-4) var(--s-4); display: flex; flex-d
 .tabs { display: none; }
 .life-grid { display: grid; grid-template-columns: 16rem minmax(0, 1fr) 26rem; gap: var(--s-5); padding-top: var(--s-4); align-items: start; }
 .pane { min-width: 0; display: flex; flex-direction: column; gap: var(--s-4); }
-.pane.side, .pane.reg { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 9.5rem); max-height: calc(100vh - 10.5rem); overflow: auto; scrollbar-width: thin; padding-bottom: var(--s-3); }
+.pane.side, .pane.reg { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12rem); max-height: calc(100vh - 13rem); overflow: auto; scrollbar-width: thin; padding-bottom: var(--s-3); }
 
 /* 户籍简 */
 .slips { display: flex; flex-direction: row-reverse; gap: 5px; overflow-x: auto; padding: 10px 2px 12px; position: relative; justify-content: flex-start; }
@@ -421,4 +421,43 @@ dialog::backdrop { background: rgba(20, 14, 6, .45); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---------- 名字、眼下所重、家计、支用 ---------- */
+.birth-name { font-family: var(--font-display); font-weight: 400; font-size: clamp(3rem, 9vw, 5.2rem); line-height: 1.05; letter-spacing: .06em; display: flex; align-items: baseline; gap: .3em; flex-wrap: wrap; }
+.birth-name span { font-family: var(--font-ui); font-size: var(--t-md); letter-spacing: .2em; color: var(--ink-3); }
+.birth-name-sub { font-size: var(--t-sm); color: var(--ink-2); margin-bottom: var(--s-3); }
+.birth-head .era-big { font-size: clamp(1.6rem, 4vw, 2.4rem); }
+.hud-name { font-family: var(--font-display); font-size: var(--t-xl); margin-right: var(--s-2); }
+.focus-row { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto; gap: 4px var(--s-3); align-items: center; margin-top: var(--s-2); font-family: var(--font-ui); font-size: var(--t-sm); }
+.focus-sel { color: var(--ink-3); letter-spacing: .15em; font-size: var(--t-xs); }
+.focus-row select { padding: 3px 8px; border: 1px solid var(--ink-2); border-radius: 3px; background: var(--silk-2); font-family: var(--font-body); font-size: var(--t-md); min-width: 7.5em; }
+.focus-chk { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-2); font-size: var(--t-xs); white-space: nowrap; cursor: pointer; }
+.focus-why { color: var(--ink-2); font-size: var(--t-xs); line-height: 1.5; min-width: 0; }
+.focus-actions { display: flex; gap: var(--s-3); align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.status.eco dd .sub, .sub { font-size: var(--t-xs); color: var(--ink-3); }
+.neg { color: var(--cinnabar); }
+.pos { color: var(--ink); }
+.eco-more summary, .e-ledger summary { cursor: pointer; font-family: var(--font-ui); font-size: var(--t-xs); color: var(--ink-3); }
+.e-ledger { font-family: var(--font-ui); font-size: var(--t-xs); color: var(--ink-2); border-top: 1px dotted var(--rule); padding-top: 4px; }
+.e-ledger summary { color: var(--ink-2); list-style-position: outside; }
+.e-ledger b { font-weight: 500; font-variant-numeric: tabular-nums; }
+table.ledger { border-collapse: collapse; margin: 6px 0; font-family: var(--font-ui); font-size: var(--t-xs); min-width: min(100%, 20rem); }
+table.ledger td { padding: 2px 8px 2px 0; border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+table.ledger td:last-child { text-align: right; }
+table.ledger tr.tot td { border-bottom: 0; font-weight: 600; color: var(--ink); }
+.e-spend .tag { color: var(--azurite); }
+.spend-room { font-family: var(--font-ui); line-height: 1.7; }
+.spend-room b { font-size: var(--t-xl); font-weight: 500; }
+.spend-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--s-3); }
+.spend-group h3 { font-weight: 400; }
+.spend-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--s-3); align-items: center; padding: 3px 0; }
+.spend-row .c { color: var(--ink-2); font-size: var(--t-sm); }
+.spend-row.poor .n { color: var(--ink-3); }
+.spend-poor { font-family: var(--font-display); font-size: var(--t-xl); color: var(--ink-2); }
+@media (max-width: 860px) {
+  .focus-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .focus-why { grid-column: 1 / -1; }
+  .focus-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }

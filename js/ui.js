@@ -156,6 +156,8 @@
     }
     $('birth-main').innerHTML =
       '<p class="kicker">' + (S.blind ? '真正的随机' : MODE_NAME[S.mode]) + '</p>' +
+      '<h2 class="birth-name"><span>你是</span>' + esc(L.name) + '</h2>' +
+      '<p class="birth-name-sub">' + nameNote(L) + '</p>' +
       '<p class="era-big">' + el.big + '<small>' + (S.blind ? el.sub : '（' + y + '）' + E.ganzhi(y)) + '</small></p>' +
       '<p class="born-line">你出生了。</p>' +
       '<dl class="facts">' +
@@ -177,6 +179,13 @@
       bc.appendChild(d);
     });
     renderSpeed($('speed-birth'));
+  }
+
+  function nameNote(L) {
+    if (L.eth) return D.ETH[L.eth].n + '人。汉人的户籍上没有你的名字。';
+    if (L.cls === 'slave') return '小名' + L.xiao + '。在主人家的簿籍上，你记作"户下' + (L.sex === 'M' ? '奴' : '婢') + L.given + '"。';
+    if (L.sex === 'F') return '大人们叫你' + L.xiao + '。长大后，户籍上会记作"大女' + L.name + '"；出了门，人们多半只称你"' + L.sur + '氏"。';
+    return '小名' + L.xiao + '。' + (L.cls === 'gentry' || L.cls === 'clerk' ? '等你行了冠礼，还会有一个字。' : '');
   }
 
   var ATTR = [['body', '体魄'], ['wealth', '家业'], ['learn', '才学'], ['standing', '人望'], ['fame', '名声']];
@@ -229,6 +238,7 @@
     $('hud-era').textContent = el.big;
     $('hud-sub').textContent = el.sub;
     $('hud-age').textContent = L.age;
+    $('hud-name').textContent = L.name;
     $('hud-place').textContent = D.ZONES[L.zone].zhou + ' · ' + D.JUN[L.jun][0] + ' · ' + L.county;
     var fk = E.ctrl(L.zone, y), g = E.group(fk), chip = $('hud-ctrl');
     chip.className = 'chip g-' + (S.blind ? 'other' : g);
@@ -254,9 +264,18 @@
 
   function stepLoop() {
     var r = E.step(S.L);
-    if (r && r.pending) { showChoice(r.pending); return; }
+    if (r && r.pending) {
+      if ($('auto-choice').checked) {
+        var c = r.pending, i = E.autoAnswer(S.L);
+        S.ol.appendChild(h('li', 'e e-choice', esc(c.q) + ' —— 交给命运：<b>' + esc(c.o[i]) + '</b>'));
+        stepLoop(); return;
+      }
+      showChoice(r.pending); return;
+    }
     S.rec = r;
     S.queue = r.entries.slice();
+    if (r.ledger && (r.age >= 14 || r.ledger.net < 0)) { S.queue.push({ s: 3.93, k: 'ledger', t: '', lg: r.ledger, age: r.age }); }
+    renderFocus(r);
     S.t = 0;
     S.yearActive = true;
   }
@@ -266,14 +285,14 @@
     var card = h('li', 'choice-card');
     var html = '';
     if (c.pre) html += '<p class="pre">' + esc(c.pre) + '</p>';
-    html += '<p>' + esc(c.q) + '</p><div class="opts"></div><p class="hint">选择会改变概率，但不会决定结果。</p>';
+    html += '<p>' + esc(c.q) + '</p><div class="opts"></div><p class="hint">' + esc(c.hint || '选择会改变概率，但不会决定结果。') + '</p>';
     card.innerHTML = html;
     var box = card.querySelector('.opts');
     c.o.forEach(function (label, i) {
       var b = h('button', '', esc(label)); b.type = 'button';
       b.onclick = function () {
         E.answer(S.L, i);
-        var done = h('li', 'e e-choice', (c.pre ? esc(c.pre) + '<br>' : '') + esc(c.q) + ' —— 你选择了：<b>' + esc(label) + '</b>');
+        var done = h('li', 'e e-choice', (c.pre ? esc(c.pre) + '<br>' : '') + esc(c.q) + (c.narr ? '<b>' : ' —— 你选择了：<b>') + esc(label) + '</b>');
         card.replaceWith(done);
         S.choiceOpen = false;
         stepLoop();
@@ -286,8 +305,17 @@
     card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
-  var TAGS = { hist: '本地', rumor: '传闻', war: '军', move: '迁', meet: '奇遇', far: '远方' };
+  var TAGS = { hist: '本地', rumor: '传闻', war: '军', move: '迁', meet: '奇遇', far: '远方', spend: '支用' };
+  function ledgerEl(lg, age) {
+    var li = h('li', 'e e-ledger');
+    var who = lg.solo ? '你今年' : age < 15 || !lg.head ? '家中今年' : '你家今年';
+    var sum = who + '：收入 ' + E.fmt(lg.I) + ' · 支出 ' + E.fmt(lg.X) + ' · 岁余 <b class="' + (lg.net < 0 ? 'neg' : 'pos') + '">' + (lg.net >= 0 ? '+' : '') + E.fmt(lg.net) + '</b> 钱值';
+    var rows = function (arr, sign) { return arr.map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td>' + sign + E.fmt(x[1]) + '</td></tr>'; }).join(''); };
+    li.innerHTML = '<details><summary>' + sum + '</summary><table class="ledger"><tbody>' + rows(lg.inc, '+') + rows(lg.exp, '−') + '<tr class="tot"><td>岁余</td><td>' + (lg.net >= 0 ? '+' : '') + E.fmt(lg.net) + '</td></tr></tbody></table></details>';
+    return li;
+  }
   function entryEl(e) {
+    if (e.k === 'ledger') return ledgerEl(e.lg, e.age);
     var tag = TAGS[e.k] && e.k !== 'far' ? '<span class="tag">' + TAGS[e.k] + '</span>' : '';
     return h('li', 'e e-' + e.k, tag + esc(e.t));
   }
@@ -325,6 +353,7 @@
     var L = S.L, rec = S.rec;
     renderAttrs($('attrs'), rec.attr, L);
     renderStatus(L.alive ? L.by + L.age - 1 : L.dy);
+    renderEco();
     renderHanji($('hanji-scroll'), $('hanji-tip'), rec.y, rec.y);
     if (rec.death || !L.alive) {
       S.dying = false;
@@ -338,7 +367,8 @@
     if (!S.L) return;
     S.L.auto = true;
     S.yearActive = false; S.queue = []; S.choiceOpen = false;
-    if (S.L.pending) S.L.pending.answer = S.L.R() < S.L.pending.auto ? 0 : 1;
+    if (S.L.pending) E.autoAnswer(S.L);
+    if ($('dlg-spend').open) $('dlg-spend').close();
     E.runToEnd(S.L);
     finish();
   }
@@ -358,13 +388,99 @@
     }
     renderStatus(y);
     renderFamily(y);
+    renderEco();
   }
   function renderStatus(y) {
     var L = S.L;
     var married = L.married ? '已婚' : L.widowed ? (L.sex === 'F' ? '寡居' : '丧妻') : '未婚';
     var job = L.band ? '随' + D.BANDS[L.band].who + '征战' : L.office ? L.office : L.soldier ? (L.job || '军卒') : L.age < 14 ? '孩童' : (L.job || '农');
     var land = L.land > 0 ? L.land + ' 亩' : '无';
-    $('status').innerHTML = '<dt>身份</dt><dd>' + clsName(L) + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>识字</dt><dd>' + (L.literate ? '识字' : '不识字') + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '');
+    $('status').innerHTML = '<dt>身份</dt><dd>' + clsName(L) + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>识字</dt><dd>' + (L.literate ? '识字' : '不识字') + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +
+      (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
+      (Object.keys(L.found).length ? '<dt>天资</dt><dd>' + Object.keys(L.found).map(function (k) { return E.TALENT[k].n; }).join('、') + '</dd>' : '');
+  }
+  function renderEco() {
+    var L = S.L, v = E.ecoView(L), el = $('eco'), det = $('eco-detail');
+    if (v.slave) { $('eco-head').textContent = ''; el.innerHTML = '<dt>家计</dt><dd>衣食仰给于主家</dd><dt>私蓄</dt><dd class="num">' + E.fmt(v.priv) + ' 钱值</dd>'; det.innerHTML = ''; return; }
+    $('eco-head').textContent = v.head ? '你是户主' : L.age < 15 ? '由家人操持' : '归家主支配';
+    var assets = [];
+    if (v.land) assets.push('田' + v.land + '亩');
+    if (v.ox) assets.push('牛' + v.ox + '头');
+    if (v.stock) assets.push(L.cls === 'merchant' ? '货本' : L.cls === 'tribal' ? '牲畜' : '作坊');
+    assets.push(L.cls === 'gentry' ? '坞壁宅院' : '屋舍');
+    el.innerHTML = '<dt>家资</dt><dd>' + assets.join(' · ') + '<br><span class="sub">折 ' + E.fmt(v.assets) + ' 钱值</span></dd>' +
+      (v.months != null ? '<dt>粮储</dt><dd>' + (v.months >= 12 ? '足支一年有余' : '约可支撑 ' + v.months + ' 个月') + '</dd>' : '') +
+      '<dt>余财</dt><dd class="num">' + E.fmt(v.cash) + ' 钱值</dd>' +
+      '<dt>私蓄</dt><dd class="num">' + E.fmt(v.priv) + ' 钱值</dd>' +
+      '<dt>债务</dt><dd class="num' + (v.debt ? ' neg' : '') + '">' + (v.debt ? E.fmt(v.debt) + ' 钱值' : '无') + '</dd>';
+    det.innerHTML = '<p class="sub">余财是钱币、布帛、粮谷折算成钱后的总数：</p><table class="ledger"><tbody>' +
+      v.comp.map(function (x) { return '<tr><td>' + x[0] + '</td><td>' + E.fmt(x[1]) + '</td></tr>'; }).join('') + '</tbody></table>' +
+      (v.coinNote ? '<p class="sub">' + v.coinNote + '。</p>' : '');
+    var sp = $('btn-spend');
+    sp.disabled = !L.alive || L.age < 15 || L.cls === 'slave';
+    sp.title = L.age < 15 ? '十五岁以后才能自己支用钱财' : '';
+  }
+
+  /* ---------- 眼下所重 ---------- */
+  function renderFocus(rec) {
+    var L = S.L, F = rec.focus, sel = $('focus-select'), opts = E.focusOptions(L).slice();
+    if (F && opts.indexOf(F.eff) < 0) opts.unshift(F.eff);
+    var cur = L.focusManual || (F ? F.eff : opts[0]);
+    sel.innerHTML = opts.map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + E.FOCUS[k].n + '</option>'; }).join('');
+    sel.disabled = opts.length < 2;
+    $('focus-auto').checked = !L.focusManual;
+    var why;
+    if (!F || F.eff === 'grow') why = '你还在襁褓之中，一切由家人照料。';
+    else if (F.dev) why = '你原本打算' + E.FOCUS[F.man].v + '，不过' + E.FOCUS[F.auto].pull + '，这一年还是' + E.FOCUS[F.auto].v + '。';
+    else if (F.man) why = '这是你定的方向。' + (F.auto !== F.man ? '若由他自己，会更想' + E.FOCUS[F.auto].v + '。' : '这也正合他的心意。');
+    else why = '系统判断：' + F.why + '，因此你近来将更多心力放在「' + E.FOCUS[F.eff].n + '」上。';
+    if (L.sex === 'F' && F && F.man) why = why.replace(/他/g, '她');
+    $('focus-why').textContent = why;
+  }
+  function focusChanged(manual) {
+    var L = S.L;
+    if (!L) return;
+    if (manual) { E.setFocus(L, $('focus-select').value); $('focus-auto').checked = false; }
+    else { E.setFocus(L, $('focus-auto').checked ? null : $('focus-select').value); }
+    $('focus-why').textContent = L.focusManual ? '自明年起，你将把心力放在「' + E.FOCUS[L.focusManual].n + '」上——不过人不一定全听你的。' : '自明年起，交由系统按此人的性情与处境判断。';
+  }
+
+  /* ---------- 支用余财 ---------- */
+  function openSpend() {
+    var L = S.L;
+    if (!L || L.age < 15) return;
+    S.wasPlaying = S.playing; S.playing = false; setPlayIcon();
+    renderSpend();
+    $('dlg-spend').showModal();
+  }
+  function renderSpend() {
+    var L = S.L, o = E.spendOptions(L), r = o.room;
+    $('spend-room').innerHTML = '可支配余财 <b class="num">' + E.fmt(o.can) + '</b> 钱值<br><span class="sub">私蓄 ' + E.fmt(r.priv) + (r.head ? ' · 家中余财 ' + E.fmt(r.house) + '（你是户主）' : ' · 家中尚有余财 ' + E.fmt(r.family) + '，但不归你支配') + '</span>';
+    var groups = {};
+    o.items.forEach(function (it) { (groups[it.g] = groups[it.g] || []).push(it); });
+    var box = $('spend-list');
+    box.innerHTML = '';
+    Object.keys(groups).forEach(function (g) {
+      var sec = h('div', 'spend-group');
+      sec.appendChild(h('h3', 'sect-title', g));
+      groups[g].forEach(function (it) {
+        var row = h('div', 'spend-row ' + it.st);
+        row.innerHTML = '<span class="n">' + esc(it.n) + '</span><span class="c num">' + E.fmt(it.c) + '</span>';
+        var b = h('button', 'btn', it.st === 'ok' ? '支用' : it.st === 'ask' ? '请家主出钱' : '买不起');
+        b.type = 'button'; b.disabled = it.st === 'poor';
+        b.onclick = function () {
+          var res = E.spend(L, it.id);
+          var e = { k: 'spend', t: res.t };
+          if (S.ol) S.ol.appendChild(entryEl(e));
+          toast(res.ok ? '已支用 ' + E.fmt(res.c) + ' 钱值' : '没有成功');
+          renderSpend(); renderEco(); renderAttrs($('attrs'), { body: L.body, wealth: L.wealth, learn: L.learn, standing: L.standing, fame: L.fame }, L);
+        };
+        row.appendChild(b);
+        sec.appendChild(row);
+      });
+      box.appendChild(sec);
+    });
+    if (o.can < 300) box.prepend(h('p', 'spend-poor', '……你好像什么都买不起。'));
   }
   function renderFamily(y) {
     var L = S.L, ul = $('family');
@@ -583,6 +699,15 @@
     else if (age >= 10) lines.push('一生未曾离开' + D.JUN[L.birthJun][0] + '。');
     if (L.kidsBorn > 0) lines.push('生育' + cn(L.kidsBorn) + '子女，' + (adultKids === 0 ? '无一人' : cn(adultKids) + '人') + '活至成年。');
     if (L.grandkids > 0) lines.push('有孙辈' + cn(L.grandkids) + '人。');
+    var lit = L.kin.filter(function (k) { return k.rel === 'child' && k.lit; }).length;
+    if (lit) lines.push(cn(lit) + '个孩子识字。');
+    if (age >= 15 && L.cls !== 'slave') {
+      if (L.eco.debt > 0) lines.push('身后还欠着' + E.fmt(L.eco.debt) + '钱值的债。');
+      else if (L.land > 0) lines.push('身后留下田' + cn(L.land) + '亩。');
+      else if (L.eco.cash + L.eco.priv < 300) lines.push('身后几乎一无所有。');
+    }
+    if (L.flags.coffin) lines.push('你早早为自己备好了寿材。');
+    if (age >= 10) lines.push('你是一个' + E.traitWords(L).join('、') + '的人。');
     var last = '';
     if (L.by < 184 && L.dy >= 280) last = '你从黄巾之乱一直活到了三国归晋。';
     else if (L.by < 220 && L.dy >= 265) last = '你经历了两个王朝的终结。';
@@ -633,8 +758,10 @@
       var big = S.blind ? E.ganzhi(rec.y) : el.big;
       sec.innerHTML = '<div class="yr-head"><b>' + esc(big) + '</b><span>' + rec.y + ' · ' + (rec.age === 0 ? '出生' : rec.age + ' 岁') + '</span></div>';
       var ol = h('ol');
-      choices.filter(function (c) { return c.y === rec.y; }).forEach(function (c) { ol.appendChild(h('li', 'e e-choice', esc(c.q) + ' —— 你选择了：<b>' + esc(c.a) + '</b>')); });
+      choices.filter(function (c) { return c.y === rec.y; }).forEach(function (c) { ol.appendChild(h('li', 'e e-choice', esc(c.q) + (c.narr ? '<b>' : ' —— 你选择了：<b>') + esc(c.a) + '</b>')); });
       rec.entries.forEach(function (e) { ol.appendChild(entryEl(e)); });
+      if (rec.ledger && (rec.age >= 14 || rec.ledger.net < 0)) ol.appendChild(ledgerEl(rec.ledger, rec.age));
+      (L.spendLog || []).filter(function (x) { return x.y === rec.y; }).forEach(function (x) { ol.appendChild(entryEl({ k: 'spend', t: x.t })); });
       sec.appendChild(ol);
       box.appendChild(sec);
     });
@@ -776,6 +903,10 @@
   function init() {
     initIntro();
     $('btn-start').onclick = beginPlayback;
+    $('focus-select').onchange = function () { focusChanged(true); };
+    $('focus-auto').onchange = function () { focusChanged(false); };
+    $('btn-spend').onclick = openSpend;
+    $('dlg-spend').addEventListener('close', function () { if (S.wasPlaying) { S.playing = true; setPlayIcon(); } S.wasPlaying = false; });
     $('btn-play').onclick = function () { S.playing = !S.playing; setPlayIcon(); };
     $('btn-skip').onclick = skipToEnd;
     $('btn-again').onclick = function () { startLife(newSeed(), S.mode === 'mirror' ? S.opts : { mode: S.mode }); };

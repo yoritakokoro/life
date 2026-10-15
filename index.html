@@ -123,12 +123,22 @@
       <div class="wrap">
         <div class="hud-row">
           <div class="hud-era"><b id="hud-era">—</b><span id="hud-sub"></span></div>
-          <div class="hud-age"><b id="hud-age">0</b> 岁</div>
+          <div class="hud-age"><span class="hud-name" id="hud-name"></span><b id="hud-age">0</b> 岁</div>
           <div class="hud-meta"><span id="hud-place"></span><span class="chip" id="hud-ctrl"><i></i><span></span></span><span class="num" id="hud-days"></span></div>
           <div class="controls">
             <button class="icon-btn" id="btn-play" type="button" aria-label="暂停"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg></button>
             <div class="seg" role="radiogroup" aria-label="速度" id="speed-hud"></div>
             <button class="btn" id="btn-skip" type="button">直接看结局</button>
+          </div>
+        </div>
+        <div class="focus-row" id="focus-row">
+          <label class="focus-sel" for="focus-select">眼下所重</label>
+          <select id="focus-select"></select>
+          <label class="focus-chk"><input type="checkbox" id="focus-auto" checked> 让系统决定</label>
+          <p class="focus-why" id="focus-why"></p>
+          <div class="focus-actions">
+            <button class="btn" id="btn-spend" type="button">支用余财</button>
+            <label class="focus-chk" title="开启后，逃难、婚事、借债等大事也由系统替你决定"><input type="checkbox" id="auto-choice"> 大事也交给命运</label>
           </div>
         </div>
         <div class="season" id="season" aria-hidden="true"><span>春</span><span>夏</span><span>秋</span><span>冬</span></div>
@@ -154,6 +164,11 @@
             <div class="attrs" id="attrs"></div>
           </div>
           <dl class="status" id="status"></dl>
+          <div>
+            <h2 class="sect-title">家计<em id="eco-head"></em></h2>
+            <dl class="status eco" id="eco"></dl>
+            <details class="eco-more"><summary>详情</summary><div id="eco-detail"></div></details>
+          </div>
           <div>
             <h2 class="sect-title">亲人</h2>
             <ul class="family" id="family"></ul>
@@ -238,13 +253,19 @@
   <div class="dlg-head"><h2 id="lives-h">前世</h2><button class="ghost" type="button" data-close>关闭</button></div>
   <div class="dlg-body"><p class="footnote" id="lives-sum"></p><ul class="lives" id="lives"></ul></div>
 </dialog>
+<dialog id="dlg-spend" aria-labelledby="spend-h">
+  <div class="dlg-head"><h2 id="spend-h">支用余财</h2><button class="ghost" type="button" data-close>关闭</button></div>
+  <div class="dlg-body"><p class="spend-room" id="spend-room"></p><div id="spend-list"></div><p class="footnote">口粮、衣物、赋税这些必要的开销每年自动结算；这里只能动用结余下来的钱。价格以"钱值"计：钱币、布帛、谷物折算成钱后的总数。</p></div>
+</dialog>
 <dialog id="dlg-about" aria-labelledby="about-h">
   <div class="dlg-head"><h2 id="about-h">说明</h2><button class="ghost" type="button" data-close>关闭</button></div>
   <div class="dlg-body">
     <p>你会随机降生为东汉末年到西晋初年之间的一个普通人。出生地按《续汉书·郡国志》所载各郡人口加权抽取，再随战乱、逃亡与迁徙逐年修正；身份阶层、家境、亲属和寿命都按概率生成。</p>
     <p>历史事件不是剧情，而是"天气"：它们按年份和地区改变战乱、饥荒、疫病、迁徙与征兵的风险。远方的大事，往往要过一两年才以传闻的形式传到你耳中。</p>
-    <p>偶尔你需要做出选择：逃难还是留守，应募还是回家，答应还是再等等。选择会改变概率，但不会决定结果。历史人物会出现，但概率很低。</p>
-    <p>五项属性：体魄（疾病、饥荒、战争中的存活）、家业（土地、粮食、抗风险）、才学（识字、入仕）、人望（宗族、乡里、婚姻）、名声（中年后才可能出现）。</p>
+    <p>偶尔你需要做出选择：逃难还是留守，应募还是回家，答应还是再等等。选择会改变概率，但不会决定结果。历史人物会出现，但概率很低；出身越高、做了官、识字或有名声的人，越可能遇见他们，有些人物也只有士人才见得到。</p>
+    <p>五项属性：体魄（疾病、饥荒、战争中的存活）、家业（土地、粮食、抗风险）、才学（识字、入仕）、人望（宗族、乡里、婚姻）、名声（中年后才可能出现）。此外还有看不见的性情与天资：幼时的一两个瞬间会悄悄塑造它们，天资要靠日后的行为才会显露。</p>
+    <p>「眼下所重」是这个人这一阶段把心力放在哪里。默认由系统按年龄、性情、家境、身份、眼前的难处和过去的习惯来判断；你可以拨一下方向，但人不一定全听你的。</p>
+    <p>家计每年自动结算：田收、纺织、佣作、俸禄，减去口粮、衣物、盐铁、赋税（汉之算赋口钱更赋、曹魏户调、西晋户调式），剩下的才是"岁余"。入不敷出就动用积蓄，积蓄用尽就欠债；债务压身时，才会让你做真正的大决定。家产、家中余财和你自己的私蓄是分开的——成了户主，才能动用家里的钱。</p>
     <p><b>这是历史概率模拟，而非精确人口学重建。</b>三国时代没有完整的人口统计，许多数值是依据史料所作的估计。</p>
     <ul class="sources">
       <li>《后汉书》《续汉书·郡国志》（永和五年郡国户口）</li>
