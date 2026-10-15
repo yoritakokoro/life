@@ -103,6 +103,8 @@
     if (hm) { $('seed-input').value = hm[1].slice(0, 1) + '-' + hm[1].slice(1); $('seed-panel').open = true; }
     $('btn-home').onclick = goHome;
     $('btn-back').onclick = goHome;
+    $('harsh').checked = !!store.harsh;
+    $('harsh').onchange = function () { store.harsh = $('harsh').checked; save(); };
     renderLedger();
   }
   function goHome() { stopLife(); show('intro'); renderLedger(); }
@@ -116,6 +118,7 @@
     stopLife();
     S.seed = seed; S.opts = opts; S.mode = opts.mode; S.blind = opts.mode === 'blind'; S.saved = false;
     var o = {}; for (var k in opts) if (k !== 'mirror') o[k] = opts[k];
+    o.harsh = !!store.harsh;
     S.L = E.create(seed, o);
     S.comps = [0, 1, 2].map(function (i) {
       var c = E.create(compSeed(seed, i), { auto: true, year: S.L.by, mode: 'history' });

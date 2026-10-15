@@ -402,6 +402,13 @@ var SGE = (function (D) {
 
   function die(L, cause, s, map) {
     if (!L.alive) return;
+    // 宽限：玩家本人在幼年多半能挺过来（同时辰者与统计仍按史实）
+    var spare = !L.auto && !L.opts.harsh ? (L.age < 5 ? 0.72 : L.age < 15 ? 0.45 : 0) : 0;
+    if (spare && L.R() < spare && cause !== 'battle' && cause !== 'executed') {
+      L.body = clamp(L.body - 4, 5, 100);
+      add(L, s, 'bad', fresh(L, L.age < 5 ? ['你病得几乎没了气息，母亲抱着你守了三天三夜，你竟活了过来。', '你高烧不退，家里连小棺材都备下了。第四天早上，你睁开了眼睛。', '你那一回差点没挺过去。祖母说，是祖宗保佑。', '你病了一场，瘦得只剩一把骨头，到底还是熬过来了。'] : ['你病得很重，家里请了巫祝，又熬了草药。你命大，挺了过来。', '那一年你差点死了。后来大人们说起来，都说你是捡回来的一条命。']));
+      return;
+    }
     if (L.opts.surviveUntil && L.rec.y <= L.opts.surviveUntil) {
       if (!L.rec.spared) { L.rec.spared = true; L.body = clamp(L.body - 6, 5, 100); add(L, s, 'bad', '你大病一场，险些丧命，终究挺了过来。'); }
       return;
