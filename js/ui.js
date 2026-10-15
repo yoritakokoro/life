@@ -182,7 +182,7 @@
       mirror = '<p class="mirror-note">你填写的是：' + esc(M.prov) + ' · 家境' + esc(M.tier) + ' · ' + esc(M.edu) + (M.extra ? ' · ' + esc(M.extra) : '') + '。' + esc(M.note) +
         '在东汉，大约八成人口是农民和佃客，士族不到百分之三。你的现代条件改变了抽签的权重，但签还是要抽的——这一次，你落在了「' + clsName(L) + '」。</p>';
     }
-    var fl = E.famLevel(L, hh);
+    var fl = E.famLevel(L, hh), laws = L.eth ? [] : E.polsAt(L.zone, y);
     $('birth-main').innerHTML =
       '<p class="kicker">' + (S.blind ? '真正的随机' : MODE_NAME[S.mode]) + '</p>' +
       '<h2 class="birth-name"><span>你是</span>' + esc(L.name) + '</h2>' +
@@ -201,6 +201,7 @@
       '<dt>家有田地</dt><dd>' + landTxt + '</dd>' +
       '<dt>家庭人口</dt><dd><span class="num">' + hh + '</span> 人</dd>' +
       '<dt>家境</dt><dd><b>' + fl.lv + '</b></dd>' +
+      (laws.length ? '<dt>此地法令</dt><dd>' + laws.map(function (p) { return esc(p.n); }).join('、') + '</dd>' : '') +
       '</dl>' +
       '<p class="fam-note">' + esc(fl.t) + (fl.r ? '<span>' + esc(fl.r) + '</span>' : '') + '</p>' + mirror +
       '<p class="countdown">' + cd + '</p>';
@@ -343,7 +344,7 @@
     card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
-  var TAGS = { hist: '本地', rumor: '传闻', war: '军', move: '迁', meet: '奇遇', far: '远方', spend: '支用' };
+  var TAGS = { law: '法令', hist: '本地', rumor: '传闻', war: '军', move: '迁', meet: '奇遇', far: '远方', spend: '支用' };
   function ledgerEl(lg, age) {
     var li = h('li', 'e e-ledger');
     var who = lg.solo ? '你今年' : age < 15 || !lg.head ? '家中今年' : '你家今年';
@@ -425,6 +426,7 @@
       });
     }
     renderStatus(y);
+    renderLaws(y);
     renderFamily(y);
     renderFriends(y);
     renderEco();
@@ -439,6 +441,12 @@
       (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '</dd>' : '') + (L.milMax ? '<dt>军职</dt><dd>' + L.milMax + '</dd>' : '') +
       (L.eth ? '' : '<dt>家境</dt><dd>' + E.lifeTier(L, y).lv + '</dd>') + (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
       (Object.keys(L.found).length ? '<dt>天资</dt><dd>' + Object.keys(L.found).map(function (k) { return E.TALENT[k].n; }).join('、') + '</dd>' : '');
+  }
+  function renderLaws(y) {
+    var L = S.L, ul = $('laws'), ps = L.eth ? [] : E.polsAt(L.zone, y);
+    $('laws-ruler').textContent = L.eth ? '' : E.fname(E.ctrl(L.zone, y), y) + '治下';
+    ul.innerHTML = L.eth ? '<li class="empty">你的族人不受汉家律令管束，只听部落首领的。</li>' : ps.length ? '' : '<li class="empty">沿用旧制，没有特别的法令。</li>';
+    ps.forEach(function (p) { ul.appendChild(h('li', '', '<b>' + esc(p.n) + '</b><span>' + esc(p.s) + '</span>')); });
   }
   function renderEco() {
     var L = S.L, v = E.ecoView(L), el = $('eco'), det = $('eco-detail');

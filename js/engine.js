@@ -132,6 +132,45 @@ var SGE = (function (D) {
   /* ================= 死亡率 ================= */
   var QT = [[0, 0.2], [1, 0.075], [2, 0.045], [3, 0.035], [4, 0.025], [5, 0.013], [10, 0.006], [15, 0.008], [20, 0.01], [30, 0.013], [40, 0.018], [50, 0.026], [55, 0.036], [60, 0.05], [65, 0.075], [70, 0.11], [75, 0.16], [80, 0.24], [85, 0.34]];
   function baseQ(a) { var q = QT[0][1]; for (var i = 0; i < QT.length; i++) if (a >= QT[i][0]) q = QT[i][1]; return q; }
+  /* ---------- 法令：按地点 × 年份 × 统治者 ---------- */
+  var POL_C = {};
+  function polsAt(z, y) {
+    var k = z + y; if (POL_C[k]) return POL_C[k];
+    var fk = ctrl(z, y);
+    return (POL_C[k] = (D.POLICIES || []).filter(function (p) { return y >= p.y[0] && y <= p.y[1] && (!p.f || p.f.indexOf(fk) >= 0) && (!p.zones || p.zones.indexOf(z) >= 0); }));
+  }
+  function polMul(z, y, key) { var m = 1; polsAt(z, y).forEach(function (p) { if (p.fx[key] != null) m *= p.fx[key]; }); return m; }
+  function polSum(z, y, key) { var m = 0; polsAt(z, y).forEach(function (p) { if (p.fx[key]) m += p.fx[key]; }); return m; }
+  function lawYear(L, y) {
+    var R = L.R, a = L.age, seen = L.lawSeen = L.lawSeen || {}, E = L.eco;
+    if (L.eth) return;
+    polsAt(L.zone, y).forEach(function (p) {
+      if (seen[p.id]) return;
+      seen[p.id] = y;
+      if (a === 0) return;
+      add(L, 0.6, 'law', y === p.y[0] ? p.t : '你所在的地方，行的是「' + p.n + '」：' + p.s + '。');
+      if (p.fx.cashLoss && E && L.cls !== 'slave' && E.cash + E.priv >= 300) {
+        var lost = Math.round((E.cash + E.priv) * p.fx.cashLoss);
+        E.cash = Math.round(E.cash * (1 - p.fx.cashLoss)); E.priv = Math.round(E.priv * (1 - p.fx.cashLoss));
+        add(L, 0.65, 'bad', '你家攒下的钱，一下子贬了' + Math.round(p.fx.cashLoss * 10) + '成，折合约' + fmt(lost) + '钱值。');
+      }
+      if (p.fx.landGrant && (L.cls === 'peasant' || L.cls === 'tuntian') && isHead(L) && L.land < 30 && R() < 0.35) {
+        var g = 10 + Math.round(R() * 10);
+        L.land += g; if (L.cls === 'tuntian') { L.cls = 'peasant'; L.job = '农'; }
+        add(L, 0.65, 'good', '你家按新法在荒地上占了' + cnNum(g) + '亩田，登记在了户籍上。');
+      }
+    });
+    var risk = polSum(L.zone, y, 'officeRisk');
+    if (risk && L.office && L.alive && R() < risk) {
+      add(L, 1.3, 'bad', pick(R, ['有人向上告发你"诽谤朝政"。你被收捕下狱，审了几个月。', '校事说你经手的文书有毛病，你被下了狱。']));
+      if (R() < 0.15) { die(L, 'executed', 1.35); return; }
+      L.office = null; L.job = L.cls === 'gentry' ? '士人' : '农'; L.fame -= 4;
+      add(L, 1.35, 'life', '后来虽被放了出来，官是丢了。');
+    }
+    var lb = polSum(L.zone, y, 'learn');
+    if (lb && L.literate && a >= 8 && a <= 50) L.learn += lb;
+  }
+
   function chaos(y) { return y < 184 ? 1 : y <= 207 ? 1.2 : y <= 219 ? 1.08 : y <= 290 ? 1 : y <= 316 ? 1.2 : 1.08; }
   var CLS_Q = { gentry: 0.68, merchant: 0.9, clerk: 0.86, slave: 1.3, tenant: 1.07, tribal: 1.08, tuntian: 1.05 };
 
@@ -599,7 +638,7 @@ var SGE = (function (D) {
         P.queue.push({ key: 'marry', sp: sp2, q: '你已经' + cnNum(a) + '岁了。媒人说合' + sp2.from + '的' + sp2.name + '（' + cnNum(sp2.age) + '岁），' + sp2.desc + '。', o: ['答应这门亲事', '再等等'], auto: 0.75 });
       } else if (a >= 6 && a <= 9 && !L.schooling && ['peasant', 'artisan', 'merchant', 'tenant', 'soldier', 'tuntian'].indexOf(L.cls) >= 0 && L.wealth >= 15 && R() < 0.12) {
         P.queue.push({ key: 'school', q: '乡里的老先生愿意教你识字，学费是每年一斗粟。父母问你想不想去。', o: ['去读书', '帮家里干活'], auto: 0.5 });
-      } else if (a >= 16 && a <= 35 && L.learn >= 35 && !L.office && L.sex === 'M' && R() < 0.25) {
+      } else if (a >= 16 && a <= 35 && L.learn >= 35 && !L.office && L.sex === 'M' && R() < 0.25 * polMul(z, y, 'career')) {
         P.queue.push({ key: 'clerk', q: '县里缺一个书佐，县丞问你愿不愿意到县廷当差。', o: ['去县廷', '留在家中'], auto: 0.6 });
       } else if (L.sex === 'M' && a >= 16 && a <= 38 && ((y >= 186 && y <= 235) || y >= 291) && ['peasant', 'tenant', 'artisan', 'clerk', 'merchant'].indexOf(L.cls) >= 0 && R() < (L.flags.martial || L.found.strength ? 0.25 : 0.1)) {
         P.queue.push({ key: 'recruit', q: fname(ctrl(z, y), y) + '的军队在郡里募兵，应募者每月给粮。', o: ['应募从军', '留在家中'], auto: 0.3 });
@@ -740,6 +779,8 @@ var SGE = (function (D) {
       }
       L.regimes.push(fk);
     }
+    lawYear(L, y);
+    if (!L.alive) return finishYear(L, rec);
 
     if (a === 0) birthEntries(L, y);
     rec.focus = resolveFocus(L, y);
@@ -1195,6 +1236,7 @@ var SGE = (function (D) {
     else if (L.cls === 'slave') pool = pool.concat(L.sex === 'F' && DD.slaveF ? DD.slaveF.concat(DD.slave) : DD.slave);
     else if (L.cls === 'tuntian') pool = pool.concat(DD.tuntian, L.sex === 'F' ? DD.farmerF : DD.farmer);
     else pool = pool.concat(L.sex === 'F' ? DD.farmerF : DD.farmer, L.cls === 'tenant' && DD.tenantLines ? DD.tenantLines : []);
+    if (a >= 8 && !L.eth) polsAt(L.zone, y).forEach(function (p) { if (p.daily) pool = pool.concat(p.daily); });
     var TD = D.TIER_DAILY, tk = lifeTier(L, y).k;
     if (TD && tk && tk !== 'slave' && !L.eth) {
       if (a >= 3 && a < 14) pool = pool.concat(TD.child[tk], L.sex === 'F' ? TD.childF[tk] : []);
@@ -1460,7 +1502,7 @@ var SGE = (function (D) {
 
   function career(L, y, dec) {
     var R = L.R, a = L.age, fk = ctrl(L.zone, y);
-    if (L.flags.corrupt && L.office && R() < 0.06) {
+    if (L.flags.corrupt && L.office && R() < 0.06 * polMul(L.zone, y, 'corrupt')) {
       L.office = null; L.job = '农'; L.fame -= 6; L.flags.corrupt = false;
       add(L, 2.6, 'bad', '你从前受贿的事被人告发，丢了官，家产也被罚没了大半。');
       L.eco.cash = Math.round(L.eco.cash * 0.4);
@@ -1471,10 +1513,11 @@ var SGE = (function (D) {
     }
     if (dec.clerk) { L.office = '书佐'; L.job = '书佐'; L.officeMax = '县书佐'; L.fame += 3; add(L, 1.4, 'good', '你到县廷当了书佐，每天抄写文书。'); }
     if (a < 16 || L.soldier || L.band || L.sex === 'F') return;
-    if (L.office === '书佐' && L.learn >= 50 && R() < 0.06) {
+    var pc = polMul(L.zone, y, 'career');
+    if (L.office === '书佐' && L.learn >= 50 && R() < 0.06 * pc) {
       L.office = '计吏'; L.job = '计吏'; L.officeMax = '郡上计吏'; L.fame += 4;
       add(L, 2, 'good', '你被郡里选为上计吏，年底要带着全郡的户口簿书进京上计。');
-    } else if ((L.office === '计吏' || L.office === '书佐') && L.fame >= 15 && L.standing >= 45 && R() < 0.02) {
+    } else if ((L.office === '计吏' || L.office === '书佐') && L.fame >= 15 && L.standing >= 45 && R() < 0.02 * pc) {
       L.office = '县长'; L.job = '县长'; L.officeMax = '县长'; L.fame += 8;
       add(L, 2, 'good', '你被任命为一个小县的县长。从小吏做到长吏，在你的出身里是极少见的。');
     }
@@ -1485,7 +1528,7 @@ var SGE = (function (D) {
       if (y < 220 && (L.fame >= 5 || L.gate >= 3)) p = 0.04; // 察举
       if (y >= 220) p = L.gate >= 3 ? 0.13 : 0.04; // 九品中正：上品无寒门
       if (y >= 190 && y < 230 && L.learn >= 55) p += 0.03; // 征辟
-      if (R() < p * cm * gm) {
+      if (R() < p * cm * gm * polMul(L.zone, y, 'gcareer')) {
         var t;
         if (y < 220 && R() < 0.6) { L.office = '郎官'; L.officeMax = '郎中'; t = L.gate >= 3 ? '凭着家世，你一出仕就做了郎官。' : '郡里举你为孝廉，你入京做了郎官。'; }
         else if (y >= 220 && R() < 0.6) { L.office = L.gate >= 3 ? '尚书郎' : '县令'; L.officeMax = L.office; t = '郡中正评你为' + (L.gate >= 3 ? '上品。上品无寒门，下品无士族——你起家便是尚书郎。' : '中品，你被任为县令。'); }
@@ -1560,7 +1603,8 @@ var SGE = (function (D) {
     if (L.flags.nocoat && R() < 0.5) { L.body -= 3; L.flags.nocoat = false; add(L, 3.6, 'bad', '冬衣当掉了，那个冬天你冻得整夜睡不着，手脚生满了冻疮。'); }
   }
 
-  function conscriptRate(z, y) {
+  function conscriptRate(z, y) { return conscriptBase(z, y) * polMul(z, y, 'cons'); }
+  function conscriptBase(z, y) {
     var g = group(ctrl(z, y));
     if (y < 184) return 0.004;
     if (y < 190) return 0.02;
@@ -1919,7 +1963,10 @@ var SGE = (function (D) {
       if (adM) out.push(['更赋', Math.round(adM * 300 * mu)]);
       if (owner && H) out.push(['田租（三十税一）', Math.round(H / 30 * PRICE)]);
     }
-    if (L.cls === 'gentry') out.forEach(function (x) { x[1] = Math.round(x[1] * 1.5); });
+    var lt = polSum(L.zone, y, 'landTax');
+    if (lt && owner && L.land) out.push(['修宫钱（亩' + lt + '钱）', L.land * lt]);
+    var tm = L.cls === 'gentry' ? 1.5 * polMul(L.zone, y, 'gtax') : polMul(L.zone, y, 'tax');
+    if (tm !== 1) out.forEach(function (x) { x[1] = Math.round(x[1] * tm); });
     return out;
   }
   function economyYear(L, y) {
@@ -1934,7 +1981,7 @@ var SGE = (function (D) {
     }
     var m = members(L, y), sh = shock(L, y);
     var RGN = D.REGION && D.REGION[L.zone];
-    var hf = sh.h * (RGN ? RGN.yield : 1) * (L.yHarvest || 1) * (0.85 + R() * 0.3) * (E.tools ? 1.08 : 1) * (fo === 'house' ? 1.06 : 1);
+    var hf = sh.h * (RGN ? RGN.yield : 1) * (L.yHarvest || 1) * (0.85 + R() * 0.3) * (E.tools ? 1.08 : 1) * (fo === 'house' ? 1.06 : 1) * polMul(L.zone, y, 'harvest');
     L.yHarvest = 1;
     var inc = [], exp = [], H = 0, note = '';
     var cap = (m.wM * 45 + m.wF * 12) * (E.ox > 0 ? 1.35 : 1);
@@ -2609,7 +2656,7 @@ var SGE = (function (D) {
     era: era, ganzhi: ganzhi, reignText: reignText, ctrl: ctrl, group: group, fname: fname, zonePop: zonePop, totalPop: totalPop,
     cnNum: cnNum, slipNum: slipNum, zname: zname, household: household, slipText: slipText, kinLabel: kinLabel, relName: relName,
     placeText: placeText, focusOptions: focusOptions, setFocus: setFocus, FOCUS: FOCUS, traitWords: traitWords, TALENT: TALENT, ecoView: ecoView,
-    spendOptions: spendOptions, spend: spend, relLabel: relLabel, famLevel: famLevel, lifeTier: lifeTier, heirOf: heirOf, afterlife: afterlife, afterword: afterword, isHead: isHead, autoAnswer: autoAnswer, fmt: fmt, LANDP: LANDP, CAUSE_SHORT: CAUSE_SHORT, CAUSE_STAT: CAUSE_STAT, POP_SCALE: POP_SCALE, stats: stats
+    spendOptions: spendOptions, spend: spend, relLabel: relLabel, famLevel: famLevel, lifeTier: lifeTier, polsAt: polsAt, heirOf: heirOf, afterlife: afterlife, afterword: afterword, isHead: isHead, autoAnswer: autoAnswer, fmt: fmt, LANDP: LANDP, CAUSE_SHORT: CAUSE_SHORT, CAUSE_STAT: CAUSE_STAT, POP_SCALE: POP_SCALE, stats: stats
   };
 })(SGD);
 if (typeof module !== 'undefined') module.exports = SGE;
