@@ -182,6 +182,7 @@
       mirror = '<p class="mirror-note">你填写的是：' + esc(M.prov) + ' · 家境' + esc(M.tier) + ' · ' + esc(M.edu) + (M.extra ? ' · ' + esc(M.extra) : '') + '。' + esc(M.note) +
         '在东汉，大约八成人口是农民和佃客，士族不到百分之三。你的现代条件改变了抽签的权重，但签还是要抽的——这一次，你落在了「' + clsName(L) + '」。</p>';
     }
+    var fl = E.famLevel(L, hh);
     $('birth-main').innerHTML =
       '<p class="kicker">' + (S.blind ? '真正的随机' : MODE_NAME[S.mode]) + '</p>' +
       '<h2 class="birth-name"><span>你是</span>' + esc(L.name) + '</h2>' +
@@ -199,7 +200,9 @@
       '<dt>母亲存活</dt><dd>' + (mother.alive ? '是' : '否') + '</dd>' +
       '<dt>家有田地</dt><dd>' + landTxt + '</dd>' +
       '<dt>家庭人口</dt><dd><span class="num">' + hh + '</span> 人</dd>' +
-      '</dl>' + mirror +
+      '<dt>家境</dt><dd><b>' + fl.lv + '</b></dd>' +
+      '</dl>' +
+      '<p class="fam-note">' + esc(fl.t) + (fl.r ? '<span>' + esc(fl.r) + '</span>' : '') + '</p>' + mirror +
       '<p class="countdown">' + cd + '</p>';
     renderAttrs($('birth-attrs'), { body: L.body, wealth: L.wealth, learn: 0, standing: L.standing, fame: 0 }, L);
     var bc = $('birth-comps'); bc.innerHTML = '';
