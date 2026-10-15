@@ -484,7 +484,7 @@
       L.office ? (LOC[L.office] ? '乡里 · ' + L.office : L.office === '幕僚' ? '幕府 · ' + (L.officeMax || '掾属') : COURT[L.office] ? '朝中 · ' + L.office : '州郡 · ' + L.office) :
       L.age < 14 ? '孩童' : L.cls === 'tenant' && (!L.job || L.job === '农' || L.job === '佃户') ? '佃农' : (L.job || '农');
     var land = L.land > 0 ? L.land + ' 亩' : '无';
-    var who = L.sex === 'F' && L.married && L.spouseK ? esc(L.spouseK.name) + '之妻（' + clsName(L) + '）' : L.sex === 'F' && L.widowed ? '寡妇（' + clsName(L) + '）' : clsName(L);
+    var who = L.sex === 'F' && L.married && L.spouseK ? esc(L.spouseK.name) + (L.flags.isConc ? '之妾' : '之妻') + '（' + (L.flags.fcPal || clsName(L)) + '）' : L.sex === 'F' && L.widowed ? '寡妇（' + clsName(L) + '）' : clsName(L);
     $('status').innerHTML = '<dt>身份</dt><dd>' + who + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>学业</dt><dd>' + eduText(L) + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +
       (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '</dd>' : '') + (L.dishu ? '<dt>嫡庶</dt><dd>' + L.dishu + '</dd>' : '') + (L.milMax ? '<dt>军职</dt><dd>' + L.milMax + '</dd>' : '') +
       (L.eth ? '' : '<dt>家境</dt><dd>' + E.lifeTier(L, y).lv + '</dd>') + (E.condText(L) ? '<dt>体况</dt><dd>' + E.condText(L) + '</dd>' : '') + (L.hobby ? '<dt>爱好</dt><dd>' + E.hobbyText(L) + '</dd>' : '') + (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +

@@ -683,6 +683,7 @@ var SGE = (function (D) {
     if (m.sex && m.sex !== L.sex) return false;
     if (m.eth && m.eth.indexOf(L.eth) < 0) return false;
     if (m.lit && !L.literate) return false;
+    if (inHH(L)) return false;
     if (m.elite && (L.flags.famousConc || !(L.cls === 'gentry' || L.office || L.cls === 'clerk' || L.learn >= 45 || L.fame >= 20))) return false;
     if (m.follow && (L.soldier || L.band)) return false;
     if (m.off && !realOffice(L)) return false;
@@ -739,10 +740,10 @@ var SGE = (function (D) {
   // 名人之妾：乱世里的諸侯納妾，尋常人家的女児偶爾也会被看中
   // y 可能被納的年份；d 卒年；b 生年（不詳則不写年歳）；seat 府邸所在；dt 死訊，拠本伝
   var FAMOUS_CONC = {
-    caocao: { y: [192, 219], d: 220, b: 155, seat: function (y) { return y < 204 ? ['潁川郡', '許県'] : ['魏郡', '鄴県']; }, dt: '夫の曹操が洛陽で病没した。享年六十六。' },
-    liubei: { y: [194, 222], d: 223, b: 161, seat: function (y) { return y < 201 ? ['下邳国', '下邳'] : y < 209 ? ['南陽郡', '新野'] : y < 214 ? ['南郡', '江陵'] : ['蜀郡', '成都']; }, dt: '夫の劉備が永安宮で病没した。享年六十三。' },
+    caocao: { pal: [[213, '魏公宮', '曹公が魏公に封ぜられ、鄴に魏国を建てた。屋敷は魏国の宮室となった。'], [216, '王宮', '曹公が魏王に進み、あなたは鄴の魏王宮に住むことになった。']], y: [192, 219], d: 220, b: 155, seat: function (y) { return y < 204 ? ['潁川郡', '許県'] : ['魏郡', '鄴県']; }, dt: '夫の曹操が洛陽で病没した。享年六十六。' },
+    liubei: { pal: [[219, '王宮', '劉備が漢中王に進み、屋敷は王宮と呼ばれるようになった。あなたは屋敷の女たちとともに宮室へ移り、出入りには宮門の衛兵を通らねばならなくなった。'], [221, '皇宮', '劉備が成都で皇帝に即位した。あなたは後宮の側妾の一人となり、成都の宮中に住むことになった。宮門が閉じれば、外の人に会うことはめったになかった。']], y: [194, 222], d: 223, b: 161, seat: function (y) { return y < 201 ? ['下邳国', '下邳'] : y < 209 ? ['南陽郡', '新野'] : y < 214 ? ['南郡', '江陵'] : ['蜀郡', '成都']; }, dt: '夫の劉備が永安宮で病没した。享年六十三。' },
     sunce: { y: [195, 199], d: 200, b: 175, seat: function () { return ['呉郡', '呉県']; }, dt: '夫の孫策が狩りの最中に許貢の食客に襲われ、その深手がもとで死んだ。享年二十六。' },
-    sunquan: { y: [200, 251], d: 252, b: 182, seat: function (y) { return y < 211 ? ['呉郡', '呉県'] : ['丹楊郡', y < 212 ? '秣陵' : '建業']; }, dt: '夫の孫権が病没した。享年七十一。' },
+    sunquan: { pal: [[221, '王宮', '孫権は魏から呉王に封ぜられ、屋敷は王宮となって、決まりごとが一気に増えた。'], [229, '皇宮', '孫権が武昌で皇帝に即位し、秋には建業へ遷都した。あなたも後宮とともに建業の太初宮へ移った。']], y: [200, 251], d: 252, b: 182, seat: function (y) { return y < 211 ? ['呉郡', '呉県'] : ['丹楊郡', y < 212 ? '秣陵' : '建業']; }, dt: '夫の孫権が病没した。享年七十一。' },
     yuanshao: { y: [191, 201], d: 202, seat: function () { return ['魏郡', '鄴県']; }, dt: '夫の袁紹は官渡で敗れたのち病を発して血を吐き、ほどなく死んだ。' },
     liubiao: { y: [190, 207], d: 208, b: 142, seat: function () { return ['南郡', '襄陽']; }, dt: '夫の劉表は背中に悪性の腫れ物ができ、病死した。享年六十七。' },
     lvbu: { y: [194, 198], d: 199, seat: function (y) { return y < 196 ? null : ['下邳国', '下邳']; }, dt: '下邳が落城し、夫の呂布は曹操に絞め殺された。' },
@@ -750,6 +751,7 @@ var SGE = (function (D) {
   };
 
   // 名人府里的日子：随他的為人、妻室和経歴而定
+  var CONC_FU = ['屋敷の女たちと針仕事をしながら、外の噂話を聞いた。', '正室から割り当てられた仕事を、ひとつひとつ片づけた。', '屋敷に大事な客が来ると、側妾たちは奥に控え、外へ出ることを許されなかった。', '屋敷の高い塀の向こうから、通りの物売りの声が聞こえた。', '節句には、屋敷から側妾一人ひとりに新しい着物が下された。'], CONC_PAL = ['宮中の日々は長かった。ほかの側妾たちと針仕事をしながら、宮人から外の話を聞いた。', '宮中で宴が開かれた。あなたは末席から、上座の冠を遠く眺めるだけだった。', '彼に会えるのはひと月に一度あるかないかだった。宮門の外のことは、宦官や宮人から聞くしかなかった。', '節句には、宮中から絹や白粉が下された。', '宮中の小さな庭に花を植え、毎年咲いては散るのを眺めた。'];
   function C2seat(id, y) { var C = FAMOUS_CONC[id]; return C && C.seat ? C.seat(y) : null; }
   function concLifeYear(L, y) {
     var id = L.flags.famousConc, k = L.spouseK, CL = id && (D.CONC_LIFE || {})[id], R = L.R;
@@ -768,6 +770,7 @@ var SGE = (function (D) {
       add(L, 1.39, tt.fav ? 'good' : 'life', tt.t);
       return;
     }
+    (FAMOUS_CONC[id].pal || []).forEach(function (pp) { if (pp[0] === y) { L.flags.fcPal = pp[1]; add(L, 1.37, 'life', pp[2]); } });
     if (CL && C2seat(id, y)) seatMove(L, C2seat(id, y), 1.38, 'あなたは彼の家族とともに{dest}へ移った。', y);
     var must = [], opt = [];
     CL.ev.forEach(function (e, i) { if (!L.clDone[i] && y >= e.y[0] && y <= e.y[1]) (e.must ? must : opt).push(i); });
@@ -1293,6 +1296,112 @@ var SGE = (function (D) {
     if (L.flags.apprenticeY && y - L.flags.apprenticeY >= 3 && L.job === '学徒') { L.flags.apprenticeY = null; L.cls = L.cls === 'gentry' ? L.cls : 'artisan'; L.job = '工匠'; L.craft += 10; add(L, 2.3, 'good', '三年の年季が明け、師匠はもう独り立ちしてよいと言った。それからは腕一本で食べていくことになった。'); }
     if (L.flags.wenpo && L.age >= 25 && !/穏婆/.test(L.job || '') && !L.office && L.sex === 'F') { L.flags.wenpo = null; L.job = '穏婆'; L.standing += 3; add(L, 2.3, 'life', '村の年老いた産婆が亡くなった。それからは、子が生まれる家はみなあなたを呼びに来るようになった。'); }
   }
+
+      /* ---------- 出嫁従夫：嫁到什麼人家，就過什麼日子 ---------- */
+      var HDESC = { tenant: ['豪族の小作人で、自分の田はない', '一家そろって大家の田を耕している'], peasant: ['わずかな田を持つ家の者', '実直な百姓'], artisan: ['腕一本で食べている職人', '父が大工'], soldier: ['代々兵を出す士家の子弟', '営で兵をしていて、家族も営に住んでいる'], tuntian: ['官田を耕す屯田民'], merchant: ['商いをしていて、年じゅう各地を回っている', '県城の市に店を構えている'], clerk: ['県の役所に勤めている', '父が県の小役人'], gentry: ['郡の名族の子弟', '数百頃の田を持ち、父や兄はみな州郡に仕えている'] };
+      var CLS_WIFE = { tenant: 'これからあなたは小作人の家の嫁だ。誰に小作料を納め、一年でどれだけ取られるかは、すべて地主の顔色しだいだった。', peasant: 'これからあなたは自作農の家の嫁だ。わずかな田が、一家の命綱だった。', artisan: 'これからあなたは職人の家の嫁だ。夫の腕しだいで、鍋に米があるかどうかが決まった。', soldier: 'これからあなたは士家の嫁だ。決まりで、士家の妻や娘は勝手に再婚も移住もできない。夫が営にいるかぎり、あなたもここを離れられない。', tuntian: 'これからあなたは屯田民の嫁だ。耕すのは官の田で、収穫は官が六、民が四だった。', merchant: 'これからあなたは商家の嫁だ。金には困らないが、村の人はどこか見下していた。', clerk: 'これからあなたは小役人の家の嫁だ。夫には毎月俸米が出て、百姓の家よりは暮らしが安定していた。', gentry: 'これからあなたは士族の家の婦人だ。家格が上がったぶん、決まりごとも増えた。' };
+      function spouseCls(L, y) {
+        var R = L.R, c = L.cls, r = R(), g = group(ctrl(L.zone, y)), shi = (g === 'wei' || g === 'wu') && y >= 200 && y <= 280;
+        if (L.eth || c === 'slave') return c;
+        if (c === 'tenant') return r < 0.6 ? 'tenant' : r < 0.85 ? 'peasant' : r < 0.93 && shi ? 'soldier' : 'artisan';
+        if (c === 'peasant') return r < 0.55 ? 'peasant' : r < 0.7 ? 'tenant' : r < 0.8 ? 'artisan' : r < 0.88 ? 'clerk' : r < 0.94 ? 'merchant' : shi ? 'soldier' : 'peasant';
+        if (c === 'tuntian') return r < 0.7 ? 'tuntian' : r < 0.85 ? 'peasant' : 'soldier';
+        if (c === 'soldier') return r < 0.75 ? 'soldier' : 'peasant';
+        if (c === 'artisan') return r < 0.5 ? 'artisan' : r < 0.85 ? 'peasant' : 'merchant';
+        if (c === 'merchant') return r < 0.55 ? 'merchant' : r < 0.75 ? 'peasant' : r < 0.9 ? 'clerk' : r < 0.95 ? 'gentry' : 'artisan';
+        if (c === 'clerk') return r < 0.55 ? 'clerk' : r < 0.75 ? 'peasant' : r < 0.9 ? 'gentry' : 'merchant';
+        if (c === 'gentry') return r < (L.shu ? 0.65 : 0.85) ? 'gentry' : 'clerk';
+        return c;
+      }
+      // 丈夫的前程：升遷、罷黜，都落在妻子的日子上
+      var H_LADDER = ['亭長', '郷嗇夫', '書佐', '県吏', '郡吏', '県令', '郡守'];
+      var H_SAL = { 亭長: 3000, 郷嗇夫: 5000, 書佐: 9000, 県吏: 6000, 郡吏: 12000, 県令: 60000, 郡守: 120000, 議郎: 30000 };
+      function husbandYear(L, y) {
+        var R = L.R, hs = L.sex === 'F' && L.married && L.spouseK && L.spouseK.alive && !L.spouseK.apart && !L.spouseK.famous ? L.spouseK : null;
+        if (!hs) {
+          if (L.sex === 'F' && L.widowed && L.hadSal && !L.flags.nosalNote) { L.flags.nosalNote = true; add(L, 2.2, 'bad', '夫が死ぬと、家に入っていた俸禄も途絶えた。'); }
+          return;
+        }
+        var i = H_LADDER.indexOf(hs.job);
+        if (H_SAL[hs.job]) L.hadSal = true;
+        if (i >= 0 && i < H_LADDER.length - 1 && y - hs.by >= 22 && R() < (L.cls === 'gentry' ? 0.05 : 0.025) * (i >= 4 ? 0.3 : 1)) {
+          hs.job = H_LADDER[i + 1]; L.standing += 3 + i; add(L, 2.2, 'good', '夫が{job}に昇進した。家に入る俸米が増え、近所の人もあなたに少し丁寧になった。'.replace('{job}', hs.job));
+        } else if (i >= 0 && R() < 0.012) {
+          hs.job = L.cls === 'gentry' ? '士人' : '農夫'; L.standing -= 2; add(L, 2.2, 'bad', '夫が職を失い、家でぶらぶらするようになった。家の実入りががくんと減った。');
+        }
+      }
+    
+  /* ---------- 府邸与宮中：做了諸侯的姫妾，日子就被関在高牆之内 ---------- */
+  function inHH(L) { var k = L.spouseK; return !!(L.flags.famousConc && !L.flags.leftHH && k && k.famous && !k.apart && (k.alive || L.flags.fcPal === '皇宮' || L.flags.noRemarry)); }
+  var FAR_HH = { fu: ['知らせは屋敷にも届き、女たちは何日もひそひそと噂し合った。', '屋敷の者たちのあいだに、たちまちこの知らせが広まった。'], gong: ['知らせは宮中にも届き、宮人たちは何日もひそひそと噂し合った。', '宮中の者たちのあいだに、たちまちこの知らせが広まった。'] };
+  var REACT_HH = { war: { fu: ['外では戦が続いていた。屋敷の門は固く閉ざされ、女たちは奥に閉じこもって、遠くの太鼓の音を聞くばかりだった。', '前線からの戦報が次々と屋敷に届いた。女たちは寄り集まって様子をうかがったが、誰も詳しく尋ねようとはしなかった。'], gong: ['外では戦が続いていた。宮門の守りが増やされ、宮人たちは夜もぐっすり眠れなかった。', '前線の戦報が宮中に届くと、宮人たちはひそひそと伝え合い、誰も大きな声では話さなかった。'] }, fam: { fu: ['外は飢饉だった。屋敷の手当も減らされたが、女たちはまだ腹を満たせた。塀の外で飢え死にする人のことは、下女から聞いて知った。'], gong: ['外は飢饉だった。宮中では民と苦しみを分かつとして膳が減らされた——それでも減らした分だけで、外の一家が一年に食べる量より多かった。'] }, plag: { fu: ['外では疫病がはやっていた。屋敷の門は閉ざされ、出入りする者はみな艾で燻された。'], gong: ['外では疫病がはやっていた。宮中では巫祝を呼んで疫を祓い、宮人たちは香袋を身につけ、宮門から一歩も出ることを許されなかった。'] } };
+  var CONC_WID = ['彼が生前に贈ってくれた装身具は、ずっと箱の底にしまってあった。', '屋敷の子どもたちは年ごとに大きくなり、あなたが誰なのかもう知らない子もいた。', '病にかかった。新しい奥方は薬を届けさせたが、見舞いには来なかった。', 'あなたは彼の位牌を守り、一年また一年と過ごした。屋敷の者たちは次第にあなたを忘れていった。', '彼の命日には、昔の側妾たち何人かと香を焚いた。誰も口をきかなかった。', '新しい主人が家を継ぎ、屋敷のしきたりも変わった。古くからの者への手当は年ごとに減っていった。', '奥庭に植えた数本の木は、もう塀より高く伸びていた。'], CONC_WIDP = ['先帝から賜った簪は、箱にしまったまま、めったに取り出さなかった。', '宮の塀の外で、槐の木がまた花をつけた。数えてみると、宮に入ってからもう何年も経っていた。', '若い宮人に、先帝はどんな方でしたかと尋ねられた。長いこと考えたが、何から話せばよいのかわからなかった。', '病にかかった。宮中の医官は一度診に来たきり、二度と来なかった。', '別宮の日々は静かだった。先帝の旧人たちと針仕事をしながら、昔の話ばかりした。', '先帝の命日には、霊座の前で楽を奏し、供え物をして、朝から昼まで過ごした。', '新帝が即位してから、別宮への手当は年ごとに減っていった。', '別宮の門は一年中閉ざされていた。外の知らせは、何か月も遅れて届いた。'], CONC_TQ = ['毎月一日と十五日、銅雀台の上で彼の霊帳に向かい、朝から昼まで楽を奏した。', '銅雀台の上からは、西陵の墓所が望めた——それも彼が遺令で言い置いたことだった。', '彼の遺した香は台の側妾たちに分けられた。履物を編んで売り、暮らしを立てる者もいた。それも遺令で許されていた。'];
+  var HPAL = { rival_o: ['耐えて、争わない', '中宮に訴え出る', '彼の歓心を買い、寵愛を取り戻そうとする'], rival_r: ['あなたは耐えた。暮らしは少し苦しくなったが、波風は立たなかった。', '中宮があなたの肩を持ち、その美人はずいぶんおとなしくなった。', '中宮は「姉妹の間柄なのだから、仲良くなさい」と淡々と言っただけだった。それからあの女はますます増長した。', '寵愛をいくらか取り戻した。だが宮中の者たちは、あなたを策士だと噂した。', '何度か張り合ううちに、かえって彼に疎まれ、ますます足が遠のいた。'], natal_r: ['こつこつ貯めた蓄えを、人に託して実家へ送った。母からは、家族みなあなたに感謝していると返事が来た。', '彼はうなずいた。兄弟は郎官の職を得て、実家の暮らしはそれから少し楽になった。', '彼は眉をひそめ、後宮の者は外のことに口を出すなと言った。あなたは二度とその話をしなかった。', '取り合わなかった。のちに、母がそのことで何日も泣いていたと聞いた。'], visit_o: ['宮を出て里帰りする許しを願う', '宦官に頼んで品物を届けてもらう', 'もう口にしない'], visit_r: ['許しを得て、車で実家へ帰った。母は門の前でひざまずいてあなたを迎え、長いこと泣いていた。', '彼は、宮中の者が宮を出るのはよくないと言った。帰ることはかなわなかった。', '宦官に頼んで、絹一匹と銭をいくらか届けてもらった。', 'それきり口にしなかった。母の面影は、年ごとにぼやけていった。'], dau_r: ['公主は、ある将軍の息子のもとへ降嫁した。輿入れの日、宮中からは数えきれないほどの下賜があった。', '公主は、代々二千石を出す家へ降嫁した。', '彼はうなずき、娘はさらに二年あなたのそばに残った。', '彼は、年頃の娘は嫁ぐものだと言い、縁談はそのまま決まった。公主は士族の名門へ降嫁した。'], wid_o: ['このまま静かに暮らしていく', '新君に願い出て宮を出て、故郷で余生を送る', '宮中の幼い子らの養育を手伝う'], wid_r: ['位牌を守る日々は、ゆっくりと過ぎていった。', '新君は許した。わずかな蓄えを持って宮門を出て、長く離れていた故郷へ帰った。', '新君は、先君の人が宮を出るのはよくないと言った。あなたは留まるしかなかった。', '宮中の幼い子らの世話を手伝った。子どもたちはあなたを「阿母」と呼んだ。'] };
+  var HPOOL = {
+    gentryWife: ['家の切り盛りを任され、朝早くから婢女たちに仕事を割り振った。', '一族の嫁たちが集まって針仕事をすると、話はいつのまにか誰の夫の官位が高いかの比べ合いになった。', '夫の同僚が家族連れで訪ねてきた。あなたは奥で宴を設け、女客をもてなした。', '息子に自ら『孝経』を教え、一句まちがえるたびに十遍書き写させた。', '祖先を祭る日、あなたは家の女たちを率いて後ろで礼をし、少しも乱れなかった。', '家の奴僕は数十人いる。誰が怠け、誰が手癖が悪いか、あなたはすべて心得ていた。', '夫がまた妾を迎えた。あなたはその女を呼び、家の決まりを言い渡した。'],
+    gentryWifeHi: ['州郡の長官の夫人たちが屋敷を訪ねてきた。あなたは品秩どおりに席次を整えた。', '外出には車を使い、前後に婢女や僕がつき従った。道行く人々はみな道を譲った。', '一族の大事には、長老たちもあなたの意見を聞きに来た。', '宮中の女官が、太后が名門の命婦たちに会いたいと仰せだと伝えてきた。あなたは三度着替えてから出かけた。'],
+    offWife: ['夫の任地に従い、官舎に住んだ。土地にも人にもなじみがなかった。', '県の富豪が贈り物を届けてきた。受け取るのも怖く、断るのも怖かった。', '夫が夜更けまで訴えを裁くあいだ、あなたは奥で食事を温めておいた。', '正月には属吏の妻たちが挨拶に来た。あなたは一人ひとりに返礼した。'],
+    haoWife: ['塢壁には百人を超える小作人や部曲が住んでいて、その衣食はすべてあなたが目を配った。', '乱兵が来たとき、あなたは女たちを率いて塢壁の楼に立てこもり、幾晩も守り抜いた。', '小作人の嫁が小作料を減らしてほしいと頼みに来た。身ごもっているのを見て、一斗減らしてやった。', 'あなたの家の田はいくつもの里にまたがっていた。県吏も税の取り立てに来ると、まずあなたの家で一杯ひっかけていった。'],
+    concNoble: ['正室に「しきたり」を教えると呼ばれ、廊下で一刻も立たされた。', 'あなたの産んだ子は正室を「母」と呼ばねばならない。それを聞いても、あなたは何も言わなかった。', '主人があなたの部屋を訪れる日は、だんだん減っていった。', '屋敷の婢女たちはあなたにも礼をする。だが陰で何と言っているかは知っていた。'],
+    gentryHi: ['門生や故吏が節句ごとに挨拶に訪れ、門前には車馬が絶えなかった。', '新任の州郡長官は、着任するとまずあなたの家に挨拶に来た。', '一族の子弟の縁談も仕官も、まずあなたの家に相談が来た。', '家の賓客・部曲・奴僕を合わせると数百人になり、あなたは半分の名前も知らなかった。'],
+    haoMan: ['塢壁には数百の部曲を養っていた。農時には田を耕し、乱れれば武器を取らせた。', '新しく着任した県令は、まず使いをよこしてあなたの家に挨拶を入れた。', 'あなたが乗り出して村の人殺し沙汰を収めると、官府もそれを認めるしかなかった。', '流民が身を寄せてきた。あなたは頑丈そうな者を小作人に取り、残りは追い返した。']
+  };
+  function hhChoice(L, y, P) {
+    var R = L.R, k = L.spouseK, pal = !!L.flags.fcPal, alive = k.alive;
+    if (L.age < 16 || !cool(L, 'hh', 3) || R() > 0.45) return;
+    var dau = liveKin(L, function (x) { return x.rel === 'child' && x.sex === 'F' && !x.out && !x.wed && y - x.by >= 14 && y - x.by <= 18; })[0];
+    var mom = L.kin[1] && L.kin[1].alive ? L.kin[1] : null, cs = [];
+    if (alive) cs.push('rival', 'natal');
+    if (alive && mom) cs.push('visit');
+    if (dau) cs.push('dau', 'dau');
+    if (!alive) cs.push('wid', 'wid');
+    if (!cs.length) return;
+    var kd = pick(R, cs), H = { rival_q: '屋敷に若い側妾が新しく入り、たちまち寵愛を得た。何かとあなたの上に立とうとし、あなたの部屋の費えまで削られた。', rival_qp: '宮中に美人が新しく入り、たちまち寵愛を得た。何かとあなたの上に立とうとし、あなたの部屋の費えまで削られた。', rival_o: ['こらえて、張り合わない', '正室に訴える', '何とか彼の心をつかみ、寵愛を取り戻す'], rival_r: ['あなたはこらえた。暮らしは少し苦しくなったが、波風は立たなかった。', '正室があなたの肩を持ってくれ、その側妾はずいぶんおとなしくなった。', '正室は「姉妹なのだから仲よくなさい」と言っただけだった。それからというもの、相手はいっそう増長した。', 'あなたはいくらか寵愛を取り戻した。だが屋敷の者は、あなたは計算高いと噂した。', '何度か張り合ったが、かえって彼をうんざりさせ、ますます足が遠のいた。'], natal_q: '実家から人づてに手紙が来た。家が災難に遭い、暮らしが立たない、何とかしてほしいという。', natal_o: ['自分の蓄えをこっそり送る', '実家の兄弟に職を世話してほしいと彼に頼む', '心を鬼にして相手にしない'], natal_r: ['あなたは貯めておいた私財を人に託して送った。母からの返事には、家じゅうがあなたに感謝していると書かれていた。', '彼はうなずいた。あなたの兄弟は屋敷で小役人の職を得て、実家の暮らしは少し楽になった。', '彼は眉をひそめ、奥の者は外のことに口を出すなと言った。あなたは二度とその話を持ち出せなかった。', 'あなたは取り合わなかった。のちに、母がそのことで何日も泣いていたと聞いた。'], visit_q: 'もう何年も母に会っていない。', visit_o: ['里帰りを許してほしいと彼に頼む', '人に託して品物を届ける', '口にしない'], visit_r: ['あなたは車で実家に帰った。母はあなたの手を取って長いこと泣き、痩せたねと言った。', '屋敷の者が外へ出るのはよくないと言われ、帰れなかった。', '絹一匹と銭をいくらか、人に託して届けた。', 'あなたは二度と口にしなかった。母の面影は、年ごとにぼやけていった。'], dau_q: 'あなたの娘{kin}が縁談の年ごろになった。屋敷の者が何軒か相手を選んできた。', dau_qp: 'あなたの娘{kin}は公主に封ぜられ、降嫁の年ごろになった。宮中が功臣の子弟から何人か候補を選んできた。', dau_o: ['将の息子に嫁がせる', '士族の名門に嫁がせる', 'もう数年手元に置かせてほしいと彼に頼む'], dau_r: ['娘はある将の息子に嫁いだ。嫁入りの日、屋敷では何十卓もの宴が開かれた。', '娘は代々二千石を出す家に嫁いだ。', '彼はうなずき、娘はさらに二年あなたのそばにいた。', '彼は、娘は嫁ぐものだと言い、縁談はそのまま決まった。娘は士族の名門に嫁いだ。'], wid_q: '彼が世を去って、もう何年にもなる。あなたは位牌を守り、一年また一年と過ごしてきた。', wid_o: ['このまま静かに暮らす', '屋敷を出て、故郷で余生を送らせてほしいと新しい主に願う', '屋敷の幼い子らの養育を手伝う'], wid_r: ['位牌を守る日々は、ゆっくりと過ぎていった。', '新しい主は許してくれた。あなたはわずかな私財を攜え、長く離れていた故郷へ帰った。', '新しい主は、先君の者が外へ出るのはよくないと言った。あなたは残るしかなかった。', 'あなたは屋敷の幼い子らの面倒を見るのを手伝い、子どもたちはあなたを「阿母」と呼んだ。'], dau_job: '持家' };
+    var q = kd === 'rival' ? (pal ? H.rival_qp : H.rival_q) : kd === 'dau' ? (pal ? H.dau_qp : H.dau_q).replace('{kin}', dau.name) : H[kd + '_q'];
+    var ho = pal && HPAL[kd + '_o'] || H[kd + '_o'];
+    P.queue.push({ key: 'hh', kd: kd, kin: dau, q: q, o: ho, w: ho.map(function () { return 1; }) });
+  }
+  function hhOutcome(L, y, c, i) {
+    var R = L.R, H = { rival_q: '屋敷に若い側妾が新しく入り、たちまち寵愛を得た。何かとあなたの上に立とうとし、あなたの部屋の費えまで削られた。', rival_qp: '宮中に美人が新しく入り、たちまち寵愛を得た。何かとあなたの上に立とうとし、あなたの部屋の費えまで削られた。', rival_o: ['こらえて、張り合わない', '正室に訴える', '何とか彼の心をつかみ、寵愛を取り戻す'], rival_r: ['あなたはこらえた。暮らしは少し苦しくなったが、波風は立たなかった。', '正室があなたの肩を持ってくれ、その側妾はずいぶんおとなしくなった。', '正室は「姉妹なのだから仲よくなさい」と言っただけだった。それからというもの、相手はいっそう増長した。', 'あなたはいくらか寵愛を取り戻した。だが屋敷の者は、あなたは計算高いと噂した。', '何度か張り合ったが、かえって彼をうんざりさせ、ますます足が遠のいた。'], natal_q: '実家から人づてに手紙が来た。家が災難に遭い、暮らしが立たない、何とかしてほしいという。', natal_o: ['自分の蓄えをこっそり送る', '実家の兄弟に職を世話してほしいと彼に頼む', '心を鬼にして相手にしない'], natal_r: ['あなたは貯めておいた私財を人に託して送った。母からの返事には、家じゅうがあなたに感謝していると書かれていた。', '彼はうなずいた。あなたの兄弟は屋敷で小役人の職を得て、実家の暮らしは少し楽になった。', '彼は眉をひそめ、奥の者は外のことに口を出すなと言った。あなたは二度とその話を持ち出せなかった。', 'あなたは取り合わなかった。のちに、母がそのことで何日も泣いていたと聞いた。'], visit_q: 'もう何年も母に会っていない。', visit_o: ['里帰りを許してほしいと彼に頼む', '人に託して品物を届ける', '口にしない'], visit_r: ['あなたは車で実家に帰った。母はあなたの手を取って長いこと泣き、痩せたねと言った。', '屋敷の者が外へ出るのはよくないと言われ、帰れなかった。', '絹一匹と銭をいくらか、人に託して届けた。', 'あなたは二度と口にしなかった。母の面影は、年ごとにぼやけていった。'], dau_q: 'あなたの娘{kin}が縁談の年ごろになった。屋敷の者が何軒か相手を選んできた。', dau_qp: 'あなたの娘{kin}は公主に封ぜられ、降嫁の年ごろになった。宮中が功臣の子弟から何人か候補を選んできた。', dau_o: ['将の息子に嫁がせる', '士族の名門に嫁がせる', 'もう数年手元に置かせてほしいと彼に頼む'], dau_r: ['娘はある将の息子に嫁いだ。嫁入りの日、屋敷では何十卓もの宴が開かれた。', '娘は代々二千石を出す家に嫁いだ。', '彼はうなずき、娘はさらに二年あなたのそばにいた。', '彼は、娘は嫁ぐものだと言い、縁談はそのまま決まった。娘は士族の名門に嫁いだ。'], wid_q: '彼が世を去って、もう何年にもなる。あなたは位牌を守り、一年また一年と過ごしてきた。', wid_o: ['このまま静かに暮らす', '屋敷を出て、故郷で余生を送らせてほしいと新しい主に願う', '屋敷の幼い子らの養育を手伝う'], wid_r: ['位牌を守る日々は、ゆっくりと過ぎていった。', '新しい主は許してくれた。あなたはわずかな私財を攜え、長く離れていた故郷へ帰った。', '新しい主は、先君の者が外へ出るのはよくないと言った。あなたは残るしかなかった。', 'あなたは屋敷の幼い子らの面倒を見るのを手伝い、子どもたちはあなたを「阿母」と呼んだ。'], dau_job: '持家' }, r = L.flags.fcPal && HPAL[c.kd + '_r'] || H[c.kd + '_r'], t;
+    if (c.kd === 'rival') {
+      if (i === 0) { t = r[0]; L.standing -= 1; L.body -= 1; }
+      else if (i === 1) { if (R() < 0.6) { t = r[1]; L.standing += 2; } else { t = r[2]; L.standing -= 2; } }
+      else if (R() < 0.4) { t = r[3]; L.flags.fcFav = true; L.standing -= 1; } else { t = r[4]; L.flags.fcFav = false; }
+    } else if (c.kd === 'natal') {
+      var nk = L.kin.filter(function (x) { return (x.rel === 'mother' || x.rel === 'father' || x.rel === 'sib') && x.alive; });
+      if (i === 0) { t = r[0]; L.eco.priv = Math.max(0, L.eco.priv - 3000); nk.forEach(function (x) { affAdd(x, 12); }); }
+      else if (i === 1) { if (R() < 0.5) { t = r[1]; var br = nk.filter(function (x) { return x.rel === 'sib' && x.sex === 'M'; })[0]; if (br) br.job = '府吏'; } else { t = r[2]; L.standing -= 2; } }
+      else { t = r[3]; nk.forEach(function (x) { affAdd(x, -20); }); }
+    } else if (c.kd === 'visit') {
+      if (i === 0) { if (R() < 0.6) { t = r[0]; affAdd(L.kin[1], 15); } else t = r[1]; }
+      else if (i === 1) { t = r[2]; L.eco.priv = Math.max(0, L.eco.priv - 800); affAdd(L.kin[1], 8); }
+      else t = r[3];
+    } else if (c.kd === 'dau') {
+      var d = c.kin; if (!d || !d.alive) return;
+      if (i === 2 && R() < 0.5) t = r[2];
+      else { t = i === 0 ? r[0] : i === 1 ? r[1] : r[3]; d.out = true; d.wed = true; d.job = '持家'; L.standing += 2; }
+    } else if (c.kd === 'wid') {
+      if (i === 0) t = r[0];
+      else if (i === 1) { if (R() < 0.4) { t = r[1]; L.flags.leftHH = true; L.flags.noRemarry = true; } else t = r[2]; }
+      else { t = r[3]; L.standing += 2; }
+    }
+    if (t) add(L, 1.3, 'life', t);
+  }
+  function hhDaily(L, y) {
+    var a = L.age, R = L.R, tk = lifeTier(L, y).k, rich = tk === 'high' || tk === 'top', sp = L.spouseK, P = HPOOL;
+    if (a < 16) return null;
+    if (L.sex === 'F' && L.married && sp && sp.alive && !sp.apart) {
+      if (L.flags.isConc && !L.flags.famousConc) return R() < 0.6 ? fresh(L, P.concNoble) : null;
+      if (/県令|郡守|県長|刺史|九卿|議郎/.test(sp.job || '')) return R() < 0.6 ? fresh(L, P.offWife) : null;
+      if (L.cls === 'gentry') return R() < 0.6 ? fresh(L, L.gate >= 3 ? P.gentryWifeHi.concat(P.gentryWife) : P.gentryWife) : null;
+      if (rich && L.cls !== 'merchant') return R() < 0.5 ? fresh(L, P.haoWife) : null;
+    }
+    if (L.sex === 'M' && a >= 25) {
+      if (L.cls === 'gentry' && L.gate >= 3 && isHead(L)) return R() < 0.45 ? fresh(L, P.gentryHi) : null;
+      if (rich && L.cls !== 'gentry' && L.cls !== 'merchant' && isHead(L)) return R() < 0.45 ? fresh(L, P.haoMan) : null;
+    }
+    return null;
+  }
   function famousConcChoice(L, y, P) {
     if (L.sex !== 'F' || L.married || L.widowed || L.age < 15 || L.age > 22 || L.flags.fcAsk || L.eth || L.flags.concubineOf || L.flags.isConc) return;
     var fk = ctrl(L.zone, y), id = lordFigAt(fk, y), C = FAMOUS_CONC[id];
@@ -1336,7 +1445,8 @@ var SGE = (function (D) {
   }
   function prepare(L, y) {
     var R = L.R, P = { queue: [], dec: { flee: {}, sights: [] } }, a = L.age, z = L.zone;
-    var free = !L.soldier && !L.band && !L.convict;
+    var free = !L.soldier && !L.band && !L.convict && !inHH(L);
+    if (inHH(L)) hhChoice(L, y, P);
     if (L.crime && L.crime.ask) { L.crime.ask = false; P.queue.push({ key: 'crimeAfter', q: 'あなたははずみで人を殺してしまった。死者の家族はすでに県に訴え出ており、亭長が求盗を率いてあちこちで下手人を捜している。', o: ['夜のうちに他郷へ逃げる', '自首する', '一族に金を集めてもらい、死者の家と示談にする'], w: [3, 1, L.eco.cash >= 10000 ? 2 : 0.1] }); }
     var gap = a - L.lastChoice >= 3;
     (EV_BY_Y[y] || []).forEach(function (ev) {
@@ -1507,7 +1617,9 @@ var SGE = (function (D) {
     var from = pick(R, ['隣村', '同じ里', '隣県', '本県の' + pick(R, D.VILLAGES) + '里']);
     var descs = sex === 'M' ? ['痩せた田を数畝持つ家', '実直な百姓', '父親は大工', '暮らし向きはあなたの家より少し良い', 'あなたより数歳年上で、人柄はまずまず真面目'] : ['手先が器用で、機織りができる', '兄弟が多い', '気立てが穏やか', '暮らし向きはあなたの家と同じくらい'];
     if (L.cls === 'gentry') { var oj = pick(R, D.JUN)[0].replace(/(郡|国|尹)$/, ''); from = oj + sur + '氏'; descs = L.gate >= 3 ? ['家格はあなたの家と同等', '先祖に太守を務めた者がいる', '家に万巻の書を蔵する'] : ['これも郡中の名族', '数百頃の田を持つ', '父や兄はみな州郡に仕えている']; }
-    return { sex: sex, age: age, sur: sur, given: given, name: sur + given, from: from, desc: pick(R, descs) };
+    var hc = L.sex === 'F' ? spouseCls(L, y) : null;
+    if (hc && hc !== L.cls && HDESC[hc]) { descs = HDESC[hc]; if (hc === 'gentry') from = pick(R, D.JUN)[0].replace(/(郡|国|尹)$/, '') + sur + '氏'; }
+    return { sex: sex, age: age, sur: sur, given: given, name: sur + given, from: from, desc: pick(R, descs), cls: hc };
   }
 
   function autoPick(L, c) {
@@ -1560,6 +1672,7 @@ var SGE = (function (D) {
       case 'yfr': d.yfr = { c: c, i: i }; break;
       case 'bpov': L.bpovDec = { k: c.pk, i: i }; break;
       case 'crimeAfter': d.crimeAfter = i; break;
+      case 'hh': d.hh = { c: c, i: i }; break;
       case 'hobby': d.hobby = { c: c, i: i }; break;
       case 'path': d.path = { c: c, i: i }; break;
       case 'civwar': d.civwar = { c: c, i: i }; break;
@@ -1625,12 +1738,14 @@ var SGE = (function (D) {
     if (dec.yfr) youthOutcome(L, y, dec.yfr.c, dec.yfr.i);
     if (dec.civwar) civWarOutcome(L, y, dec.civwar.c, dec.civwar.i);
     if (dec.crimeAfter != null) crimeAfter(L, y, dec.crimeAfter);
+    if (dec.hh) hhOutcome(L, y, dec.hh.c, dec.hh.i);
     if (dec.hobby) hobbyPick(L, y, dec.hobby.c, dec.hobby.i);
     if (dec.path) pathOutcome(L, y, dec.path.c.ks[dec.path.i]);
     planYear(L, y);
     if (dec.wfig) wedFigOutcome(L, y, dec.wfig.c, dec.wfig.i);
     if (!L.alive) return finishYear(L, rec);
     concLifeYear(L, y);
+    husbandYear(L, y);
     condYear(L, y);
     hobbyYear(L, y);
     crimeYear(L, y);
@@ -1776,7 +1891,7 @@ var SGE = (function (D) {
       var dir = dirWord(L.zone, ev.o);
       add(L, ev.s + 0.05, 'far', (ev.farE && eliteView(L) && L.age >= 10 ? ev.farE : ev.far).replace('{dir}', dir));
       L.rec.major = true;
-      if (L.age >= 5) add(L, ev.s + 0.06, 'far2', L.office ? pick(R, ['知らせはすぐに官署に届き、あなたもその軍報を読んだ。', '官署ではこの件で何日も議論が続いた。']) : L.cls === 'gentry' && L.age >= 12 ? pick(R, ['一族にはすぐに知らせが届いた。', '家の食客が知らせを持ち帰り、年長者たちは長いこと話し合った。']) : pick(R, ['あなたは関わらなかった。', 'あなたはこのことを何も知らなかった。', 'それらは、あなたからは遠い出来事だった。']));
+      if (L.age >= 5) add(L, ev.s + 0.06, 'far2', inHH(L) ? pick(R, L.flags.fcPal ? FAR_HH.gong : FAR_HH.fu) : L.office ? pick(R, ['知らせはすぐに官署に届き、あなたもその軍報を読んだ。', '官署ではこの件で何日も議論が続いた。']) : L.cls === 'gentry' && L.age >= 12 ? pick(R, ['一族にはすぐに知らせが届いた。', '家の食客が知らせを持ち帰り、年長者たちは長いこと話し合った。']) : pick(R, ['あなたは関わらなかった。', 'あなたはこのことを何も知らなかった。', 'それらは、あなたからは遠い出来事だった。']));
     }
     var r = (L.learn >= 40 || L.cls === 'gentry') && ev.r2 ? ev.r2 : ev.r1;
     if (!r && ev.r2 && (L.learn >= 40 || L.cls === 'gentry')) r = ev.r2;
@@ -1819,7 +1934,7 @@ var SGE = (function (D) {
       if (kind === 'fam') L.body -= 4;
       if (kind === 'plag') L.body -= 2;
     }
-    if (fx.war && L.sex === 'F' && a >= 14 && a <= 35 && !fled && !L.yFort && L.cls !== 'gentry' && R() < fx.war * 3) {
+    if (fx.war && L.sex === 'F' && a >= 14 && a <= 35 && !fled && !L.yFort && L.cls !== 'gentry' && !inHH(L) && R() < fx.war * 3) {
       var dz = pick(R, ['bing', 'liang', 'you', 'guanzhong', 'jiangdong', 'jingnan'].filter(function (q) { return q !== L.zone; }));
       liveKin(L).forEach(function (k) { k.apart = true; });
       if (L.spouseK) { L.married = false; L.spouseK = null; }
@@ -1830,7 +1945,7 @@ var SGE = (function (D) {
     var rk = fx.war ? 'war' : fx.fam ? 'fam' : fx.plag ? 'plag' : null;
     if (rk && a >= 5 && D.REACT && R() < 0.85) {
       var bk = L.cls === 'slave' ? 'slave' : L.cls === 'gentry' ? 'gentry' : L.office ? 'official' : L.cls === 'merchant' ? 'merchant' : L.eth ? 'tribal' : L.cls === 'tenant' && D.REACT[rk].tenant && R() < 0.5 ? 'tenant' : 'poor';
-      var pool = D.REACT[rk][bk] || D.REACT[rk].poor;
+      var pool = inHH(L) ? REACT_HH[rk][L.flags.fcPal ? 'gong' : 'fu'] : D.REACT[rk][bk] || D.REACT[rk].poor;
       add(L, s + 0.06, 'life', fresh(L, pool));
     }
     if (fx.m15) {
@@ -2152,6 +2267,8 @@ var SGE = (function (D) {
     LOCAL.forEach(function (x) { if (x[0] === L.zone && y >= x[1] && y <= x[2] && a >= 6) pool.push(x[3]); });
     var RG = D.REGION && D.REGION[L.zone];
     if (RG && a >= 6) pool = pool.concat(RG.custom);
+    if (inHH(L) && a >= 14) return fresh(L, L.spouseK.alive ? (L.flags.fcPal ? CONC_PAL : CONC_FU) : L.flags.fcPal === '皇宮' ? CONC_WIDP : L.flags.famousConc === 'caocao' && L.flags.noRemarry ? CONC_TQ.concat(CONC_WID) : CONC_WID);
+    var hd = !L.eth && hhDaily(L, y); if (hd) return hd;
     if (L.eth && D.ETH[L.eth]) pool = pool.concat(a < 14 ? D.ETH[L.eth].child : D.ETH[L.eth].adult);
     else if (a < 3) return a === 0 ? null : pick(R, ['歩けるようになった。', '「阿母」と呼べるようになった。', '乳離れして、粟の粥を食べ始めた。']);
     else if (a < 14) {
@@ -2192,12 +2309,14 @@ var SGE = (function (D) {
   var LOCAL = D.LOCAL;
 
   function doMarry(L, sp, y, s, prefix) {
+    if (L.sex === 'F' && sp.cls && sp.cls !== L.cls) { L.cls = sp.cls; if (sp.cls === 'gentry') L.gate = Math.max(L.gate || 0, 1); L.clsNote = CLS_WIFE[sp.cls]; }
     var k = newKin(L, 'spouse', sp.sex, y - sp.age, sp.name, { sur: sp.sur });
     L.spouseK = k; L.married = true; L.widowed = false; L.marriedAt = y;
     if (L.shu && L.cls === 'gentry') prefix = (prefix || '') + '縁談の席で、相手方は開口一番「嫡出か庶出か」と尋ねた。結局決まったのは、家格の少し低い家だった。';
     add(L, s, 'good', (prefix || '') + (L.sex === 'M' ? 'あなたは' + sp.from + 'の' + sp.name + 'を妻に迎えた。' : 'あなたは' + sp.from + 'の' + sp.name + 'に嫁いだ。'));
     L.standing += 4;
     L.rec.tags.push('marry');
+    if (L.clsNote) { add(L, s + 0.02, 'life', L.clsNote); L.clsNote = null; }
     if (L.sex === 'F') { // 女子出嫁，嬢家人不再同住
       liveKin(L, function (x) { return ['father', 'mother', 'dimu', 'sib', 'gp'].indexOf(x.rel) >= 0; }).forEach(function (x) { x.out = true; });
       var dowry = Math.round(clamp(L.eco.cash * (L.shu ? 0.07 : 0.15), 200, 30000) / 10) * 10, priv = L.eco.priv + dowry;
@@ -2421,6 +2540,7 @@ var SGE = (function (D) {
     var k = L.spouseK, R = L.R, id = L.flags.famousConc;
     if (!id || L.flags.fcWidow || !k || k.famous !== id || k.alive || k.dy !== y) return;
     L.flags.fcWidow = true;
+    if (L.flags.fcPal === '皇宮') { add(L, 1.62, 'life', '先帝が崩御した。宮中の決まりで、位号のない側妾は宮人とともに別宮へ移り、以後は先帝の位牌を守って暮らし、再嫁は許されなかった。'); L.flags.noRemarry = true; return; }
     if (id === 'caocao') { add(L, 1.62, 'life', '彼は遺令を残した。「吾婢妾与伎人皆勤苦，使著銅雀台，善待之（わが婢妾と伎人はみなよく勤めた。銅雀台に住まわせ、手厚く遇せよ）」。あなたは屋敷の姫妾たちと共に銅雀台に移り住んだ。毎月一日と十五日には、朝から昼まで、彼の霊帳に向かって楽を奏でねばならなかった。'); L.flags.noRemarry = true; seatMove(L, ['魏郡', '鄴県'], 1.63, 'あなたは{dest}の銅雀台へ送られた。', y); return; }
     if (id === 'yuanshao') {
       if (R() < (L.flags.fcFav ? 0.75 : 0.1)) { die(L, 'executed', 1.62, { full: '彼の亡骸がまだ冷えぬうちに、正室の劉夫人は彼が生前寵愛した五人の妾を殺し、髪を剃り、顔を黒く塗った。あの世で再び彼に会わせないためだという。あなたもその一人だった。' }); return; }
@@ -2629,7 +2749,7 @@ var SGE = (function (D) {
 
   function personal(L, y) {
     var R = L.R, a = L.age;
-    if (a < 6) return;
+    if (a < 6 || inHH(L)) return;
     var farm = ['peasant', 'tenant', 'tuntian', 'soldier', 'clerk'].indexOf(L.cls) >= 0 && !L.soldier;
     var poor = L.wealth < 25 && L.cls !== 'gentry';
     var tk = lifeTier(L, y).k, rich = tk === 'high' || tk === 'top';
@@ -3113,7 +3233,7 @@ var SGE = (function (D) {
     var R = L.R, E = L.eco, rec = L.rec, fo = rec.focus ? rec.focus.eff : null, a = L.age, c = L.cls;
     if (c === 'slave') { if (a >= 15) E.priv += Math.round(10 + R() * 50); rec.ledger = null; L.grainMonths = null; return; }
     // 诸侯府中的姬妾：吃穿用度都由府里供给，不再有自家的账
-    if (L.flags.famousConc && L.spouseK && L.spouseK.famous && L.spouseK.alive && !L.spouseK.apart) { E.debt = 0; rec.ledger = null; L.grainMonths = null; L.crisis = false; return; }
+    if (inHH(L)) { E.debt = 0; rec.ledger = null; L.grainMonths = null; L.crisis = false; return; }
     if (L.band || (L.soldier && liveKin(L, function (k) { return !k.out; }).length === 0)) {
       var pay = 2400, keep = Math.round(pay * (L.tr.cau > 55 ? 0.6 : 0.35));
       E.priv += keep;
@@ -3153,6 +3273,8 @@ var SGE = (function (D) {
     }
     if (c === 'tribal') inc.push(['家畜', Math.round(E.stock * 0.12 + m.wM * 800)]);
     if (c === 'soldier') inc.push(['士家への支給', m.n * 400]);
+    var hs = L.sex === 'F' && L.married && L.spouseK && L.spouseK.alive && !L.spouseK.apart && !L.spouseK.famous ? L.spouseK : null;
+    if (hs && H_SAL[hs.job]) inc.push(['夫の俸禄（' + hs.job + '）', H_SAL[hs.job]]);
     if (L.office && SAL[L.office]) inc.push(['俸禄（' + L.office + '）', SAL[L.office]]);
     if (JOBINC[L.job]) inc.push([L.job + 'としての収入', JOBINC[L.job]]);
     var f = L.kin[0];
@@ -4191,7 +4313,7 @@ var SGE = (function (D) {
     // 結交
     var alive = L.friends.filter(function (f) { return f.alive && !f.apart; }).length;
     var p = 0.05 + (F === 'social' ? 0.22 : F === 'travel' ? 0.15 : F === 'fame' || F === 'play' ? 0.1 : 0) + (L.found.charm ? 0.04 : 0) + (L.tr.soc - 50) / 400;
-    if (a >= 6 && alive < (F === 'social' ? 9 : 6) && R() < p) {
+    if (a >= 6 && !inHH(L) && alive < (F === 'social' ? 9 : 6) && R() < p) {
       var ctx = frCtx(L), sex = L.sex === 'F' || ctx === 'girl' ? 'F' : 'M';
       var sur = L.eth && !D.ETH[L.eth].sur ? '' : surname(R, L.cls === 'gentry' && ctx !== 'village' ? 'gentry' : L.cls);
       var fr = { name: sur + givenName(R, sex), sex: sex, by: y - a + Math.round((R() - 0.5) * 6), since: y, ctx: ctx, aff: Math.round(55 + R() * 25), alive: true, apart: false, job: '', fate: '' };
@@ -4214,6 +4336,7 @@ var SGE = (function (D) {
       }
       if (f.fig || evDone || R() > 0.1) return;
       evDone = true;
+      if (inHH(L)) { var hw = L.flags.fcPal ? '宮中' : '屋敷'; affAdd(f, 3); add(L, 2.5, 'life', fresh(L, [f.name + 'から' + hw + 'へ手紙が届いた。元気にしているかと書いてあった。', hw + 'の買い出しに出る下女に頼んで、' + f.name + 'へ品物を届けてもらった。', f.name + 'は、あなたが' + hw + 'で大事にされていると聞き、人づてに祝いの言葉を寄こした。'])); return; }
       var r = R(), ta = f.sex === 'F' ? '彼女' : '彼';
       if (r < 0.25 && poorNow(L) && f.aff >= 60) { L.eco.cash += 200; affAdd(f, 5); add(L, 2.5, 'good', f.name + 'は、あなたの家の食糧が尽きたと聞いて、粟を二斗届けてくれた。'); }
       else if (r < 0.45 && fa >= 16 && fa <= 40 && f.sex === 'M' && f.job !== '軍卒') { var nj = pick(R, ['軍卒', '県吏', '商販', '門客']); f.job = nj; add(L, 2.5, 'life', 'あなたの友人' + f.name + (nj === '軍卒' ? 'は軍に身を投じた。発つ前に、' + ta + 'はあなたと一度酒を酌み交わしに来た。' : nj === '県吏' ? 'は県の役所で小吏になった。' : nj === '商販' ? 'は商いを始め、一年じゅう各地を飛び回るようになった。' : 'はある豪族の門下に身を寄せた。')); }
