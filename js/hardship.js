@@ -653,4 +653,101 @@
         [{ p: 1, t: '', fx: { flag: 'victimAsk', vic: 3 } }]],
       aw: function (L) { return L.sex === 'M' ? [RT(L, 'cau'), RT(L, 'per') - 10, 25, RT(L, 'act') - 10] : [RT(L, 'cau') + 20, RT(L, 'per') - 10, RT(L, 'soc') - 10]; } }
   ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 男子的不伦：盗嫂、私婢、倡家、男宠 ---------- */
+  // 《二年律令·杂律》："复兄弟、季父伯父之妻、御婢，皆黥为城旦舂。"
+  [
+    { id: 'aff_sao', w: 0.5, ok: function (L, H) { var b = L.kin.filter(function (k) { return k.rel === 'sib' && k.sex === 'M' && k.by < L.by && !k.alive && H.y - k.dy <= 6; })[0]; return L.sex === 'M' && !L.eth && L.cls !== 'slave' && H.a >= 18 && H.a <= 45 && !L.affair && !L.flags.saoAsk && b && { kin: b }; },
+      q: '{kin}死后，嫂子守了寡，仍和你们住在一个院子里。她年纪不大，夜里常听见她在屋里哭。有一天，她给你送来一件缝好的衣裳，手指碰到了你的手。', o: ['从此避嫌，不进她的屋', '暗中往来', '劝她改嫁，替她张罗'],
+      r: [[{ p: 1, t: '你从此避嫌，有事都让母亲去说。她看你的眼神，慢慢冷了下来。', fx: { flag: 'saoAsk' } }],
+        [{ p: 1, t: '你们暗中有了往来。律令上，这叫"复兄弟之妻"，要黥为城旦舂；乡论里，这叫"盗嫂"。你知道，却停不下来。', fx: { flag: 'saoAsk', affair: 'sao' } }],
+        [{ p: 0.7, t: '你托媒人替她寻了一户人家。出嫁那天，她回头看了你一眼。', fx: { flag: 'saoAsk', standing: 2 } }, { p: 0.3, t: '你劝她改嫁。她哭着说你嫌弃她，第二天就回了娘家，再没回来。', fx: { flag: 'saoAsk' } }]],
+      aw: function (L) { return [RT(L, 'cau') + 20, RT(L, 'act') - 25, RT(L, 'soc')]; } },
+    { id: 'aff_bi', w: 0.6, ok: function (L, H) { return L.sex === 'M' && wed(L) && (H.tier === 'high' || H.tier === 'top' || L.cls === 'gentry') && H.a >= 22 && H.a <= 55 && !L.affair && !L.flags.biAsk && {}; },
+      q: '家里新买了一个婢女，年纪轻，手脚勤快。妻子出门回娘家的那几天，她来给你送茶，迟迟没有退下。', o: ['让她退下', '收她做妾，名正言顺', '暗中往来'],
+      r: [[{ p: 1, t: '你让她退下了。她红着脸走了，此后做事更小心了。', fx: { flag: 'biAsk' } }],
+        [{ p: 0.6, t: '你收她做了妾。主人收御婢，律令上并不禁止；可妻子回来，一连几个月不和你说话。', fx: { flag: 'biAsk', husbandConc: true, kinAff: 0 } }, { p: 0.4, t: '你想收她做妾。妻子回来知道了，当着全家的面把那婢女打了一顿，转手就卖了。', fx: { flag: 'biAsk' } }],
+        [{ p: 1, t: '你们暗中往来。主人和婢女的事，律令管不着，可妻子迟早会知道。', fx: { flag: 'biAsk', affair: 'bi' } }]],
+      aw: function (L) { return [RT(L, 'cau'), 30, RT(L, 'act') - 20]; } },
+    { id: 'aff_chang', w: 0.6, ok: function (L, H) { return L.sex === 'M' && (L.cls === 'gentry' || L.cls === 'merchant' || L.office || H.tier === 'top') && H.a >= 18 && H.a <= 55 && (L.urban || L.office || L.cls === 'gentry') && !L.flags.changAsk && {}; },
+      q: '几个同僚（朋友）拉你去倡家听曲饮酒。倡女弹着筝唱《陌上桑》，满座都在起哄。', o: ['跟着去，喝个痛快', '去了，只饮酒听曲', '推说有事，不去'],
+      r: [[{ p: 0.6, t: '你喝得大醉，在倡家住了一夜，第二天才回家。花掉的钱，够寻常人家吃半年。', fx: { flag: 'changAsk', cash: -3000, standing: -2 } }, { p: 0.4, t: '你从此成了倡家的常客。钱花得像流水，妻子哭过几回，你也只当没听见。', fx: { flag: 'changAsk', cash: -5000, debt: 2000, standing: -4 } }],
+        [{ p: 1, t: '你只饮酒听曲，夜深就回了家。同僚笑你古板，可也没人说你什么。', fx: { flag: 'changAsk', cash: -800 } }],
+        [{ p: 1, t: '你推说有事，没有去。', fx: { flag: 'changAsk', tr: { cau: 2 } } }]],
+      need: [function (L) { return L.eco.cash >= 3000; }, function (L) { return L.eco.cash >= 800; }, null], why: ['手头没有这么多钱', '手头没有这么多钱', null],
+      aw: function (L) { return [RT(L, 'act') - 20, RT(L, 'soc'), RT(L, 'cau') + 10]; } },
+    { id: 'aff_nan', w: 0.5, elite: true, ok: function (L, H) { return L.sex === 'M' && L.cls === 'gentry' && H.y >= 275 && H.y <= 310 && H.a >= 18 && H.a <= 50 && !L.affair && !L.flags.nanAsk && {}; },
+      q: '自咸宁、太康以来，洛阳的士大夫之间男宠之风大兴，"甚于女色"，天下竞相仿效。同游的一位年轻士人姿容秀美，常与你同车出游，诗酒唱和。', o: ['与他相与往来', '只作诗友', '敬而远之'],
+      r: [[{ p: 1, t: '你们形影不离。当时风气如此，朋友们并不以为怪；只有妻子，再也不肯和你多说一句话。', fx: { flag: 'nanAsk', affair: 'nan' } }],
+        [{ p: 1, t: '你们只作诗友。你写的几首赠答诗，在洛阳传抄了一阵子。', fx: { flag: 'nanAsk', fame: 2 } }],
+        [{ p: 1, t: '你敬而远之。有人说你迂腐，你也不在意。', fx: { flag: 'nanAsk' } }]],
+      aw: function (L) { return [RT(L, 'act') - 20, RT(L, 'soc'), RT(L, 'cau')]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 犯罪：饥寒起盗心，乱世多亡命 ---------- */
+  var pov = function (L, H) { return !L.eth && L.cls !== 'gentry' && L.cls !== 'slave' && !L.office && !L.crime && !L.convict && !L.flags.palaceIn; };
+  [
+    { id: 'cr_steal', w: 1.4, ok: function (L, H) { return pov(L, H) && H.a >= 14 && H.a <= 50 && (H.tier === 'low' || H.poor) && (H.fl.fam > 0 || L.eco.cash < 300) && {}; },
+      q: '家里断粮好几天了。村头大户人家的粮仓，看守的老汉夜里常打瞌睡。', o: ['夜里去偷几斗', '去挖野菜、剥树皮', '去求大户借粮'],
+      r: [[{ p: 0.6, t: '你趁黑翻进了粮仓，背出来两斗粟。一家人总算吃了几顿饱饭，你却好几夜睡不着。', fx: { cash: 400, tr: { cau: -2 } } }, { p: 0.4, t: '你翻进粮仓，被看守的老汉一把揪住了。', fx: { crime: 'steal' } }],
+        [{ p: 1, t: '你天天去挖野菜、剥榆树皮，一家人勉强撑着。', fx: { body: -3 } }],
+        [{ p: 0.5, t: '大户借给了你三斗粟，约好秋后还六斗。', fx: { debt: 600 } }, { p: 0.5, t: '大户的管事把你赶了出来，说今年谁家都不借。', fx: { standing: -1 } }]],
+      aw: function (L) { return [RT(L, 'act') - 10, RT(L, 'per'), RT(L, 'soc')]; } },
+    { id: 'cr_brawl', w: 0.8, ok: function (L, H) { return pov(L, H) && L.sex === 'M' && H.a >= 16 && H.a <= 50 && {}; },
+      q: '集市上，一个喝醉了的汉子当众辱骂你的父母，还推了你一把。周围的人都在看。', o: ['忍了，转身就走', '还手打他一顿', '抄起扁担砸过去'],
+      r: [[{ p: 1, t: '你忍了，转身走了。背后传来一阵哄笑。', fx: { standing: -2, tr: { cau: 3 } } }],
+        [{ p: 0.8, t: '你们扭打在一起，被人拉开了。他鼻青脸肿，你也挂了彩。', fx: { body: -2, standing: 1 } }, { p: 0.2, t: '你们扭打在一起。他倒下去，头磕在了石阶上，再也没有起来。', fx: { crime: 'kill' } }],
+        [{ p: 0.6, t: '扁担砸在他肩上，他嚎叫着跑了。第二天，他家里人上门要了一千钱的药费。', fx: { cash: -1000 } }, { p: 0.4, t: '扁担砸在他头上，他倒在地上，抽了几下就不动了。', fx: { crime: 'kill' } }]],
+      aw: function (L) { return [RT(L, 'cau') + 10, RT(L, 'per'), RT(L, 'act') - 20]; } },
+    { id: 'cr_revenge', w: 1, ok: function (L, H) { var f = L.kin[0]; return !L.eth && L.cls !== 'slave' && H.a >= 16 && H.a <= 45 && f && !f.alive && ['bandit', 'war', 'feud'].indexOf(f.cause) >= 0 && H.y - f.dy <= 15 && !L.flags.revAsk && !L.crime && !L.convict && {}; },
+      q: '杀害父亲的人，你终于打听到了下落：他就住在邻县，仗着有豪强撑腰，至今逍遥法外。汉末复仇之风盛行，许多人手刃仇人后自首，反被乡里称为孝义。', o: ['手刃仇人', '告到官府', '算了，父亲也不愿你送命'],
+      r: [[{ p: 0.75, t: '你在集市上等到了他，当街刺死了他。你没有逃，提着刀去了县廷。', fx: { flag: 'revAsk', crime: 'revenge' } }, { p: 0.25, t: '你去报仇，却被他的宾客围住，打得遍体鳞伤，扔在了路边。', fx: { flag: 'revAsk', body: -12 } }],
+        [{ p: 0.3, t: '县里把他抓了起来，判了罪。你在父亲坟前烧了一叠纸钱。', fx: { flag: 'revAsk', standing: 3 } }, { p: 0.7, t: '你告到了县里。豪强打点过了，县吏把状子压了下来。', fx: { flag: 'revAsk', tr: { per: 4 } } }],
+        [{ p: 1, t: '你没有去。有人背后说你不孝，你只当没听见。', fx: { flag: 'revAsk', standing: -3 } }]],
+      aw: function (L) { return [RT(L, 'per') - 10, RT(L, 'cau'), RT(L, 'cau') - 10]; } },
+    { id: 'cr_tomb', w: 0.8, ok: function (L, H) { return pov(L, H) && L.sex === 'M' && H.a >= 18 && H.a <= 50 && H.chaos > 1.05 && H.tier === 'low' && !L.flags.tombAsk && {}; },
+      q: '乱世里，盗墓的人多了起来。连袁绍的檄文都骂曹操"特置发丘中郎将、摸金校尉"。有人约你夜里去挖城外的一座大冢，说里面有金玉。', o: ['跟着去', '不去'],
+      r: [[{ p: 0.45, t: '你们挖了三夜，挖出了几件玉器和一些铜钱。你分到的那一份，在市上换了三千钱。', fx: { flag: 'tombAsk', cash: 3000 } }, { p: 0.3, t: '墓早就被人盗过了，你们只挖到一堆朽木和白骨。', fx: { flag: 'tombAsk', body: -1 } }, { p: 0.25, t: '你们正在挖，亭长带着求盗打着火把围了上来。', fx: { flag: 'tombAsk', crime: 'tomb' } }],
+        [{ p: 1, t: '你没有去。后来听说那几个人里，有一个被抓了。', fx: { flag: 'tombAsk' } }]],
+      aw: function (L) { return [RT(L, 'act') - 20, RT(L, 'cau') + 10]; } },
+    { id: 'cr_coin', w: 0.8, ok: function (L, H) { return pov(L, H) && L.sex === 'M' && (L.cls === 'artisan' || L.cls === 'merchant' || L.found.craft) && H.a >= 18 && H.a <= 55 && ((H.y >= 190 && H.y <= 208) || (H.y >= 236 && H.y <= 246)) && !L.flags.coinAsk && {}; },
+      q: '市上的钱越来越薄，越来越轻。有人私下熔了铜器盗铸钱，一本万利。他找上了你。', o: ['入伙', '不碰'],
+      r: [[{ p: 0.55, t: '你们在山里的窑中铸了几个月的钱，换了不少粮食和布帛。', fx: { flag: 'coinAsk', cash: 6000 } }, { p: 0.45, t: '你们的窑被人告发了。按律，盗铸钱者弃市。', fx: { flag: 'coinAsk', crime: 'coin' } }],
+        [{ p: 1, t: '你没有碰。汉律写得明明白白：盗铸钱及佐者，弃市。', fx: { flag: 'coinAsk' } }]],
+      aw: function (L) { return [RT(L, 'act') - 20, RT(L, 'cau') + 10]; } },
+    { id: 'cr_gamble', w: 1, ok: function (L, H) { return !L.eth && L.cls !== 'slave' && L.sex === 'M' && H.a >= 16 && H.a <= 55 && L.eco.cash >= 500 && !L.flags.gambleAsk && {}; },
+      q: '县城的一间屋里，几个人围着樗蒲、六博的局子大呼小叫。有人拉你坐下，说手气好的话，一晚上能赢一年的口粮。', o: ['下场赌几把', '在一旁看看就走'],
+      r: [[{ p: 0.3, t: '你手气正旺，赢了两千钱。回家的路上，你哼了一路的小曲。', fx: { flag: 'gambleAsk', cash: 2000 } }, { p: 0.45, t: '你输光了身上的钱，又借了一千钱接着赌，也输了。', fx: { flag: 'gambleAsk', cash: -500, debt: 1000 } }, { p: 0.25, t: '你越赌越大，输掉了家里一年的口粮钱。妻子哭了一夜。', fx: { flag: 'gambleAsk', cash: -3000, debt: 2000, standing: -3 } }],
+        [{ p: 1, t: '你看了一会儿就走了。', fx: { flag: 'gambleAsk' } }]],
+      aw: function (L) { return [RT(L, 'act') - 10, RT(L, 'cau') + 10]; } },
+    { id: 'cr_false', w: 0.45, ok: function (L, H) { return !L.eth && L.cls !== 'slave' && L.cls !== 'gentry' && H.a >= 20 && H.a <= 60 && H.head && !L.crime && !L.convict && {}; },
+      q: '和你争田界的邻家，跑到县里告了你一状，说你家藏匿了逃亡的人口。县吏带着人来拿你。', o: ['花钱打点县吏', '据理力争，请里中父老作证', '连夜逃走'],
+      r: [[{ p: 0.75, t: '你托人给县吏送了三千钱。案子不了了之。', fx: { cash: -3000 } }, { p: 0.25, t: '钱送了，县吏却嫌少，照样把你拿了去。', fx: { cash: -3000, crime: 'false' } }],
+        [{ p: 0.6, t: '里中父老都替你作证。县令查明是诬告，反坐了邻家。', fx: { standing: 4 } }, { p: 0.4, t: '父老们怕得罪人，没有一个肯出头。你被关进了县狱。', fx: { crime: 'false' } }],
+        [{ p: 1, t: '你连夜逃出了县界。', fx: { crime: 'falseFled' } }]],
+      need: [function (L) { return L.eco.cash >= 3000; }, null, null], why: ['拿不出这么多钱', null, null],
+      aw: function (L) { return [RT(L, 'soc'), RT(L, 'per'), RT(L, 'act') - 20]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 同性之情：史书只在帝王"断袖"、宫人"对食"、晋人"男宠"处留下几笔 ---------- */
+  var sameFr = function (L) { return (L.friends || []).filter(function (f) { return f.alive && !f.apart && !f.fig && f.sex === L.sex && f.aff >= 65; }).sort(function (a, b) { return b.aff - a.aff; })[0]; };
+  [
+    { id: 'lg_m', w: 0.35, ok: function (L, H) { var f = sameFr(L); return L.sex === 'M' && !L.eth && H.a >= 16 && H.a <= 40 && !L.love && !L.flags.lgAsk && f && { friend: f }; },
+      q: '你和{friend}形影不离，农闲时同出同归，夜里也常同榻而眠。有一天你忽然明白，你对他的心思，和对别人不一样。', o: ['把这份心思藏在心里', '向他吐露', '躲开他，早些成亲'],
+      r: [[{ p: 1, t: '你把这份心思藏在了心里。你们还是最好的朋友，只是你再也没有睡得安稳过。', fx: { flag: 'lgAsk', love: 1 } }],
+        [{ p: 0.5, t: '你吐露了心思。{friend}沉默了很久，握住了你的手。从此你们之间多了一样谁也不说破的东西。', fx: { flag: 'lgAsk', love: 2, frAff: 20 } }, { p: 0.5, t: '你吐露了心思。{friend}愣住了，什么也没说。此后他见了你，总有些躲闪。', fx: { flag: 'lgAsk', frAff: -25 } }],
+        [{ p: 1, t: '你开始躲着{friend}，又催着家里早些给你说亲。他来找过你几回，后来就不来了。', fx: { flag: 'lgAsk', frAff: -15 } }]],
+      aw: function (L) { return [RT(L, 'cau') + 10, RT(L, 'act') - 20, RT(L, 'cau')]; } },
+    { id: 'lg_f', w: 0.18, ok: function (L, H) { var f = sameFr(L); return L.sex === 'F' && !L.eth && H.a >= 13 && H.a <= 35 && !L.love && !L.flags.lgAsk && !L.flags.palaceIn && f && { friend: f }; },
+      q: '你和{friend}一起采桑、一起织布，无话不说。你想到将来各自嫁人、从此难得一见，心里就像刀割一样。', o: ['把这份心思藏在心里', '和她约定：一辈子做最亲的姐妹', '求父母晚些给你说亲'],
+      r: [[{ p: 1, t: '你把这份心思藏在了心里。她出嫁那天，你送了她一双亲手绣的鞋，回来哭了一夜。', fx: { flag: 'lgAsk', love: 1 } }],
+        [{ p: 1, t: '你们在桑树下拜了天地，约定一辈子做最亲的姐妹。后来各自嫁了人，每年回娘家，总要想办法见上一面。', fx: { flag: 'lgAsk', love: 2, frAff: 20 } }],
+        [{ p: 0.4, t: '父母拗不过你，把亲事往后推了两年。那两年，是你一生里最好的日子。', fx: { flag: 'lgAsk', love: 2, frAff: 10 } }, { p: 0.6, t: '父亲沉下脸说："女大不中留。"媒人第二天就上了门。', fx: { flag: 'lgAsk', love: 1 } }]],
+      aw: function (L) { return [RT(L, 'cau') + 10, RT(L, 'soc'), RT(L, 'per') - 10]; } },
+    { id: 'lg_palace', w: 0.8, ok: function (L, H) { return L.sex === 'F' && L.flags.palaceIn && L.cls === 'slave' && H.a >= 18 && H.a <= 50 && !L.flags.duishi && !L.flags.dsAsk && {}; },
+      q: '宫里的日子漫长。宫人之间，常有人"自相与为夫妇"，叫作"对食"，彼此照应，也彼此妒忌。和你同屋的一个宫人，待你格外好。', o: ['和她结为对食', '婉言谢绝'],
+      r: [[{ p: 1, t: '你们结为对食。冬天一同取暖，病了相互煎药，受了委屈有人可说。宫里的人都知道，也没有人管。', fx: { flag: ['dsAsk', 'duishi'], body: 2 } }],
+        [{ p: 1, t: '你婉言谢绝了。她从此不再和你说话，你在宫里更孤单了。', fx: { flag: 'dsAsk' } }]],
+      aw: function (L) { return [RT(L, 'soc'), RT(L, 'cau')]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
 })(SGD);

@@ -986,6 +986,24 @@ var SGE = (function (D) {
     // 事情败露
     L.affair = null; L.flags.affCaught = true; L.rec.tags.push('loss');
     var t;
+    if (A.k === 'sao') {
+      L.standing -= 20;
+      if (R() < 0.5) { add(L, 2.2, 'bad', '事情败露了。族人把你们告到了县里。按律，"复兄弟之妻"者黥为城旦舂。'); sentence(L, y, 2.21, '黥为城旦', 4); }
+      else { L.split = true; add(L, 2.2, 'bad', '事情败露了。族中长辈开了祠堂，把你逐出了宗族，嫂子被送回了娘家。从此乡里人背后都叫你"盗嫂"。'); }
+      return;
+    }
+    if (A.k === 'bi') {
+      var bx = R();
+      if (bx < 0.5) { affAdd(sp, -30); add(L, 2.2, 'bad', '妻子知道了。她什么也没说，第二天就叫来人牙子，把那婢女卖到了外县。'); }
+      else if (bx < 0.8) { affAdd(sp, -40); L.standing -= 3; add(L, 2.2, 'bad', '妻子知道了。她把那婢女叫到院子里，当着全家的面打了个半死，然后回了娘家，你去请了三回才肯回来。'); }
+      else { add(L, 2.2, 'life', '妻子知道了，却没有闹。她说，与其偷偷摸摸，不如收了做妾。'); var csur = surname(R, 'peasant'), ck = newKin(L, 'conc', 'F', y - 18, csur + givenName(R, 'F', 'plain'), { sur: csur }); ck.job = '侍妾'; }
+      return;
+    }
+    if (A.k === 'nan') {
+      if (R() < 0.5) { affAdd(sp, -30); add(L, 2.2, 'life', '妻子再也忍不了，哭着回了娘家。你们的事，在洛阳的士人中间传了一阵子，倒也没人当回事——当时风气如此。'); }
+      else { L.fame = Math.max(0, L.fame - 3); add(L, 2.2, 'life', '有人在清议中讥讽你们，说这是"男宠乱德"。你一笑置之。'); }
+      return;
+    }
     if (A.k === 'slave') {
       if (R() < 0.55) { die(L, 'executed', 2.2, { full: '事情败露了。主人把你和那个侍妾都绑到了院子里，当着全家僮仆的面活活打死。' }); return; }
       L.body -= 15; add(L, 2.2, 'bad', '事情败露了。侍妾被主人卖去了远方，你被打得半死，脸上刺了字，罚去田庄做最苦的活。'); return;
@@ -1036,6 +1054,63 @@ var SGE = (function (D) {
       }
     }
   }
+
+  /* ---------- 罪与罚：系狱、刑徒、亡命、赎罪与大赦 ---------- */
+  var HIDE = ['jingbei', 'jiangdong', 'shu', 'liaodong', 'jiao', 'liang', 'you', 'jingnan'];
+  function sentence(L, y, s, n, years, deathP, deathT) {
+    var R = L.R;
+    if (deathP && R() < deathP) {
+      if (L.eco.cash + L.eco.priv >= 20000 && R() < 0.5) { payFrom(L, 20000); add(L, s, 'bad', '按律当死。家里卖了田宅，凑足了钱，赎了你一死，改判' + n + '。'); }
+      else { die(L, 'executed', s, { full: deathT || '你被押到市上斩首，弃市示众。' }); return; }
+    }
+    if (L.eco.cash >= 8000 && R() < 0.4) { payFrom(L, 8000); L.standing -= 6; add(L, s + 0.01, 'bad', '家里出钱赎了你的罪。你回了家，可乡里人见了你，总要在背后指指点点。'); return; }
+    L.convict = { until: y + years, n: n, job: L.job }; L.job = '刑徒'; L.flags.convicted = n; L.standing -= 12; L.rec.tags.push('loss');
+    add(L, s + 0.01, 'bad', '你被判' + n + '，剃去了头发，颈上套着铁钳，和一队刑徒一起被押去' + pick(R, ['修城墙', '筑河堤', '在官府的作坊里做苦工', '修驰道']) + '。刑期' + cnNum(years) + '年。');
+  }
+  function crimeStart(L, y, k, s) {
+    var R = L.R;
+    if (k === 'steal') {
+      if (R() < 0.5) { L.body -= 5; payFrom(L, 500); L.standing -= 6; add(L, s, 'bad', '大户把你绑到了里正那里，打了一顿，又让你家赔了五斗粟。从此乡里人都防着你。'); }
+      else { add(L, s, 'bad', '大户把你送到了县里。'); sentence(L, y, s + 0.02, '罚作一年', 1); }
+    } else if (k === 'kill') { L.crime = { k: 'kill', y: y, ask: true }; L.flags.killed = y; }
+    else if (k === 'revenge') {
+      var r = R();
+      if (r < 0.45) { L.fame += 15; L.standing += 10; L.flags.revenger = true; add(L, s, 'good', '县长感念你的孝义，不忍治罪，几次劝你逃走，你都不肯。后来遇上大赦，你被放了出来。乡里称你"孝烈"，郡里还在你家门口立了表。'); }
+      else sentence(L, y, s, '髡钳城旦', 5, 0.35, '你为父报仇，又自首投案。可律令不容私自杀人，你还是被判了死罪，弃市。乡里人都替你叹息。');
+    } else if (k === 'tomb') sentence(L, y, s, '髡钳城旦', 4, 0.4, '盗掘坟墓是重罪。你被押到市上斩首。');
+    else if (k === 'coin') sentence(L, y, s, '髡钳城旦', 4, 0.6, '按律，盗铸钱者弃市。你被押到市上斩首，铸钱的模子也被当众砸碎。');
+    else if (k === 'false') {
+      if (R() < 0.06) { die(L, 'executed', s, { full: '你在县狱里被关了几个月。狱吏要钱，你家拿不出，你病死在了狱中。' }); return; }
+      add(L, s, 'bad', '你被关进了县狱。狱吏每天来要钱，不给就打。关了大半年，案子才查清楚，你被放了出来。'); L.body -= 8; payFrom(L, 1000);
+    } else if (k === 'falseFled') { L.crime = { k: 'fled', y: y, fled: true }; relocate(L, pick(R, HIDE), s + 0.02, '你亡命到了{dest}，隐姓埋名，替人做工度日。', 0.03, y); }
+  }
+  function crimeAfter(L, y, i) {
+    var R = L.R;
+    if (i === 2 && L.eco.cash < 10000) i = 0;
+    if (i === 0) { L.crime.fled = true; L.crime.fy = y; L.flags.wanted = true; relocate(L, pick(R, HIDE), 1.3, '你连夜亡命，一路逃到了{dest}，改了名字，替人做工度日。', 0.04, y); }
+    else if (i === 1) { L.crime = null; add(L, 1.3, 'life', '你去县廷投案自首。'); sentence(L, y, 1.31, '髡钳城旦', 5, 0.3, '斗杀人者，按律当死。你被押到市上斩首。'); }
+    else { payFrom(L, 10000); L.crime = null; L.standing -= 8; add(L, 1.3, 'bad', '族人凑了一万钱，送到死者家里。死者家撤了状子，县吏也收了一份。这件事就这样压了下去。'); }
+  }
+  function crimeYear(L, y) {
+    var R = L.R;
+    if (L.convict) {
+      var C = L.convict;
+      if (R() < 0.04 * bodyMul(L)) { die(L, 'corv', 2.3, { full: '你在刑徒的队伍里累倒了，被草草埋在了工地旁边。刑徒的墓砖上，只刻着名字、籍贯和"死"字。' }); return; }
+      if (R() < 0.2) { L.convict = null; L.job = C.job || '农'; add(L, 2.3, 'good', '天子大赦天下。你和一队刑徒一起被放了出来。头发还没长齐，你就回了家。'); return; }
+      if (y >= C.until) { L.convict = null; L.job = C.job || '农'; add(L, 2.3, 'life', '刑期满了，你被放了回来。家里的地荒了一半，孩子见了你，躲在了母亲身后。'); return; }
+      L.body -= 4; add(L, 2.4, 'life', pick(R, ['你戴着铁钳在工地上干了一整年，肩上的皮磨破了又长好。', '刑徒们每天天不亮就上工，监工的鞭子从不留情。', '同一队的刑徒又死了一个。他的墓砖上刻着名字、籍贯和刑名。']));
+      return;
+    }
+    var K = L.crime;
+    if (!K || K.ask || K.fy === y || K.y === y) return;
+    if (R() < 0.22) { L.crime = null; L.flags.wanted = false; add(L, 2.3, 'good', '天子大赦天下。你身上的案子，就这样一笔勾销了。'); return; }
+    if (y - K.y >= 8) { L.crime = null; add(L, 2.3, 'life', '这么多年过去了，再没有人追究那件旧案。你渐渐敢用自己的本名了。'); return; }
+    if (R() < 0.12 * (K.fled ? 0.5 : 1) * ((L.reg ? L.reg.order : 70) / 70)) {
+      L.crime = null; add(L, 2.3, 'bad', '有人认出了你，告了官。你被押回了原籍。');
+      if (K.k === 'kill') sentence(L, y, 2.31, '髡钳城旦', 5, 0.4, '斗杀人者，按律当死。你被押到市上斩首。');
+      else sentence(L, y, 2.31, '罚作', 2);
+    }
+  }
   function famousConcChoice(L, y, P) {
     if (L.sex !== 'F' || L.married || L.widowed || L.age < 15 || L.age > 22 || L.flags.fcAsk || L.eth) return;
     var fk = ctrl(L.zone, y), id = lordFigAt(fk, y), C = FAMOUS_CONC[id];
@@ -1079,7 +1154,8 @@ var SGE = (function (D) {
   }
   function prepare(L, y) {
     var R = L.R, P = { queue: [], dec: { flee: {}, sights: [] } }, a = L.age, z = L.zone;
-    var free = !L.soldier && !L.band;
+    var free = !L.soldier && !L.band && !L.convict;
+    if (L.crime && L.crime.ask) { L.crime.ask = false; P.queue.push({ key: 'crimeAfter', q: '你失手打死了人。死者的家人已经告到了县里，亭长带着求盗正在四处拿人。', o: ['连夜亡命他乡', '投案自首', '求族人凑钱，向死者家私了'], w: [3, 1, L.eco.cash >= 10000 ? 2 : 0.1] }); }
     var gap = a - L.lastChoice >= 3;
     (EV_BY_Y[y] || []).forEach(function (ev) {
       var fx = localFx(L, ev, z, y);
@@ -1290,6 +1366,7 @@ var SGE = (function (D) {
       case 'fconc': d.fconc = { c: c, i: i }; break;
       case 'yfr': d.yfr = { c: c, i: i }; break;
       case 'bpov': L.bpovDec = { k: c.pk, i: i }; break;
+      case 'crimeAfter': d.crimeAfter = i; break;
       case 'civwar': d.civwar = { c: c, i: i }; break;
       case 'wfig': d.wfig = { c: c, i: i }; break;
       case 'purge': (d.purge = d.purge || {})[c.ev] = { i: i, tie: c.tie, pn: c.pn }; break;
@@ -1352,9 +1429,11 @@ var SGE = (function (D) {
     if (dec.fconc) famousConcOutcome(L, y, dec.fconc.c, dec.fconc.i);
     if (dec.yfr) youthOutcome(L, y, dec.yfr.c, dec.yfr.i);
     if (dec.civwar) civWarOutcome(L, y, dec.civwar.c, dec.civwar.i);
+    if (dec.crimeAfter != null) crimeAfter(L, y, dec.crimeAfter);
     if (dec.wfig) wedFigOutcome(L, y, dec.wfig.c, dec.wfig.i);
     if (!L.alive) return finishYear(L, rec);
     concLifeYear(L, y);
+    crimeYear(L, y);
     affairYear(L, y);
     clanYear(L, y);
     civWarYear(L, y);
@@ -3416,6 +3495,8 @@ var SGE = (function (D) {
     if (fx.priv) E.priv = Math.max(0, E.priv + fx.priv);
     if (fx.affair) { var lsx = L.sex === 'M' ? 'F' : 'M', lsur = surname(R, L.cls === 'gentry' ? 'gentry' : 'peasant'); L.affair = { k: fx.affair, since: y, name: lsur + givenName(R, lsx) }; }
     if (fx.vic) victimOutcome(L, y, fx.vic, s);
+    if (fx.crime) crimeStart(L, y, fx.crime, s + 0.05);
+    if (fx.love && meta.friend) { L.love = { name: meta.friend.name, sex: meta.friend.sex, y: y, mutual: fx.love === 2 }; }
     if (fx.side) L.side = { k: fx.side, from: y, until: y + 5 + Math.floor(R() * 6) };
     if (fx.yHarvest) L.yHarvest = fx.yHarvest;
     if (fx.harvestB) L.harvestB = Math.min(1.15, (L.harvestB || 1) * fx.harvestB);
@@ -3441,6 +3522,7 @@ var SGE = (function (D) {
     if (sv) serveLord(L, sv, y, fx.office ? '在' + figName(sv) + '幕府中任职' : '追随' + figName(sv));
     if (fx.noOffice) { L.office = null; L.job = '农'; }
     if (fx.flag) [].concat(fx.flag).forEach(function (f) { L.flags[f] = true; });
+    if (L.flags.duishi === true) L.flags.duishi = surname(R, 'peasant') + givenName(R, 'F', 'plain');
     if (fx.tr) for (var t in fx.tr) L.tr[t] = clamp(L.tr[t] + fx.tr[t], 5, 95);
     if (fx.kinLit && meta.kin) meta.kin.lit = true;
     if (fx.kinAff && meta.kin) affAdd(meta.kin, fx.kinAff);
@@ -3710,6 +3792,10 @@ var SGE = (function (D) {
     else if (L.clanName && age >= 20) who = '你生在' + L.clanName + '。门第给了你读书、做官、乱世里先走一步的机会，也让你在每一次改朝换代时，都必须选一边站。';
     else if (age >= 15) who = '你种出的粮食进了官仓，织出的布帛交了户调，你的名字写在里正的户籍简上。帝王将相的事业，就压在这些简牍上。';
     if (who) t.push(who);
+    if (L.flags.revenger) t.push('你手刃了杀父的仇人，又自首投案。乡里称你孝烈——汉末的人，敬重这样的事。');
+    else if (L.flags.convicted) t.push('你做过刑徒（' + L.flags.convicted + '）。洛阳出土的刑徒墓砖上，刻着成千上万个这样的名字；你的名字，没有留下来。');
+    if (L.love) t.push(L.love.mutual ? '你和' + L.love.name + '之间的情分，史书没有一个字的位置。可它是真的。' : '你心里一直装着' + L.love.name + '。这件事，你到死也没有对人说过。');
+    if (L.flags.duishi) t.push('在宫里，你和' + L.flags.duishi + '结为"对食"，相互照应了许多年。');
     if (L.flags.affCaught) t.push('你的一段私情，后来成了乡里多年的谈资。史书不记这样的事——除非事关王侯。');
     else if (L.flags.affPast) t.push('你有过一段谁也不知道的往事。它跟着你进了坟墓。');
     var CLN = clanOf(L);
