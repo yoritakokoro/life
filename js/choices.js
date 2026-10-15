@@ -1,4 +1,4 @@
-/* 一世·汉末 —— 人生抉择
+/* 五千万分之一 —— 人生抉择
  * 每条：id；w 权重；ok(L, H) 是否出现（返回 false 或附加信息对象）；q 问题（可含 {kin} {lord} {birth} {kid}）；
  * o 选项；r 每个选项的结果列表 [{p 概率, t 文字, fx 效果}]；aw(L) 自动选择时各选项的权重。
  * 效果字段：body learn standing fame craft cash priv land ox debt；job cls office noOffice flag tr；

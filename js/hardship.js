@@ -1,4 +1,4 @@
-/* 一世·汉末 —— 身份不同的遭遇、青黄不接、更多日常
+/* 五千万分之一 —— 身份不同的遭遇、青黄不接、更多日常
  * REACT：同一场兵祸、饥荒、疫病，落在不同身份的人身上，是不同的样子。
  * LEAN：自家的粮吃不到年底时，怎样熬过青黄不接的月份。
  */
@@ -335,7 +335,7 @@
       r: [[{ p: 0.45, t: '郡里考问了你一番，让你去郡府做了书佐。乡里人都说，寒门也能做官了。', fx: { office: '书佐', fame: 3 } }, { p: 0.55, t: '你去了。郡吏看了看你的衣着，又问了几句，就把你打发走了。', fx: { standing: -1 } }],
         [{ p: 1, t: '你没有去。你想，这样的好事，轮不到自己。', fx: {} }]],
       aw: function (L) { return [ET(L, 'ind') + ET(L, 'cmp') / 2, ET(L, 'cau')]; } },
-    { id: 'zz_low', w: 3, ok: function (L, H) { return L.sex === 'M' && H.a >= 18 && H.a <= 40 && H.y >= 220 && (H.g === 'wei' || H.g === 'jin') && !L.office && !L.soldier && L.cls !== 'gentry' && L.cls !== 'slave' && (L.literate && L.learn >= 30) && !L.flags.zz && !L.flags.zzno && {}; },
+    { id: 'zz_low', w: 3, ok: function (L, H) { return L.sex === 'M' && H.a >= 18 && H.a <= 40 && H.y >= 220 && (H.g === 'wei' || H.g === 'jin' || H.fk === 'houzhao') && !L.office && !L.soldier && L.cls !== 'gentry' && L.cls !== 'slave' && (L.literate && L.learn >= 30) && !L.flags.zz && !L.flags.zzno && {}; },
       q: '州郡的中正官要评定本地士人的品第，朝廷凭品第授官。你家门第低微，不打点的话，多半只能评个下品，这辈子也做不了官。', o: ['备一份厚礼去拜见中正', '凭才学去应评', '不去凑这个热闹'],
       need: [function (L) { return L.eco.cash + L.eco.priv >= 6000; }, null, null], why: ['你拿不出像样的礼', null, null],
       r: [[{ p: 0.55, t: '中正收下了礼，给你评了个中品。不久，你被郡里辟为书佐。', fx: { cash: -6000, office: '书佐', flag: 'zz' } }, { p: 0.45, t: '礼收了，品第还是下品。"上品无寒门，下品无势族"——你这才明白这句话。', fx: { cash: -6000, flag: 'zzno', tr: { cmp: 3 } } }],
@@ -443,5 +443,68 @@
         [{ p: 1, t: '你做了里正，挨家挨户催收赋税、登记户口。这差事两头受气，可也算是个"吏"了。', fx: { office: '里正', standing: 2 } }],
         [{ p: 1, t: '你推辞了。你想，这差事得罪人，不如守着自家的地。', fx: {} }]],
       aw: function (L) { return [(L.tr.act + L.tr.ind) / 2, L.tr.cau, L.tr.cau - 10]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 各国的后宫之选（以当地史料为准） ---------- */
+  var RT = function (L, k) { return L.tr[k] == null ? 50 : L.tr[k]; };
+  var LIANGJIA = ['peasant', 'clerk', 'gentry', 'tuntian'];
+  function palaceOk(L, H, g, zones, y0, y1, fk) { return L.sex === 'F' && !L.married && H.a >= 13 && H.a <= 20 && H.y >= y0 && H.y <= y1 && (fk ? H.fk === fk : H.g === g) && zones.indexOf(L.zone) >= 0 && LIANGJIA.indexOf(L.cls) >= 0 && !L.flags.pkReg; }
+  function pick3(sel, alt, hideOk) {
+    return [[{ p: sel * 1.6, t: '你被选中了，载进了宫里。', fx: { palace: alt } }, { p: 1 - sel * 1.6, t: '你没有被选中。回家的路上，母亲一直握着你的手。', fx: {} }],
+      [{ p: sel, t: '你被选中了，载进了宫里。', fx: { palace: alt } }, { p: 1 - sel, t: '你没有被选中。', fx: {} }],
+      [{ p: hideOk, t: '你在亲戚家躲了一阵，选女子的人走了。', fx: {} }, { p: 1 - hideOk, t: '你还是被找了出来，送去应选，被选中了。', fx: { palace: alt } }]];
+  }
+  [
+    { id: 'pk_wei', w: 1, ok: function (L, H) { return palaceOk(L, H, 'wei', ['luoyang', 'yu', 'ji'], 221, 264) && !(H.y >= 235 && H.y <= 237) && {}; }, pre: function (L) { L.flags.pkReg = true; },
+      q: '掖庭派人到郡里阅选良家女子，充实后宫。魏的后宫，自贵人以下到掖庭洒扫的，已经有好几千人了。', o: ['盛装去应选', '照常去', '躲到亲戚家'],
+      r: pick3(0.15, 'luoyang', 0.8), aw: function (L) { return [RT(L, 'ind'), 50, RT(L, 'cau')]; } },
+    { id: 'pk_wei_ming', w: 4, ok: function (L, H) { return L.sex === 'F' && H.a >= 14 && H.a <= 24 && H.y >= 235 && H.y <= 237 && H.g === 'wei' && (L.cls === 'soldier' || L.cls === 'peasant') && !L.flags.pkReg && {}; }, pre: function (L) { L.flags.pkReg = true; },
+      q: '天子大修宫室，又下诏：士家的女儿，从前已经嫁给吏民的，一律夺回来改配给士卒；其中有姿色的，选进掖庭。官吏挨家挨户地查户籍。', o: ['听天由命', '让家里拿钱去打点', '连夜逃到山里'],
+      need: [null, function (L) { return L.eco.cash + L.eco.priv >= 2000; }, null], why: [null, '家里拿不出钱', null],
+      r: [[{ p: 0.3, t: '你被选进了掖庭。', fx: { palace: 'luoyang' } }, { p: 0.3, t: '你被夺回改配，嫁给了一个素不相识的士卒。', fx: { marry: true, standing: -2 } }, { p: 0.4, t: '查户籍的人没有找到你家。', fx: {} }],
+        [{ p: 0.7, t: '钱送到了，你的名字被从册子上抹掉了。', fx: { cash: -2000 } }, { p: 0.3, t: '钱收了，你还是被带走了。', fx: { cash: -2000, palace: 'luoyang' } }],
+        [{ p: 0.6, t: '你在山里躲了一个多月，风头过去了。', fx: { body: -3 } }, { p: 0.4, t: '你被搜了出来，改配给了士卒。', fx: { marry: true, standing: -2 } }]],
+      aw: function (L) { return [RT(L, 'cau'), 60, RT(L, 'act')]; } },
+    { id: 'pk_shu', w: 0.12, ok: function (L, H) { return palaceOk(L, H, 'shu', ['shu'], 223, 262) && {}; }, pre: function (L) { L.flags.pkReg = true; },
+      q: '听说宫里又要采选良家女子了，乡里有女儿的人家都在打听消息。', o: ['盛装去应选', '照常去', '躲到亲戚家'],
+      r: [[{ p: 0.85, t: '消息很快又变了：侍中董允上书说"古者天子后妃之数不过十二，今嫔嫱已具，不宜增益"，后主只好作罢。你家的人都松了一口气。', fx: {} }, { p: 0.15, t: '这一回采选没有被谏止。你被选中，进了成都的宫里。', fx: { palace: 'shu' } }],
+        [{ p: 0.92, t: '采选被侍中董允谏止了。蜀汉的后宫，一直没有多少人。', fx: {} }, { p: 0.08, t: '你被选中，进了宫。', fx: { palace: 'shu' } }],
+        [{ p: 1, t: '你躲了一阵。后来听说，这次采选根本没有成。', fx: {} }]],
+      aw: function (L) { return [RT(L, 'ind'), 50, RT(L, 'cau')]; } },
+    { id: 'pk_wuq', w: 0.6, ok: function (L, H) { return palaceOk(L, H, 'wu', ['jiangdong'], 222, 263) && {}; }, pre: function (L) { L.flags.pkReg = true; },
+      q: '吴主从江东大族和良家中选女子入宫。听说宫里的潘夫人，原本是织室里罪人之女，被吴主一眼看中，如今生了皇子。', o: ['盛装去应选', '照常去', '躲到亲戚家'],
+      r: pick3(0.12, 'jiangdong', 0.85), aw: function (L) { return [RT(L, 'ind') + RT(L, 'cmp') / 3, 50, RT(L, 'cau')]; } },
+    { id: 'pk_jin2', w: 0.6, ok: function (L, H) { return palaceOk(L, H, 'jin', ['luoyang', 'yu', 'ji'], 266, 300) && (H.y < 273 || H.y > 274) && {}; }, pre: function (L) { L.flags.pkReg = true; },
+      q: '掖庭又到郡里选女子了。晋武帝的后宫已经近万人，听说天子常坐着羊车在宫里随意游走，羊停在哪里就宿在哪里。', o: ['盛装去应选', '照常去', '躲到亲戚家'],
+      r: pick3(0.15, 'luoyang', 0.8), aw: function (L) { return [RT(L, 'ind'), 50, RT(L, 'cau')]; } },
+    { id: 'pk_dj', w: 0.3, ok: function (L, H) { return palaceOk(L, H, 'jin', ['jiangdong'], 318, 350) && {}; }, pre: function (L) { L.flags.pkReg = true; },
+      q: '建康的宫里要选良家女子。南渡以后，后妃多出自王、庾、褚这几家大族，寻常人家的女儿，进了宫也只是宫人。', o: ['盛装去应选', '照常去', '躲到亲戚家'],
+      r: pick3(0.1, 'jiangdong', 0.85), aw: function (L) { return [RT(L, 'ind'), 50, RT(L, 'cau')]; } },
+    { id: 'pk_zhao', w: 0.5, ok: function (L, H) { return palaceOk(L, H, null, ['ji'], 319, 344, 'houzhao') && {}; }, pre: function (L) { L.flags.pkReg = true; },
+      q: '后赵的宫里派人来选女子。羯人的官吏看人，不问家世，只看相貌。', o: ['盛装去应选', '照常去', '躲到亲戚家'],
+      r: pick3(0.2, 'ji', 0.7), aw: function (L) { return [RT(L, 'ind'), 40, RT(L, 'cau') + 10]; } },
+    { id: 'pk_cheng', w: 0.3, ok: function (L, H) { return palaceOk(L, H, null, ['shu'], 304, 346, 'chenghan') && {}; }, pre: function (L) { L.flags.pkReg = true; },
+      q: '成汉的宫里要选良家女子。李家的天子出身流民，宫里的规矩也比别处松些。', o: ['盛装去应选', '照常去', '躲到亲戚家'],
+      r: pick3(0.12, 'shu', 0.85), aw: function (L) { return [RT(L, 'ind'), 50, RT(L, 'cau')]; } },
+    /* ---------- 各国的仕进之路 ---------- */
+    { id: 'han_xl', w: 2, ok: function (L, H) { return L.sex === 'M' && H.a >= 20 && H.a <= 45 && H.y >= 150 && H.y <= 189 && H.g === 'han' && !L.office && !L.soldier && L.cls !== 'gentry' && L.cls !== 'slave' && !L.eth && L.literate && L.standing >= 45 && !L.flags.hanXl && {}; }, pre: function (L) { L.flags.hanXl = true; },
+      q: '郡里每年按人口举孝廉，二十万人才举一个。乡里的父老说，你孝顺、肯读书，不妨试一试。', o: ['托人在太守面前说项', '守孝尽礼，等乡里公推', '不去想这些'],
+      need: [function (L) { return L.eco.cash + L.eco.priv >= 5000; }, null, null], why: ['托人说项要花钱，你拿不出', null, null],
+      r: [[{ p: 0.25, t: '太守收下了礼，把你的名字报了上去。你被举为孝廉，入京做了郎官。', fx: { cash: -5000, office: '郎官', fame: 6 } }, { p: 0.75, t: '礼送了，名额还是给了郡中大族的子弟。', fx: { cash: -5000 } }],
+        [{ p: 0.08, t: '乡里公推你为孝廉。你入京做了郎官，郡里的人都说，这是多少年都没有过的事。', fx: { office: '郎官', fame: 8 } }, { p: 0.92, t: '这一年的孝廉，举的是郡中大族的子弟。', fx: { standing: 1 } }],
+        [{ p: 1, t: '你没有去想。孝廉这种事，从来轮不到寒门。', fx: {} }]],
+      aw: function (L) { return [RT(L, 'cmp'), RT(L, 'per'), RT(L, 'cau')]; } },
+    { id: 'shu_bi', w: 2.5, ok: function (L, H) { return L.sex === 'M' && H.a >= 18 && H.a <= 45 && H.g === 'shu' && H.y >= 221 && H.y <= 262 && !L.office && !L.soldier && L.cls !== 'slave' && !L.eth && L.literate && L.learn >= 30 && !L.flags.shuBi && {}; }, pre: function (L) { L.flags.shuBi = true; },
+      q: '蜀中人才少。丞相府常从郡县的小吏里拔擢有才干的人，"开诚心，布公道"，不问出身。郡里有人劝你去试试。', o: ['投书丞相府自荐', '请郡里的长辈举荐', '安心过自己的日子'],
+      r: [[{ p: 0.4, t: '丞相府考校了你的文书和算术，辟你为掾属。', fx: { office: '幕僚', fame: 4 } }, { p: 0.6, t: '你的书信没有回音。', fx: {} }],
+        [{ p: 0.3, t: '郡里的长辈举荐了你，你做了郡吏。', fx: { office: '书佐', fame: 2 } }, { p: 0.7, t: '长辈说你还年轻，再等等。', fx: {} }],
+        [{ p: 1, t: '你没有去。', fx: {} }]],
+      aw: function (L) { return [RT(L, 'ind') + RT(L, 'cmp') / 2, RT(L, 'soc'), RT(L, 'cau')]; } },
+    { id: 'wu_bk', w: 2, ok: function (L, H) { return L.sex === 'M' && H.a >= 18 && H.a <= 45 && H.g === 'wu' && H.y >= 222 && H.y <= 279 && !L.office && !L.soldier && L.cls !== 'gentry' && L.cls !== 'slave' && !L.eth && !L.flags.wuBk && {}; }, pre: function (L) { L.flags.wuBk = true; },
+      q: '吴国的官，多半出自顾、陆、朱、张这几家大族。寒门想出头，要么投到大族门下做宾客，要么去军中凭战功。', o: ['投到大族门下做宾客', '去军中，凭战功出头', '不去'],
+      r: [[{ p: 0.3, t: '你投到了陆家门下做宾客。几年后，主人荐你做了郡吏。', fx: { office: '书佐', flag: 'connected' } }, { p: 0.7, t: '你在大族门下做了几年宾客，替人跑腿、写信，终究没有出身。', fx: { flag: 'connected', standing: 1 } }],
+        [{ p: 1, t: '你去营中报了名。', fx: { enlist: true } }],
+        [{ p: 1, t: '你没有去。', fx: {} }]],
+      aw: function (L) { return [RT(L, 'soc'), RT(L, 'act'), RT(L, 'cau')]; } }
   ].forEach(function (c) { D.CHOICES.push(c); });
 })(SGD);

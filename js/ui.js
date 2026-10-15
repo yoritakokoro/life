@@ -1,4 +1,4 @@
-/* 一世·汉末 —— 界面与播放 */
+/* 五千万分之一 —— 界面与播放 */
 (function () {
   'use strict';
   var D = SGD, E = SGE;
@@ -17,8 +17,8 @@
   var store = load();
 
   var SPEEDS = [['慢', 12], ['中', 6], ['快', 2.5], ['极快', 0.7]];
-  var MODES = { history: 'H', zhongping: 'Z', jianan: 'J', chaos: 'C', blind: 'B', xiping: 'X', sanguo: 'S', weijin: 'W', taikang: 'T', yongjia: 'Y', mirror: 'M', heir: 'G' };
-  var MODE_NAME = { history: '史实人生', zhongping: '生于中平', jianan: '生于建安', chaos: '乱世之子', blind: '真正的随机', xiping: '生于熹平', sanguo: '三国鼎立', weijin: '魏晋之际', taikang: '生于太康', yongjia: '生于永嘉', mirror: '我若生于那个时代', heir: '传家' };
+  var MODES = { history: 'H', zhongping: 'Z', jianan: 'J', chaos: 'C', blind: 'B', xiping: 'X', sanguo: 'S', weijin: 'W', taikang: 'T', mirror: 'M', heir: 'G' };
+  var MODE_NAME = { history: '史实人生', zhongping: '生于中平', jianan: '生于建安', chaos: '乱世之子', blind: '真正的随机', xiping: '生于熹平', sanguo: '三国鼎立', weijin: '魏晋之际', taikang: '生于太康', mirror: '我若生于那个时代', heir: '传家' };
   var GNAME = function (g, y) { return { han: '汉', wei: y < 220 ? '曹操' : '魏', shu: y < 221 ? '刘备' : '蜀汉', wu: y < 222 ? '孙氏' : '吴', jin: y >= 317 ? '东晋' : '晋', other: '其他势力' }[g]; };
 
   var S = { speed: store.speed || 6, playing: true, last: 0, t: 0, queue: [], yearActive: false, L: null, comps: [], statsCache: {} };
@@ -33,7 +33,7 @@
   function newSeed() { return (Math.random() * 4294967296) >>> 0; }
   function codeOf(seed, mode) { return MODES[mode] + '-' + seed.toString(36).toUpperCase(); }
   function parseCode(s) {
-    var m = /^\s*([HZJCBXSWTYM])\s*-?\s*([0-9A-Z]+)\s*$/i.exec(s || '');
+    var m = /^\s*([HZJCBXSWTM])\s*-?\s*([0-9A-Z]+)\s*$/i.exec(s || '');
     if (!m) return null;
     var mode = Object.keys(MODES).filter(function (k) { return MODES[k] === m[1].toUpperCase(); })[0];
     var seed = parseInt(m[2], 36);
@@ -123,7 +123,7 @@
       if (!c) { toast('命数的格式像这样：H-1K3X9Q'); return; }
       startLife(c.seed, { mode: c.mode });
     };
-    var hm = /^#m([HZJCBXSWTY][0-9A-Z]+)$/i.exec(location.hash || '');
+    var hm = /^#m([HZJCBXSWT][0-9A-Z]+)$/i.exec(location.hash || '');
     if (hm) { $('seed-input').value = hm[1].slice(0, 1) + '-' + hm[1].slice(1); $('seed-panel').open = true; }
     $('btn-home').onclick = goHome;
     $('btn-back').onclick = goHome;
@@ -540,9 +540,9 @@
       sec.appendChild(h('h3', 'sect-title', g));
       groups[g].forEach(function (it) {
         var row = h('div', 'spend-row ' + it.st);
-        row.innerHTML = '<span class="n">' + esc(it.n) + '</span><span class="c num">' + E.fmt(it.c) + '</span>';
-        var b = h('button', 'btn', it.st === 'ok' ? '支用' : it.st === 'ask' ? '请家主出钱' : '买不起');
-        b.type = 'button'; b.disabled = it.st === 'poor';
+        row.innerHTML = '<span class="n">' + esc(it.n) + (it.sub || it.why ? '<small>' + esc(it.why ? it.why + (it.sub ? ' · ' + it.sub : '') : it.sub) + '</small>' : '') + '</span><span class="c num">' + E.fmt(it.c) + '</span>';
+        var b = h('button', 'btn', it.st === 'ok' ? '支用' : it.st === 'ask' ? '请家主出钱' : it.st === 'no' ? '去不了' : '买不起');
+        b.type = 'button'; b.disabled = it.st === 'poor' || it.st === 'no';
         b.onclick = function () {
           var res = E.spend(L, it.id);
           var e = { k: 'spend', t: res.t };
@@ -783,12 +783,18 @@
     if (L.cause === 'fade') lines.push(E.reignText(L.zone, L.dy) + '以后，不知所终。');
     else if (age > 0) lines.push(E.reignText(L.zone, L.dy) + '卒。');
     if (L.clanName) lines.splice(1, 0, '出身' + L.clanName + '。');
-    if (L.sex === 'M' && age >= 20) lines.push(L.officeMax ? '曾任' + L.officeMax + '。' : L.milMax ? '官至' + L.milMax + '。' : '一生未曾入仕。');
+    var F = L.flags || {};
+    if (F.palaceIn) lines.push(F.palaceIn + '年入宫为' + (F.palaceIn < 190 ? '采女' : '宫人') + ((F.palace || 0) >= 1 ? '，位至' + F.palaceTop : '') + '。' + (F.palaceOut ? F.palaceOut + '年放出宫。' : ''));
+    if (F.isConc) lines.push('为' + (L.kin.filter(function (k) { return k.rel === 'spouse'; })[0] || { name: '显贵' }).name + '之妾。');
+    if (L.edu) lines.push(L.edu.passed ? L.edu.city + L.edu.n + '出身。' : '曾在' + L.edu.city + L.edu.n + '求学。');
+    if (L.sex === 'M' && age >= 20) lines.push(L.officeMax && L.milMax ? '曾任' + L.officeMax + '，又从军，官至' + L.milMax + '。' : L.officeMax ? '曾任' + L.officeMax + '。' : L.milMax ? '官至' + L.milMax + '。' : '一生未曾入仕。');
+    if (F.loyal) lines.push(F.loyal + '败亡后，不仕新朝。');
     if (L.sex === 'F' && age >= 15 && !L.married && !L.widowed && !L.divorced && L.kidsBorn === 0) lines.push('终身未嫁。');
     if (L.divorced) lines.push('曾被夫家休弃。');
     if (L.flags.abducted) lines.push('曾被乱兵掳走，流落异乡。');
     if (L.soldierYears > 0) lines.push('从军' + cn(L.soldierYears) + '年。');
     if (L.moves > 0) lines.push('迁居' + cn(L.moves) + '次。');
+    if ((L.visited || []).length >= 2) lines.push('游历' + L.visited.slice(0, 4).join('、') + (L.visited.length > 4 ? '等地' : '') + '。');
     else if (age >= 10) lines.push('一生未曾离开' + D.JUN[L.birthJun][0] + '。');
     if (L.kidsBorn > 0) lines.push('生育' + cn(L.kidsBorn) + '子女，' + (adultKids === 0 ? '无一人' : cn(adultKids) + '人') + '活至成年。');
     if (L.grandkids > 0) lines.push('有孙辈' + cn(L.grandkids) + '人。');
@@ -803,7 +809,10 @@
     if (age >= 10) lines.push('你是一个' + E.traitWords(L).join('、') + '的人。');
     if (L.lineage && L.lineage.length) { var pa = L.lineage[L.lineage.length - 1]; lines.splice(1, 0, '你是' + pa.name + '的' + (L.sex === 'M' ? '儿子' : '女儿') + '。'); }
     var last = '';
-    if (L.by < 266 && L.dy >= 317) last = '你从三国的余烬一直活到了衣冠南渡。';
+    if (L.cause === 'fade') last = '史笔写到这一年就停了。你后来的日子，只有你自己知道。';
+    else if (L.by < 300 && L.dy >= 349) last = '你从晋室的天下一直活到了后赵的崩溃。';
+    else if (L.by < 266 && L.dy >= 317) last = '你从三国的余烬一直活到了衣冠南渡。';
+    else if (L.by < 300 && L.dy >= 311 && L.dy < 317) last = '你经历了永嘉之乱。';
     else if (L.by < 184 && L.dy >= 280) last = '你从黄巾之乱一直活到了三国归晋。';
     else if (L.by < 220 && L.dy >= 265) last = '你经历了两个王朝的终结。';
     else if (L.by < 220 && L.dy >= 220) last = '你经历了一个王朝的终结。';
@@ -814,6 +823,7 @@
   function achievements(L) {
     var a = L.achievements.slice();
     L.meetLog.forEach(function (m) { if (a.indexOf(m.ach) < 0) a.push(m.ach); });
+    if (!L.alive) E.endAch(L).forEach(function (x) { if (a.indexOf(x) < 0) a.push(x); });
     return a;
   }
 
@@ -1025,7 +1035,7 @@
   function copyEpitaph() {
     var L = S.L, ep = epitaph(L);
     var txt = ep.lines.join('\n') + (L.causeText ? '\n' + L.causeText : '') + (ep.last ? '\n' + ep.last : '') +
-      achievements(L).map(function (a) { return '\n【' + a + '】'; }).join('') + '\n\n' + E.afterword(L).join('\n') + '\n—— 一世·汉末 · 命数 ' + codeOf(S.seed, S.mode);
+      achievements(L).map(function (a) { return '\n【' + a + '】'; }).join('') + '\n\n' + E.afterword(L).join('\n') + '\n—— 五千万分之一 · 命数 ' + codeOf(S.seed, S.mode);
     var done = function () { toast('墓志已复制'); };
     try {
       navigator.clipboard.writeText(txt).then(done, fallback);

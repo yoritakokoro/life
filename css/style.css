@@ -1,4 +1,4 @@
-/* 一世·汉末
+/* 五千万分之一
  * 版式：开篇为竖排卷轴标题；人生页为"户籍简 | 编年 | 舆图"三栏，下接"汉纪·一格一年"；窄屏改为分页签。
  */
 :root {
@@ -489,6 +489,8 @@ table.ledger tr.tot td { border-bottom: 0; font-weight: 600; color: var(--ink); 
 .spend-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--s-3); align-items: center; padding: 3px 0; }
 .spend-row .c { color: var(--ink-2); font-size: var(--t-sm); }
 .spend-row.poor .n { color: var(--ink-3); }
+.spend-row .n small { display: block; font-family: var(--font-ui); font-size: var(--t-xs); color: var(--ink-3); line-height: 1.5; }
+.spend-row.no .n { color: var(--ink-3); }
 .spend-poor { font-family: var(--font-display); font-size: var(--t-xl); color: var(--ink-2); }
 @media (max-width: 860px) {
   .focus-row { grid-template-columns: auto minmax(0, 1fr) auto; }
