@@ -144,6 +144,7 @@
     var o = {}; for (var k in opts) if (k !== 'mirror') o[k] = opts[k];
     o.harsh = !!store.harsh;
     S.L = E.create(seed, o);
+    S.L.autoSpendOn = !!store.autoSpend;
     S.comps = [0, 1, 2].map(function (i) {
       var c = E.create(compSeed(seed, i), { auto: true, year: S.L.by, mode: 'history' });
       c.cseed = compSeed(seed, i);
@@ -1018,6 +1019,8 @@
     $('focus-select').onchange = function () { focusChanged(true); };
     $('focus-auto').onchange = function () { focusChanged(false); };
     $('btn-spend').onclick = openSpend;
+    $('auto-spend').checked = !!store.autoSpend;
+    $('auto-spend').onchange = function () { store.autoSpend = $('auto-spend').checked; save(); if (S.L) S.L.autoSpendOn = store.autoSpend; toast(store.autoSpend ? '已开启自动支用' : '已关闭自动支用'); };
     $('dlg-spend').addEventListener('close', function () { if (S.wasPlaying) { S.playing = true; setPlayIcon(); } S.wasPlaying = false; });
     $('btn-play').onclick = function () { S.playing = !S.playing; setPlayIcon(); };
     $('btn-skip').onclick = skipToEnd;

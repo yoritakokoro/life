@@ -141,6 +141,23 @@ var SGE = (function (D) {
   }
   function polMul(z, y, key) { var m = 1; polsAt(z, y).forEach(function (p) { if (p.fx[key] != null) m *= p.fx[key]; }); return m; }
   function polSum(z, y, key) { var m = 0; polsAt(z, y).forEach(function (p) { if (p.fx[key]) m += p.fx[key]; }); return m; }
+  // 前因后果：城池易手前先有军报；在任者随军务奔忙
+  function foreshadow(L, y, fk) {
+    var R = L.R, a = L.age, nfk = ctrl(L.zone, y + 1), zl = D.ZONES[L.zone].label;
+    if (a >= 8 && !L.band && !L.eth && nfk !== fk && !SUCC[fk + '>' + nfk]) {
+      var nn = lordName(nfk, y);
+      if (L.office) add(L, 0.7, 'war', '你在' + L.office + '任上，案头的军报一天比一天急：' + nn + '的兵马正向' + zl + '逼近。官署里已经有人在悄悄收拾细软。');
+      else if (L.cls === 'gentry' && a >= 12) add(L, 0.7, 'war', '族中得到消息：' + nn + '的兵马正向' + zl + '逼近。长辈们关起门来，一连商量了好几夜。');
+      else if (!L.soldier && R() < 0.65) add(L, 0.7, 'rumor', pick(R, ['听说' + nn + '的兵马要打过来了。乡里有人开始往山里藏粮。', '路上逃难的人多了起来，都说' + nn + '的大军就在后面。', '县里贴出告示，要百姓加紧修城、交粮——听说是' + nn + '要来了。']));
+    }
+    if (L.office && !L.soldier && a >= 16) {
+      var g = armyOf(fk), cs = (CAMP_BY_Y[y] || []).filter(function (c) { return c.a.indexOf(g) >= 0 || c.a.indexOf(fk) >= 0; });
+      if (cs.length && R() < 0.7) {
+        var c = pick(R, cs);
+        add(L, 1.6, 'war', '为了' + c.n + '，' + (L.office === '幕僚' ? '幕府' : '官署') + '里日夜忙碌。你在' + L.office + '任上' + pick(R, ['筹措军粮、征发民夫', '核算军需、清点仓廪', '起草檄文、传递军书', '安置伤兵、抚恤阵亡者的家属']) + '，好几个月没有回家。');
+      }
+    }
+  }
   function lawYear(L, y) {
     var R = L.R, a = L.age, seen = L.lawSeen = L.lawSeen || {}, E = L.eco;
     if (L.eth) return;
@@ -422,8 +439,27 @@ var SGE = (function (D) {
     if (k.rel === 'gp' || (k.rel === 'mother' && k.name === '母亲')) return r;
     return r + k.name;
   }
+  // 称呼随居住地而变：同一个人，魏人、蜀人、吴人各有各的叫法
+  function nameFor(L, key, y) {
+    var fk = ctrl(L.zone, y), g = group(fk);
+    switch (key) {
+      case '曹操': if (g === 'wei' && y >= 196) return y >= 220 ? '武皇帝' : y >= 216 ? '魏王' : y >= 213 ? '魏公' : '曹公'; return y >= 196 && y < 213 ? '曹公' : '曹操';
+      case '曹丕': if (g === 'wei' || g === 'jin') return y >= 227 ? '文皇帝' : y >= 220 ? '今上' : y >= 217 ? '魏太子曹丕' : '五官中郎将曹丕'; return '曹丕';
+      case '刘备': if (g === 'shu' || fk === 'liubei') return y >= 223 ? '先帝' : y >= 221 ? '今上' : y >= 219 ? '汉中王' : '刘使君'; return '刘备';
+      case '孙权': if (g === 'wu' || fk === 'sunquan') return y >= 252 ? '大皇帝' : y >= 229 ? '至尊' : y >= 221 ? '吴王' : '孙将军'; return '孙权';
+      case '诸葛亮': if (g === 'shu') return y >= 234 ? '诸葛丞相' : y >= 221 ? '丞相' : '诸葛军师'; return '诸葛亮';
+      case '司马懿': if (g === 'jin') return '宣皇帝'; if (g === 'wei' && y >= 239) return '太傅'; return '司马懿';
+      case '汉帝': if (g === 'wei' && y >= 220) return '山阳公'; if (g === 'shu' && y >= 220) return '孝愍皇帝'; return '天子';
+      case '刘禅': if (g === 'shu' && y < 264) return '今上'; return y >= 264 ? '安乐公刘禅' : '后主刘禅';
+      case '孙皓': if (g === 'wu' && y < 280) return '主上'; return y >= 280 ? '归命侯孙皓' : '吴主孙皓';
+    }
+    return key;
+  }
+  function nameFill(L, t) { return t.indexOf('{') < 0 ? t : t.replace(/\{(曹操|曹丕|刘备|孙权|诸葛亮|司马懿|汉帝|刘禅|孙皓)\}/g, function (m, k) { return nameFor(L, k, L.by + L.age); }); }
+  function eliteView(L) { return L.cls === 'gentry' || L.cls === 'clerk' || !!L.office || L.learn >= 40; }
   function add(L, s, k, t) {
     if (!L.alive && k !== 'death') return null;
+    if (t) t = nameFill(L, t);
     var e = { s: s, k: k, t: t, i: L.rec.entries.length };
     L.rec.entries.push(e);
     return e;
@@ -550,11 +586,56 @@ var SGE = (function (D) {
   }
 
   // 地位越高，越可能见到名人
+  var OFF_RANK = { 书佐: 1.3, 计吏: 1.5, 县长: 1.8, 幕僚: 2.2, 郎官: 2.2, 尚书郎: 2.6, 县令: 2.3, 郡守: 3.4, 刺史: 4.2, 九卿: 4.8 };
   function statusMul(L) {
     var m = { gentry: 5, clerk: 3, merchant: 1.6, slave: 0.3, tenant: 0.6, tribal: 0.6, tuntian: 0.6, soldier: 0.7 }[L.cls] || 0.8;
-    if (L.office) m *= 2;
+    if (L.cls === 'gentry') m *= L.gate >= 3 ? 1.8 : L.gate >= 2 ? 1.3 : 1;
+    if (L.office) m *= OFF_RANK[L.office] || 2;
+    if (L.mil) m *= 1 + L.mil * 0.4;
     if (L.literate) m *= 1.3;
+    if (L.flags.salon) m *= 1.4;
+    if (L.flags.connected || L.flags.retainers) m *= 1.15;
     return m * (1 + L.fame / 50);
+  }
+  // 同席交游：高门、大官、名士之家，常在宴会、拜访、雅集中结识当时当地的人物
+  var FIG_AT = null;
+  function figPresence() {
+    if (FIG_AT) return FIG_AT;
+    FIG_AT = {};
+    D.MEETS.forEach(function (m) { if (m.eth || m.sol || m.cls) return; (FIG_AT[m.f] = FIG_AT[m.f] || []).push(m); });
+    return FIG_AT;
+  }
+  var CIRCLE_P = { 书佐: 0.01, 计吏: 0.02, 县长: 0.025, 幕僚: 0.07, 郎官: 0.06, 尚书郎: 0.08, 县令: 0.045, 郡守: 0.09, 刺史: 0.13, 九卿: 0.13 };
+  function eliteMeet(L, y) {
+    var R = L.R, a = L.age;
+    if (a < 12 || L.eth || L.cls === 'slave' || L.band || !L.alive) return;
+    var p = 0;
+    if (L.cls === 'gentry') p = L.gate >= 3 ? 0.2 : L.gate >= 2 ? 0.12 : 0.05;
+    if (L.office) p = Math.max(p, CIRCLE_P[L.office] || 0.03);
+    if (L.mil >= 2) p = Math.max(p, L.mil * 0.025);
+    if (L.cls === 'merchant' && L.wealth >= 60) p = Math.max(p, 0.015);
+    if (L.fame >= 40) p = Math.max(p, 0.03);
+    if (!p) return;
+    p *= (1 + L.fame / 80) * (L.flags.salon ? 1.6 : 1) * (L.flags.connected || L.flags.retainers ? 1.2 : 1) * (a < 16 ? 0.5 : 1) * (L.sex === 'F' ? 0.5 : 1);
+    if (R() >= Math.min(0.4, p)) return;
+    var fk = ctrl(L.zone, y), cands = [], FA = figPresence(), gk = group(fk);
+    // 高门与大官的交游不限于本郡：同一政权治下、当时在世的人物都可能同席
+    var wide = (L.cls === 'gentry' && L.gate >= 2) || (OFF_RANK[L.office] || 0) >= 2.2 || L.fame >= 50;
+    var lf = LORD_FIG[fk];
+    if (lf && !L.met[lf] && (L.office || L.cls === 'gentry' || L.fame >= 30)) cands.push({ id: lf, lord: true });
+    Object.keys(FA).forEach(function (id) {
+      if (L.met[id] || id === lf) return;
+      if (FA[id].some(function (m) { return y >= m.y[0] && y <= m.y[1] && (m.zones.indexOf(L.zone) >= 0 || (wide && !m.q && group(ctrl(m.zones[0], y)) === gk)); })) cands.push({ id: id });
+    });
+    if (!cands.length) return;
+    var c = pick(R, cands), fig = D.FIGURES.filter(function (f) { return f.id === c.id; })[0];
+    if (!fig) return;
+    var who = a < 18 && L.kin[0] && L.kin[0].alive && !L.kin[0].apart ? '父亲' : null, t;
+    if (c.lord) t = pick(R, [fig.n + '巡视本郡，郡中设宴相迎，你也在座。', fig.n + '召见郡中的士人和属吏，你也在其中。']) + '你第一次在近处见到他。' + (LORD_LOOK[c.id] || '');
+    else t = pick(R, ['郡中大族设宴，你也在座。', '太守在府中宴请郡中士人，你也在受邀之列。', '你' + (who ? '随' + who : '') + '去一位名士家中拜访，座中另有客人。', '一次清谈雅集上，你和几位名士同席。']) + '席间有一位客人引人注目——' + fig.n + '，' + fig.d + '。' + (LORD_LOOK[c.id] || '');
+    add(L, 2.2, 'meet', t);
+    markMet(L, c.id, y, '你曾与' + fig.n + (c.lord ? '有过一面之缘' : '同席') + '。');
+    L.rec.tags.push('meet');
   }
   function prepare(L, y) {
     var R = L.R, P = { queue: [], dec: { flee: {}, sights: [] } }, a = L.age, z = L.zone;
@@ -781,6 +862,7 @@ var SGE = (function (D) {
     }
     lawYear(L, y);
     if (!L.alive) return finishYear(L, rec);
+    foreshadow(L, y, fk);
 
     if (a === 0) birthEntries(L, y);
     rec.focus = resolveFocus(L, y);
@@ -816,6 +898,7 @@ var SGE = (function (D) {
     if (dec.meet != null) meetHappen(L, dec.meet, y, 1.0, dec.meetOut);
     if (!L.alive) return finishYear(L, rec);
     dec.sights.forEach(function (i) { meetHappen(L, i, y, 1 + R() * 2); });
+    eliteMeet(L, y);
     if (dec.follow) joinBand(L, dec.follow, y);
 
     // 军旅
@@ -913,9 +996,9 @@ var SGE = (function (D) {
     var R = L.R;
     if (ev.major && ev.far && L.age >= 0) {
       var dir = dirWord(L.zone, ev.o);
-      add(L, ev.s + 0.05, 'far', ev.far.replace('{dir}', dir));
+      add(L, ev.s + 0.05, 'far', (ev.farE && eliteView(L) && L.age >= 10 ? ev.farE : ev.far).replace('{dir}', dir));
       L.rec.major = true;
-      if (L.age >= 5) add(L, ev.s + 0.06, 'far2', pick(R, ['你没有参与。', '你对此一无所知。', '这些事，离你很远。']));
+      if (L.age >= 5) add(L, ev.s + 0.06, 'far2', L.office ? pick(R, ['消息很快送到了官署，你读到了这份军报。', '官署里为此议论了好几天。']) : L.cls === 'gentry' && L.age >= 12 ? pick(R, ['族中很快就得到了消息。', '家里的门客把消息带了回来，长辈们议论了很久。']) : pick(R, ['你没有参与。', '你对此一无所知。', '这些事，离你很远。']));
     }
     var r = (L.learn >= 40 || L.cls === 'gentry') && ev.r2 ? ev.r2 : ev.r1;
     if (!r && ev.r2 && (L.learn >= 40 || L.cls === 'gentry')) r = ev.r2;
@@ -924,6 +1007,7 @@ var SGE = (function (D) {
       var delay = d < 1.2 ? 0 : d < 2.5 ? (R() < 0.5 ? 0 : 1) : d < 4 ? 1 + Math.floor(R() * 2) : 2 + Math.floor(R() * 2);
       if (REMOTE[L.zone]) delay++;
       if (L.cls === 'gentry' && delay > 0) delay--;
+      if (L.office) delay = 0;
       if (delay === 0) add(L, Math.min(3.9, ev.s + 0.6 + R()), 'rumor', r);
       else L.rumors.push({ y: y + delay, t: r });
     }
@@ -932,7 +1016,7 @@ var SGE = (function (D) {
   /* ---------- 地方效果 ---------- */
   function applyFx(L, ev, fx, dec, y) {
     var R = L.R, s = ev.s + 0.1, a = L.age;
-    if (fx.t) add(L, s, 'hist', fx.t);
+    if (fx.t) add(L, s, 'hist', fx.t2 && eliteView(L) && a >= 10 ? fx.t2 : fx.t);
     var fled = false, moved = false, dest = null;
     if (fx.flee) {
       var f = dec.flee[ev.id];
@@ -1521,7 +1605,7 @@ var SGE = (function (D) {
       L.office = '县长'; L.job = '县长'; L.officeMax = '县长'; L.fame += 8;
       add(L, 2, 'good', '你被任命为一个小县的县长。从小吏做到长吏，在你的出身里是极少见的。');
     }
-    var cm = (L.lastFocus === 'career' ? 2 : 1) * (L.flags.robe ? 1.3 : 1) * (L.flags.connected ? 1.3 : 1) * (L.flags.zz ? 2 : 1) * (L.flags.zzno ? 0.6 : 1) * (L.flags.disciple ? 1.4 : 1) * (L.found.memory ? 1.3 : 1) * (L.found.charm ? 1.2 : 1) * (L.flags.banned ? 0 : 1) * (L.patron ? 1.5 : 1) * (L.flags.praised ? 1.4 : 1);
+    var cm = (L.lastFocus === 'career' ? 2 : 1) * (L.flags.robe ? 1.3 : 1) * (L.flags.connected ? 1.3 : 1) * (L.flags.zz ? 2 : 1) * (L.flags.zzno ? 0.6 : 1) * (L.flags.disciple ? 1.4 : 1) * (L.found.memory ? 1.3 : 1) * (L.found.charm ? 1.2 : 1) * (L.flags.banned ? 0 : 1) * (L.patron ? 1.5 : 1) * (L.flags.praised ? 1.4 : 1) * (L.flags.jushi ? 1.5 : 1);
     var gm = L.gate >= 3 ? 2.2 : 1;
     if (L.cls === 'gentry' && !L.office && a >= 18) {
       var p = 0;
@@ -1657,6 +1741,7 @@ var SGE = (function (D) {
         if (k.fixDy != null || y <= k.guard) return;
       }
       var q = (ka === 1 ? baseQ(0) : baseQ(ka)) * (CLS_Q[L.cls] || 1) * chaos(y) * (k.soldier ? 1.5 : 1) * (k.rel === 'child' && L.rec.focus && L.rec.focus.eff === 'kids' ? 0.85 : 1) * (k.rel === 'child' && ka < 10 ? (L.wealth >= 60 ? 0.6 : L.wealth < 15 ? 1.25 : 1) : 1);
+      if (k.cared && y - k.cared <= 3) q *= 0.65;
       if (R() < q) kinDie(L, k, 'base', 1 + Math.floor(R() * 3) + 0.5, y);
     });
     // 弟妹出生
@@ -2062,7 +2147,8 @@ var SGE = (function (D) {
     }
     rec.ledger = { inc: inc, exp: exp, I: I, X: X, net: net, head: head };
     if (E.debt > Math.max(4000, C * PRICE * 0.8) && a - (L.lastCrisis == null ? -9 : L.lastCrisis) >= 3) { L.crisis = true; L.lastCrisis = a; }
-    autoSpend(L, y, fo);
+    pendYear(L, y);
+    if (!L.auto && L.autoSpendOn) smartSpend(L, y, fo); else autoSpend(L, y, fo);
   }
   function autoSpend(L, y, fo) {
     var R = L.R, E = L.eco;
@@ -2149,8 +2235,74 @@ var SGE = (function (D) {
     { id: 'sendhome', g: '军中', n: '把私蓄寄回家', c: function (L) { return Math.max(100, Math.round(L.eco.priv)); }, ok: function (L) { return !!L.soldier && L.eco.priv >= 100 && liveKin(L, function (k) { return !k.out; }).length > 0; }, fx: function (L, y, c) { L.eco.cash += c; return '你托同乡把' + fmt(c) + '钱值的私蓄捎回了家。'; } },
     { id: 'hairpin', g: '日用', n: '给自己买一支铜钗', c: 200, ok: function (L) { return L.sex === 'F'; }, fx: function () { return '你给自己买了一支铜钗。'; } },
     { id: 'coffin', g: '身后', n: '预备寿材', c: 3000, ok: function (L) { return L.age >= 55 && !L.flags.coffin; }, fx: function (L) { L.flags.coffin = true; return '你早早为自己备好了一副柏木寿材。'; } },
+    { id: 'piglet', g: '农事', n: '买一头猪崽来养', c: 300, ok: function (L) { return farmerish(L) && !L.band && !pendHas(L, 'piglet'); }, fx: function (L, y) { pendAdd(L, { id: 'piglet', y: y + 1, cash: 700, t: '去年买的猪崽养肥了，年底卖了七百钱。' }); return '你买了一头猪崽，打算养到年底卖钱。'; } },
+    { id: 'nourish', g: '日用', n: '买些补药养身', c: 2500, ok: function (L) { return richish(L) && L.age >= 35; }, fx: function (L) { L.body += 5; return '你买了些人参、茯苓，每天熬汤进补。'; } },
+    { id: 'medicine', g: '家人', n: '给年老的爹娘请医买药', c: 1200, ok: function (L) { return !!oldParent(L); }, fx: function (L, y) { var k = oldParent(L); k.cared = y; affAdd(k, 10); L.standing += 1; return '你请了医者来给' + kinLabel(L, k) + '看病，又抓了几服药。老人嘴上说不要花这个钱，眼眶却红了。'; } },
+    { id: 'redeem', g: '家人', n: '赎回被卖、被送走的亲人', c: 8000, ok: function (L) { return !!lostKin(L); }, fx: function (L) { var k = lostKin(L); k.apart = false; k.sold = k.given = k.bonded = false; affAdd(k, 25); L.standing += 2; return '你四处打听，终于找到了' + kinLabel(L, k) + '，花了八千钱把人赎了回来。一家人抱头痛哭。'; } },
+    { id: 'dowry', g: '子女', n: '给女儿备一份体面的嫁妆', c: 4000, ok: function (L) { return !!dowryGirl(L); }, fx: function (L) { var k = dowryGirl(L); k.dowry = true; affAdd(k, 15); L.standing += 2; return '你给' + kinLabel(L, k) + '备下了一份嫁妆：铜镜、漆奁、几匹绢。她将来到了夫家，腰杆能直一些。'; } },
+    { id: 'loan', g: '家业', n: '放一笔债（一万钱，两年后收回）', c: 10000, ok: function (L) { return richish(L) && L.age >= 20 && !pendHas(L, 'loan'); }, fx: function (L, y) { pendAdd(L, { id: 'loan', y: y + 2, cash: 13000, risk: 0.15, t: '两年前放出去的债收回来了，连本带利一万三千钱。', fail: '借债的那户人家举家逃走了，一万钱打了水漂。' }); return '你把一万钱借给了邻县的一户人家，约好两年后连本带利归还。'; } },
+    { id: 'land100', g: '农事', n: '买一百亩田', c: LANDP * 100, ok: function (L) { return ['clerk', 'gentry', 'merchant'].indexOf(L.cls) >= 0 && !L.band; }, fx: function (L) { L.land += 100; return '你买下了一百亩田，招了几户佃客来种。'; } },
+    { id: 'wubi', g: '家业', n: '修筑坞壁', c: 60000, ok: function (L, y) { return (L.cls === 'gentry' || L.wealth >= 60) && !L.flags.wubi && y >= 184 && !L.band; }, fx: function (L) { L.flags.wubi = true; L.standing += 4; return '你家征发佃客，在庄外筑起了高墙，四角立起望楼。乱兵来了，至少能关起门来守几天。'; } },
+    { id: 'retainers', g: '交游', n: '蓄养宾客部曲', c: 30000, ok: function (L) { return (L.cls === 'gentry' || L.wealth >= 65) && L.sex === 'M' && !L.flags.retainers; }, fx: function (L) { L.flags.retainers = true; L.flags.connected = true; L.standing += 8; L.fame += 3; return '你家门下养了几十个宾客、上百个部曲。出门时前呼后拥，郡里的人都要让你三分。'; } },
+    { id: 'salon', g: '交游', n: '招邀名士清谈雅集', c: 8000, ok: function (L) { return L.literate && (L.cls === 'gentry' || !!L.office || L.fame >= 30) && !L.flags.salon; }, fx: function (L) { L.flags.salon = true; L.fame += 3; L.standing += 2; return '你在家中设雅集，招邀郡中名士清谈。往后名士们路过本郡，常来你家坐坐。'; } },
+    { id: 'library', g: '读书', n: '修一座藏书楼', c: 40000, ok: function (L) { return L.cls === 'gentry' && L.literate && !L.flags.library; }, fx: function (L) { L.flags.library = true; L.learn += 10; L.fame += 4; kidsWith(L, function (a) { return a >= 5; }).forEach(function (k) { k.lit = true; }); return '你修了一座藏书楼，收藏了上千卷书。远近的读书人都来借抄，家中子弟也都读了书。'; } },
+    { id: 'tomb', g: '身后', n: '为先人修墓立碑', c: 20000, ok: function (L, y) { return richish(L) && !L.flags.tomb && deadParent(L) && !polsAt(L.zone, y).some(function (p) { return p.id === 'bozang'; }); }, fx: function (L) { L.flags.tomb = true; L.standing += 6; L.fame += 4; return '你为先人修了一座大墓，立了石阙，请人撰写碑文，颂扬先人的德行。乡里人都说你是孝子。'; } },
+    { id: 'jushi', g: '仕途', n: '上下打点，谋一个举荐', c: 15000, ok: function (L, y) { return y < 220 && L.sex === 'M' && L.age >= 18 && L.age <= 45 && !L.office && (L.cls === 'gentry' || L.cls === 'clerk' || L.learn >= 40) && !L.flags.jushi; }, fx: function (L) { L.flags.jushi = true; return '你带着厚礼去拜见郡中的功曹，又托人在太守面前说了好话。能不能被举荐，就看来年了。'; } },
+    { id: 'zzbribe', g: '仕途', n: '打点中正官', c: 30000, ok: function (L, y) { return y >= 220 && L.cls === 'gentry' && L.sex === 'M' && L.age >= 18 && L.age <= 45 && !L.office && !L.flags.zz; }, fx: function (L) { L.flags.zz = true; return '你托人给州里的中正官送去厚礼。不久，你的品第被评高了一等。'; } },
     { id: 'gift', g: '身后', n: '给孙辈压岁钱', c: 100, ok: function (L) { return L.grandkids > 0; }, fx: function () { return '你给孙辈们每人串了一串压岁钱。'; } }
   ];
+  function pendHas(L, id) { return (L.pend || []).some(function (p) { return p.id === id; }); }
+  function pendAdd(L, p) { (L.pend = L.pend || []).push(p); }
+  function pendYear(L, y) {
+    if (!L.pend || !L.pend.length) return;
+    L.pend = L.pend.filter(function (p) {
+      if (p.y > y) return true;
+      if (p.risk && L.R() < p.risk) add(L, 3.6, 'bad', p.fail);
+      else { L.eco.cash += p.cash; add(L, 3.6, 'good', p.t); }
+      return false;
+    });
+  }
+  function oldParent(L) { return liveKin(L, function (k) { return (k.rel === 'father' || k.rel === 'mother') && !k.out && L.by + L.age - k.by >= 55; })[0] || null; }
+  function lostKin(L) { return L.kin.filter(function (k) { return k.alive && k.apart && (k.sold || k.given || k.bonded); })[0] || null; }
+  function deadParent(L) { return L.kin.some(function (k) { return (k.rel === 'father' || k.rel === 'mother') && !k.alive; }); }
+  function dowryGirl(L) { return kidsWith(L, function (a, k) { return k.sex === 'F' && a >= 12 && a <= 20 && !k.out && !k.dowry; })[0] || null; }
+
+  // 自动支用：按性情、眼下所重和家境，替你花一部分余财
+  var SP_G = { 日用: 1, 农事: 1, 子女: 3, 家人: 5, 读书: 1, 交游: 1, 乡里: 1, 家业: 2, 买卖: 1, 军中: 2, 身后: 1, 仕途: 1.5 };
+  function smartSpend(L, y, fo) {
+    var R = L.R, t = L.tr;
+    if (L.age < 16 || L.cls === 'slave') return;
+    var opt = spendOptions(L), budget = opt.can * clamp(0.3 + (t.soc - t.cau) / 150 + (fo === 'save' ? -0.2 : 0), 0.1, 0.6);
+    if (budget < 80) return;
+    var seen = L.spentY = L.spentY || {}, done = 0, rich = L.wealth >= 55;
+    if (R() >= (rich ? 0.75 : 0.45)) return;
+    for (var n = 0; n < (rich && R() < 0.4 ? 2 : 1); n++) {
+      var items = opt.items.filter(function (it) { return it.st === 'ok' && it.c <= budget && (seen[it.id] == null || y - seen[it.id] >= 3); });
+      if (!items.length) break;
+      var it = wpick(R, items, function (it) {
+        var w = SP_G[it.g] || 1, G = it.g;
+        if (G === '日用') w *= L.body < 50 ? 3 : 0.8;
+        if (G === '农事') w *= farmerish(L) ? 2.5 : 0.6;
+        if (G === '读书') w *= L.literate ? 0.6 + t.cur / 50 : 0;
+        if (G === '交游' || G === '乡里') w *= 0.3 + t.soc / 50;
+        if (G === '买卖') w *= L.cls === 'merchant' ? 3 : 0;
+        if (G === '身后') w *= L.age >= 50 ? 2 : 0.3;
+        if (fo === 'career' && (G === '仕途' || G === '交游')) w *= 2.5;
+        if (fo === 'study' && G === '读书') w *= 2.5;
+        if ((fo === 'house' || fo === 'save') && (G === '农事' || G === '家业')) w *= 2;
+        if ((fo === 'social' || fo === 'fame') && (G === '交游' || G === '乡里')) w *= 2.5;
+        if (fo === 'kids' && G === '子女') w *= 2;
+        w *= 0.4 + Math.log10(Math.max(50, it.c)) / 3;
+        return Math.max(0.05, w);
+      });
+      var r = spend(L, it.id);
+      if (!r.ok) break;
+      seen[it.id] = y; budget -= it.c; done++;
+      add(L, 3.75, 'spend', '（自动支用 ' + fmt(it.c) + ' 钱值）' + r.t);
+      opt = spendOptions(L);
+    }
+    return done;
+  }
   function spendRoom(L) {
     var head = isHead(L), free = Math.max(0, Math.round(L.eco.cash - reserve(L)));
     return { priv: Math.round(L.eco.priv), house: head ? free : 0, family: head ? 0 : free, head: head };
