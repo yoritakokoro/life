@@ -1362,6 +1362,17 @@ var SGE = (function (D) {
     }
   }
 
+  // 在群雄本人手下做事，就算见过他
+  var LORD_FIG = { caocao: 'caocao', liubei: 'liubei', sunce: 'sunce', sunquan: 'sunquan', yuanshao: 'yuanshao', liubiao: 'liubiao', dongzhuo: 'dongzhuo', gongsunzan: 'gongsunzan', zhanglu: 'zhanglu', shixie: 'shixie', lvbu: 'lvbu' };
+  var LORD_LOOK = { caocao: '他个子不高，目光很亮，说话时常常大笑。', liubei: '他身长七尺五寸，垂手下膝，待人很和气，记得住下属的名字。', sunce: '他年轻俊朗，爱说笑，人们都叫他"孙郎"。', sunquan: '他方颐大口，目有精光。', yuanshao: '他姿貌威容，举止很有气度，只是议事时总拿不定主意。', liubiao: '他身长八尺余，姿貌温厚，说话不紧不慢。', dongzhuo: '他身体肥胖，目光阴沉，堂下的人都不敢抬头。', gongsunzan: '他相貌英俊，声音洪亮，身边总跟着骑白马的卫士。', zhanglu: '他穿着道服，说话不紧不慢，案上摆着道书。', shixie: '他体器宽厚，待人谦和，说起《春秋》来头头是道。', lvbu: '他身材魁梧，弓马娴熟，只是喜怒无常。' };
+  function figName(id) { var f = D.FIGURES.filter(function (x) { return x.id === id; })[0]; return f ? f.n : ''; }
+  function serveLord(L, id, y, how, s) {
+    if (!id || L.met[id] || !figName(id)) return;
+    add(L, s || 1.45, 'meet', '你第一次在近处见到了' + figName(id) + '本人。' + (LORD_LOOK[id] || ''));
+    markMet(L, id, y, '你曾' + how + '。');
+    L.rec.tags.push('meet');
+  }
+
   // 改朝换代：禅代与父子相继不算易主
   var SUCC = { 'caocao>wei': 1, 'liubei>shu': 1, 'sunce>sunquan': 1, 'sunquan>wu': 1, 'liuyan>liuzhang': 1, 'wei>jin': 1, 'dongzhuo>lijue': 1, 'han>liuyan': 1, 'han>liubiao': 1, 'han>taoqian': 1, 'han>shixie': 1, 'han>gongsun': 1, 'han>zhanglu': 1, 'han>gongsunzan': 1, 'han>warlords': 1 };
   function lordName(fk, y) { return { warlords: '新起的豪强', rebels: '凉州叛军', nzrebels: '南中豪帅', han: '汉廷', lijue: '李傕、郭汜' }[fk] || fname(fk, y); }
@@ -1370,7 +1381,7 @@ var SGE = (function (D) {
     var R = L.R, nn = lordName(c.nfk, y), on = lordName(c.ofk, y), r = R();
     if (!L.office) {
       if (i === 0) {
-        if (r < 0.3 + L.fame / 120 + (L.gate >= 3 ? 0.15 : 0)) { L.office = '幕僚'; L.officeMax = nn + '的掾属'; L.job = '幕僚'; L.fame += 4; add(L, 1.2, 'good', '你的书信得到了回音。' + nn + '辟你为掾属。有人说你识时务，也有人在背后说你急于求进。'); }
+        if (r < 0.3 + L.fame / 120 + (L.gate >= 3 ? 0.15 : 0)) { L.office = '幕僚'; L.officeMax = nn + '的掾属'; L.job = '幕僚'; L.fame += 4; add(L, 1.2, 'good', '你的书信得到了回音。' + nn + '辟你为掾属。有人说你识时务，也有人在背后说你急于求进。'); serveLord(L, LORD_FIG[c.nfk], y, '应' + nn + '征辟，做他的掾属'); }
         else add(L, 1.2, 'life', '你的书信石沉大海。新主身边的人太多了，轮不到你。');
       } else { L.standing += 2; add(L, 1.2, 'life', '你闭门谢客，只在家中读书。乱世里，观望也是一种站队。'); }
       return;
@@ -1380,7 +1391,7 @@ var SGE = (function (D) {
         if (r < 0.85) add(L, 1.2, 'life', '县廷换了主人，户籍、田亩、刑狱的文书还得有人管。你照旧当差，只是公文上的年号和印信都换了。');
         else { add(L, 1.2, 'bad', '新来的长官带来了自己的人，你被打发回了家。'); L.office = null; L.job = '农'; }
       } else if (r < 0.5) add(L, 1.2, 'life', '新主要安抚人心，你被留任原职。只是从此每次议事，都有人看你的脸色。');
-      else if (r < 0.62 && L.fame >= 25) { L.fame += 5; add(L, 1.2, 'good', nn + '看重你的名声，不但留任，还加了你的秩禄。'); }
+      else if (r < 0.62 && L.fame >= 25) { L.fame += 5; add(L, 1.2, 'good', nn + '看重你的名声，召你相见，不但留任，还加了你的秩禄。'); serveLord(L, LORD_FIG[c.nfk], y, '得' + nn + '召见，加了秩禄'); }
       else if (r < 0.88) { L.office = '幕僚'; L.job = '幕僚'; add(L, 1.2, 'bad', '要紧的位置都给了' + nn + '的旧部。你被调去做了一个闲散的掾属。'); }
       else {
         add(L, 1.2, 'bad', '有人告你是' + on + '的心腹。你被下了狱。');
@@ -1394,10 +1405,11 @@ var SGE = (function (D) {
       add(L, 1.2, 'life', '你把印绶封好，留在官舍里，回乡闭门不出。' + (L.cls === 'gentry' ? '乡里人说你有节操；新主那边，记下了你的名字。' : '家里人埋怨你，丢了一份口粮。'));
     } else {
       if (R() < 0.08) { die(L, 'road', 1.4); return; }
-      relocate(L, c.dest, 1.2, '你带着家小连夜出城，投奔{dest}的' + on + '。', 0, y);
+      relocate(L, c.dest, 1.2, '你带着家小连夜出城，往{dest}投奔' + on + '。', 0, y);
       if (R() < 0.55) add(L, 1.5, 'good', on + '念你远来相投，仍授了你官职。');
       else { L.office = '幕僚'; L.job = '幕僚'; add(L, 1.5, 'life', on + '收留了你，可远来的人太多，你只做了一个闲散的掾属。'); }
       L.fame += 2;
+      serveLord(L, LORD_FIG[c.ofk], y, '投奔' + on + '，在他帐下任职', 1.55);
     }
   }
 
@@ -1480,6 +1492,7 @@ var SGE = (function (D) {
         else { L.office = '幕僚'; L.officeMax = fname(fk, y) + '的幕僚'; t = fname(fk, y) + '征辟你为掾属，你做了幕府的幕僚。'; }
         L.job = L.office; L.fame += 10;
         add(L, 2, 'good', t);
+        if (L.office === '幕僚') serveLord(L, LORD_FIG[fk], y, '在' + fname(fk, y) + '幕府中任掾属');
       }
     } else if ((L.office === '郎官' || L.office === '尚书郎' || L.office === '幕僚') && R() < 0.12 * gm) {
       L.office = '县令'; L.officeMax = '县令'; L.job = '县令'; L.fame += 6;
@@ -2177,7 +2190,7 @@ var SGE = (function (D) {
     (EV_BY_Y[y] || []).forEach(function (ev) { var fx = localFx(L, ev, L.zone, y); if (fx && !fx._skip) { fl.war += fx.war || 0; fl.fam += fx.fam || 0; fl.plag += fx.plag || 0; } });
     var camp = L.soldier && (CAMP_BY_Y[y] || []).some(function (c) { return c.a.indexOf(L.soldier.army) >= 0; });
     return {
-      y: y, a: L.age, g: group(fk), fname: fname(fk, y), head: isHead(L), fl: fl, chaos: chaos(y), poor: poorNow(L), farm: farmerish(L), camp: camp,
+      y: y, a: L.age, g: group(fk), fk: fk, fname: fname(fk, y), head: isHead(L), fl: fl, chaos: chaos(y), poor: poorNow(L), farm: farmerish(L), camp: camp,
       kids: function (lo, hi, sex, f) { return liveKin(L, function (k) { var a = y - k.by; return k.rel === 'child' && a >= lo && a <= hi && (!sex || k.sex === sex) && (!f || f(k)); }); },
       friend: function (min) { return bestFriend(L, min); },
       tier: lifeTier(L, y).k,
@@ -2236,6 +2249,8 @@ var SGE = (function (D) {
     if (fx.gentryWed) { L.spouseK = null; doMarry(L, makeSpouse(L, y), y, s + 0.1, L.sex === 'F' ? '你奉父命出嫁。' : ''); }
     if (fx.clanDie) liveKin(L, function (k) { return !k.out || k.rel === 'father' || k.rel === 'sib'; }).forEach(function (k) { if (R() < 0.6) kinDie(L, k, 'executed', s + 0.08, y); });
     if (fx.office) { L.office = fx.office; L.officeMax = fx.office === '幕僚' ? (meta.lord || '') + '幕府的掾属' : fx.office; L.job = fx.office; }
+    var sv = fx.serve || (fx.office === '幕僚' && meta.fk ? LORD_FIG[meta.fk] : null);
+    if (sv) serveLord(L, sv, y, fx.office ? '在' + figName(sv) + '幕府中任职' : '追随' + figName(sv));
     if (fx.noOffice) { L.office = null; L.job = '农'; }
     if (fx.flag) [].concat(fx.flag).forEach(function (f) { L.flags[f] = true; });
     if (fx.tr) for (var t in fx.tr) L.tr[t] = clamp(L.tr[t] + fx.tr[t], 5, 95);
