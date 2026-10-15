@@ -2555,7 +2555,9 @@ var SGE = (function (D) {
   /* ================= 家计 ================= */
   var PRICE = 100, LANDP = 1000;
   var SAL = { 里正: 1500, 亭长: 3000, 游徼: 4000, 乡啬夫: 5000, 书佐: 9000, 计吏: 12000, 县长: 40000, 郎官: 30000, 县令: 60000, 幕僚: 30000, 郡守: 120000, 尚书郎: 50000, 刺史: 150000, 九卿: 200000 };
-  var JOBINC = { 医者: 1500, 巫祝: 800, 门客: 2000, 塾师: 900, 稳婆: 600, 山贼: 1500, 官匠: 1800, 代书先生: 1000, 游侠: 1200, 中人: 1200, 方士: 1000, 媒人: 600, 经师: 3000 };
+  // 平民的副业：名目与一年大约的进项
+  var SIDE_JOB = { sang: ['桑麻', 500], veg: ['卖菜', 700], tan: ['烧炭', 900], xie: ['编草鞋、织席', 450], yu: ['捕鱼', 650], fang: ['纺线', 500], zhu: ['养猪、养鸡', 600], feng: ['缝补浆洗', 350] };
+  var JOBINC = { 里父老: 300, 医者: 1500, 巫祝: 800, 门客: 2000, 塾师: 900, 稳婆: 600, 山贼: 1500, 官匠: 1800, 代书先生: 1000, 游侠: 1200, 中人: 1200, 方士: 1000, 媒人: 600, 经师: 3000 };
   function fmt(n) { n = Math.round(n); return (n < 0 ? '-' : '') + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
   function initEco(L) {
     var R = L.R, E = { cash: 0, priv: 0, debt: 0, ox: 0, house: 3000, stock: 0, tools: false, loom: false, labor: 0, porter: 0, cart: false };
@@ -2648,7 +2650,7 @@ var SGE = (function (D) {
     }
     var m = members(L, y), sh = shock(L, y);
     var RGN = D.REGION && D.REGION[L.zone];
-    var hf = sh.h * (RGN ? RGN.yield : 1) * (L.yHarvest || 1) * (0.85 + R() * 0.3) * (E.tools ? 1.08 : 1) * (fo === 'house' ? 1.06 : 1) * polMul(L.zone, y, 'harvest');
+    var hf = sh.h * (RGN ? RGN.yield : 1) * (L.yHarvest || 1) * (0.85 + R() * 0.3) * (E.tools ? 1.08 : 1) * (fo === 'house' ? 1.06 : 1) * (L.harvestB || 1) * polMul(L.zone, y, 'harvest');
     L.yHarvest = 1;
     var inc = [], exp = [], H = 0, note = '';
     var cap = (m.wM * 45 + m.wF * 12) * (E.ox > 0 ? 1.35 : 1);
@@ -2689,6 +2691,11 @@ var SGE = (function (D) {
     if ((c === 'peasant' || c === 'tenant') && H < C) wage += Math.round(Math.max(0, m.wM - 1) * 900);
     if (wage) inc.push(['佣作', wage]);
     if (E.labor > 0) { inc.push(['外出佣作寄回', 2500]); E.labor--; }
+    if (L.side && !L.soldier && !L.band) {
+      var SD = SIDE_JOB[L.side.k];
+      if (y > L.side.until || a >= 62) L.side = null;
+      else if (SD) inc.push(['副业：' + SD[0], Math.round(SD[1] * (sh.h < 0.6 ? 0.7 : 1) * (0.8 + R() * 0.4))]);
+    }
     if (L.soldier) inc.push(['军饷寄回', 1200]);
     var sup = elderSupport(L, y);
     if (sup) inc.push(['子女奉养', sup]);
@@ -3217,6 +3224,11 @@ var SGE = (function (D) {
     var E = L.eco;
     if (fx.cash) { if (fx.cash > 0) E.cash += fx.cash; else payFrom(L, -fx.cash); }
     if (fx.priv) E.priv = Math.max(0, E.priv + fx.priv);
+    if (fx.side) L.side = { k: fx.side, from: y, until: y + 5 + Math.floor(R() * 6) };
+    if (fx.yHarvest) L.yHarvest = fx.yHarvest;
+    if (fx.harvestB) L.harvestB = Math.min(1.15, (L.harvestB || 1) * fx.harvestB);
+    if (fx.labor) E.labor = Math.max(E.labor || 0, fx.labor);
+    if (fx.kidDie && meta.kid && meta.kid.alive) kinDie(L, meta.kid, 'fam', s + 0.05, y);
     if (fx.debt) E.debt = Math.max(0, E.debt + fx.debt);
     if (fx.land) L.land = Math.max(0, L.land + fx.land);
     if (fx.ox) E.ox = Math.max(0, E.ox + fx.ox);
