@@ -59,7 +59,11 @@
   X.slaveF = ['你给主家的小姐梳头，梳掉了一根头发，被罚跪了一个时辰。', '你在厨下帮工，主母嫌菜咸，摔了碗。', '主家来了客人，你被叫去斟酒，手一直在抖。', '你和几个婢女挤在一间屋里睡，冬天冷得睡不着。'];
   X.tenantLines = ['主家的管事来田里看过收成，定下了今年的租子。', '你给主家白干了半个月的活，说是"助役"。', '主家办喜事，佃户们都要去帮忙，还得随礼。', '你家住的屋子也是主家的，漏了雨，管事说自己修。', '主家的狗咬了你，你不敢说什么。'];
   X.slave = X.slave.concat(['主人家的孩子过生日，你在一旁端菜，一口也没吃上。', '你被派去给主人家的田庄送信，走了一整天。', '管事说你偷懒，罚你一天不许吃饭。', '你在马厩里过了一冬，和马挤在一起取暖。']);
-  X.old = X.old.concat(['你把年轻时的事讲给孙辈听，他们听着听着就睡着了。', '你的眼睛花了，穿不进针。', '你常常一个人坐在田边，看着别人耕种。', '冬天的夜里，你的骨头疼得睡不着。']);
+  X.old = X.old.concat(['你把年轻时的事讲给孙辈听，他们听着听着就睡着了。', '冬天的夜里，你的骨头疼得睡不着。']);
+  X.oldFarm = X.oldFarm.concat(['你常常一个人坐在田边，看着别人耕种。']);
+  X.oldF = X.oldF.concat(['你的眼睛花了，穿不进针。']);
+  X.gongrenHi = ['你住进了自己的宫院，有了几个伺候你的宫女。', '天子来过几次，每次都只坐一会儿就走了。', '后宫里的女人们笑着说话，眼睛却都盯着彼此。', '你家里托人送来书信，说父兄都沾了你的光。你读完，把信烧了。'];
+  X.gongren = ['宫里的日子，一天和一天一样：洒扫、浆洗、侍立。', '你听老宫人讲先帝时候的事，她说着说着就哭了。', '天子游幸后宫，宫人们都站在路边低着头，你从没被看过一眼。', '宫墙很高，只看得见一方天。你常常想起家里的那棵树。', '有宫人犯了错，被拖出去打死了。那几天，谁也不敢大声说话。'];
   X.merchant = X.merchant.concat(['你在市上跟人为了一匹布的价钱争了半天。', '县里的市吏又来收"市租"了。', '你家的账簿记满了一卷木牍。']);
   X.artisan = X.artisan.concat(['你给邻村的人家打了一套桌案。', '你的徒弟把一件活做坏了，你只好熬夜重做。', '官府定下了今年要交的器物数目，比去年多了一成。']);
 })(SGD);
@@ -374,5 +378,70 @@
       q: '{kin}在外面闯了祸，把邻家的孩子打得头破血流。邻家的大人找上门来了。', o: ['带着孩子登门赔罪', '护着自家孩子', '当着邻人的面狠狠打他一顿'],
       r: [[{ p: 1, t: '你提着两斗米，押着{kin}去邻家赔了罪。回来的路上，孩子一句话也没说。', fx: { cash: -200, standing: 2, kinAff: -3 } }], [{ p: 1, t: '你护着自家孩子，和邻家吵了一架。两家从此结了怨。', fx: { standing: -3, kinAff: 8 } }], [{ p: 1, t: '你当着众人的面打了{kin}一顿。邻家消了气，孩子却好几天不肯理你。', fx: { kinAff: -10, standing: 1 } }]],
       aw: function (L) { return [ET(L, 'soc'), 100 - ET(L, 'soc'), ET(L, 'per')]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 选宫人：孙皓简阅将吏之女，晋武帝聘选公卿以下子女 ---------- */
+  var PT = function (L, k) { return L.tr[k] == null ? 50 : L.tr[k]; };
+  var officerFam = function (L) { return ['gentry', 'clerk', 'soldier'].indexOf(L.cls) >= 0 || !!L.officeMax || !!L.milMax; };
+  [
+    { id: 'pk_wu', w: 20, ok: function (L, H) { return L.sex === 'F' && !L.married && H.a >= 14 && H.a <= 16 && H.y >= 266 && H.y <= 279 && H.g === 'wu' && officerFam(L) && !L.flags.pkWu && {}; },
+      pre: function (L) { L.flags.pkWu = true; },
+      q: '吴主下令：将吏家的女儿，十五六岁要一年一简阅，选不中的才许出嫁。今年轮到你了，母亲连夜给你梳头，手一直在抖。', o: ['听天由命，去简阅', '装病，躲过这一回', '让家里拿钱去打点'],
+      need: [null, null, function (L) { return L.eco.cash + L.eco.priv >= 3000; }], why: [null, null, '家里拿不出打点的钱'],
+      r: [[{ p: 0.35, t: '你被选中了。宫里的车来接你那天，母亲哭着追了半条街。', fx: { palace: 'jiangdong' } }, { p: 0.65, t: '你没有被选中。回家的路上，你第一次觉得自己长得不好看是件好事。', fx: {} }],
+        [{ p: 0.6, t: '你装了一个月的病，简阅的人来看了一眼，说明年再说。', fx: { tr: { cau: 3 } } }, { p: 0.4, t: '装病被看穿了。你被带去简阅，家里还挨了一顿训斥。', fx: { palace: 'jiangdong' } }],
+        [{ p: 0.75, t: '钱送到了，你的名字被从册子上划掉了。父亲说，这钱花得值。', fx: { cash: -3000 } }, { p: 0.25, t: '钱收了，人还是被带走了。', fx: { cash: -3000, palace: 'jiangdong' } }]],
+      aw: function (L) { return [PT(L, 'cau'), PT(L, 'ind'), 70]; } },
+    { id: 'pk_wu_d', w: 20, ok: function (L, H) { if (H.y < 266 || H.y > 279 || H.g !== 'wu' || !H.head || !officerFam(L)) return false; var k = H.kids(14, 16, 'F', function (x) { return !x.out && !x.pkWu; })[0]; return k && { kin: k }; },
+      pre: function (L, m) { m.kin.pkWu = true; },
+      q: '吴主下令：将吏家的女儿，十五六岁要一年一简阅，选不中的才许出嫁。今年轮到了你家的{kin}。', o: ['让她去简阅', '让她装病', '拿钱去打点'],
+      need: [null, null, function (L) { return L.eco.cash + L.eco.priv >= 3000; }], why: [null, null, '你拿不出打点的钱'],
+      r: [[{ p: 0.35, t: '{kin}被选进了宫。你后来托人打听过几次，再也没有她的消息。', fx: { kinGone: true } }, { p: 0.65, t: '{kin}没有被选中。你赶紧托媒人给她说了一门亲事。', fx: { kinOut: true } }],
+        [{ p: 0.6, t: '{kin}装了一个月的病，躲过了这一回。', fx: {} }, { p: 0.4, t: '装病被看穿，{kin}还是被带走了。', fx: { kinGone: true } }],
+        [{ p: 0.75, t: '你送了三千钱，{kin}的名字被划掉了。你连夜托人给她说亲。', fx: { cash: -3000, kinOut: true } }, { p: 0.25, t: '钱收了，{kin}还是被带走了。', fx: { cash: -3000, kinGone: true } }]],
+      aw: function (L) { return [PT(L, 'cau'), PT(L, 'ind'), 70]; } },
+    { id: 'pk_jin', w: 20, ok: function (L, H) { return L.sex === 'F' && !L.married && H.a >= 13 && H.a <= 20 && H.y >= 273 && H.y <= 274 && H.g === 'jin' && (L.cls === 'gentry' || L.cls === 'clerk' || !!L.officeMax) && !L.flags.pkJin && {}; },
+      pre: function (L) { L.flags.pkJin = true; },
+      q: '朝廷下诏，聘选公卿以下的女儿充实六宫；采选没有结束之前，天下禁止婚嫁。名门的女儿们听说了，有的穿上破旧衣裳，有的故意不梳洗，想躲过去。', o: ['穿上破衣、不施脂粉去应选', '照常打扮去应选', '求父亲托病不去'],
+      r: [[{ p: 0.15, t: '你还是被选中了。听说同时入宫的胡氏女在殿上大哭，左右劝她小声些，她说："死且不畏，何畏陛下！"', fx: { palace: 'luoyang' } }, { p: 0.85, t: '选官看了你一眼，摇摇头，把你剔了出去。', fx: {} }],
+        [{ p: 0.4, t: '你被选中了，用绛纱系在臂上，送进了洛阳的后宫。宫里已经有几千人了。', fx: { palace: 'luoyang' } }, { p: 0.6, t: '你没有被选中。禁婚令解除后，家里很快给你定了亲。', fx: {} }],
+        [{ p: 0.6, t: '父亲称病，替你挡了过去。', fx: {} }, { p: 0.4, t: '有人告发父亲欺瞒，你家被罚了一大笔钱，你也还是被送去应选了。', fx: { cash: -5000, palace: 'luoyang' } }]],
+      aw: function (L) { return [PT(L, 'cau') + 10, 100 - PT(L, 'cau'), PT(L, 'ind')]; } },
+    { id: 'pk_jin_d', w: 20, ok: function (L, H) { if (H.y < 273 || H.y > 274 || H.g !== 'jin' || !H.head || !(L.cls === 'gentry' || L.cls === 'clerk' || !!L.officeMax)) return false; var k = H.kids(13, 20, 'F', function (x) { return !x.out && !x.pkJin; })[0]; return k && { kin: k }; },
+      pre: function (L, m) { m.kin.pkJin = true; },
+      q: '朝廷下诏，聘选公卿以下的女儿充实六宫，天下暂禁婚嫁。你家的{kin}也在册上。', o: ['让她穿上破衣、不施脂粉去应选', '让她好好打扮去应选', '你托病，不让她去'],
+      r: [[{ p: 0.15, t: '{kin}还是被选进了宫。', fx: { kinGone: true } }, { p: 0.85, t: '{kin}被剔了出来。你松了一口气。', fx: {} }],
+        [{ p: 0.4, t: '{kin}被选进了宫。临走时，她回头看了你一眼。', fx: { kinGone: true, standing: 2 } }, { p: 0.6, t: '{kin}没有被选中。', fx: {} }],
+        [{ p: 0.6, t: '你称病，把{kin}挡了过去。', fx: {} }, { p: 0.4, t: '有人告发你欺瞒，你被罚了一大笔钱，{kin}还是被送去了。', fx: { cash: -5000, kinGone: true } }]],
+      aw: function (L) { return [PT(L, 'cau') + 10, PT(L, 'ind') - 20, PT(L, 'ind')]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 女子的上升之路：选入后宫、为显贵之妾 ---------- */
+  var QT = function (L, k) { return L.tr[k] == null ? 50 : L.tr[k]; };
+  [
+    { id: 'pk_han', w: 4, ok: function (L, H) { return L.sex === 'F' && !L.married && H.a >= 13 && H.a <= 20 && H.y >= 150 && H.y <= 188 && L.zone === 'luoyang' && ['peasant', 'clerk', 'gentry'].indexOf(L.cls) >= 0 && !L.flags.pkHan && {}; },
+      pre: function (L) { L.flags.pkHan = true; },
+      q: '八月算人。掖庭丞带着相工到乡里阅视良家女子，十三到二十岁、"姿色端丽、合法相"的，要载回后宫。', o: ['盛装去应选，说不定能做贵人', '照常去，听天由命', '让家里把你藏起来'],
+      r: [[{ p: 0.3, t: '相工看了你很久，在册上记了一笔。你被载进了洛阳的后宫，做了采女。', fx: { palace: 'luoyang', standing: 2 } }, { p: 0.7, t: '相工摇了摇头。你回到家，把那身新衣服叠好，放进了箱底。', fx: {} }],
+        [{ p: 0.12, t: '你被选中了，载进了后宫。', fx: { palace: 'luoyang' } }, { p: 0.88, t: '你没有被选中。', fx: {} }],
+        [{ p: 1, t: '你在亲戚家躲了几天，掖庭的人走了。', fx: {} }]],
+      aw: function (L) { return [QT(L, 'ind') + QT(L, 'act') / 2, 50, QT(L, 'cau')]; } },
+    { id: 'f_noble', w: 0.8, ok: function (L, H) { return L.sex === 'F' && !L.married && !L.widowed && H.a >= 15 && H.a <= 22 && ['peasant', 'tenant', 'artisan', 'merchant', 'clerk', 'tuntian'].indexOf(L.cls) >= 0 && !L.eth && !L.flags.nobleAsk && {}; },
+      pre: function (L) { L.flags.nobleAsk = true; },
+      q: '郡里的一位贵人在路上看见了你，派人到你家下了聘礼，要纳你为妾。聘礼摆了一屋子，父母看了半天，不知该说什么。', o: ['答应', '求父母回绝'],
+      r: [[{ p: 1, t: '你答应了。', fx: { nobleConc: '郡中显贵' } }],
+        [{ p: 0.6, t: '父母婉言回绝了。那位贵人没有再来，你家也没敢声张。', fx: {} }, { p: 0.4, t: '父母回绝了。没过多久，你家的田被人寻了个由头占去了一半。', fx: { landMul: 0.5, standing: -2 } }]],
+      aw: function (L) { return [QT(L, 'ind') + QT(L, 'cmp') / 2, QT(L, 'cau')]; } }
+  ].forEach(function (c) { D.CHOICES.push(c); });
+
+  /* ---------- 乡里经营：亭长、里正——要看家境和名望 ---------- */
+  [
+    { id: 'xiangguan', w: 2, ok: function (L, H) { return L.sex === 'M' && H.a >= 25 && H.a <= 55 && !L.office && !L.soldier && L.cls !== 'slave' && L.cls !== 'gentry' && !L.eth && L.standing >= 40 && (L.land >= 15 || L.wealth >= 35 || L.literate) && !L.flags.xgAsk && {}; },
+      pre: function (L) { L.flags.xgAsk = true; },
+      q: '乡里缺一个' + '亭长。县里的小吏来问你愿不愿意干：管十里地的治安、迎送往来的官差，每月有些俸钱。乡里人说，你家底子厚、说话有人听，正合适。', o: ['做亭长', '做里正，管自家这一里', '推辞'],
+      r: [[{ p: 1, t: '你做了亭长，腰里挂着一块木牌，手下有两个求盗。乡里有了纠纷，都来找你评理。', fx: { office: '亭长', standing: 3 } }],
+        [{ p: 1, t: '你做了里正，挨家挨户催收赋税、登记户口。这差事两头受气，可也算是个"吏"了。', fx: { office: '里正', standing: 2 } }],
+        [{ p: 1, t: '你推辞了。你想，这差事得罪人，不如守着自家的地。', fx: {} }]],
+      aw: function (L) { return [(L.tr.act + L.tr.ind) / 2, L.tr.cau, L.tr.cau - 10]; } }
   ].forEach(function (c) { D.CHOICES.push(c); });
 })(SGD);

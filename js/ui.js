@@ -445,7 +445,10 @@
   function renderStatus(y) {
     var L = S.L;
     var married = L.married ? '已婚' : L.widowed ? (L.sex === 'F' ? '寡居' : '丧妻') : '未婚';
-    var job = L.band ? '随' + D.BANDS[L.band].who + '征战' : L.office ? L.office : L.soldier ? (L.job || '军卒') : L.age < 14 ? '孩童' : (L.job || '农');
+    var LOC = { 亭长: 1, 里正: 1, 乡啬夫: 1, 游徼: 1 }, COURT = { 郎官: 1, 尚书郎: 1, 九卿: 1 };
+    var job = L.band ? '行伍 · 随' + D.BANDS[L.band].who + '征战' : L.soldier ? '行伍 · ' + (L.job || '军卒') :
+      L.office ? (LOC[L.office] ? '乡里 · ' + L.office : L.office === '幕僚' ? '幕府 · ' + (L.officeMax || '掾属') : COURT[L.office] ? '朝中 · ' + L.office : '州郡 · ' + L.office) :
+      L.age < 14 ? '孩童' : L.cls === 'tenant' && (!L.job || L.job === '农' || L.job === '佃户') ? '佃农' : (L.job || '农');
     var land = L.land > 0 ? L.land + ' 亩' : '无';
     var who = L.sex === 'F' && L.married && L.spouseK ? esc(L.spouseK.name) + '之妻（' + clsName(L) + '）' : L.sex === 'F' && L.widowed ? '寡妇（' + clsName(L) + '）' : clsName(L);
     $('status').innerHTML = '<dt>身份</dt><dd>' + who + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>学业</dt><dd>' + eduText(L) + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +

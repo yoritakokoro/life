@@ -251,7 +251,7 @@ var SGE = (function (D) {
       }
     });
     var risk = polSum(L.zone, y, 'officeRisk');
-    if (risk && L.office && L.alive && R() < risk) {
+    if (risk && realOffice(L) && L.alive && R() < risk) {
       add(L, 1.3, 'bad', pick(R, ['有人向上告发你"诽谤朝政"。你被收捕下狱，审了几个月。', '校事说你经手的文书有毛病，你被下了狱。']));
       if (R() < 0.15) { die(L, 'executed', 1.35, { full: '狱吏拷问你与谁同谋，你说不出来，最后死在了狱中。' }); return; }
       L.office = null; L.job = L.cls === 'gentry' ? '士人' : '农'; L.fame -= 4;
@@ -657,7 +657,7 @@ var SGE = (function (D) {
     if (m.lit && !L.literate) return false;
     if (m.elite && !(L.cls === 'gentry' || L.office || L.cls === 'clerk' || L.learn >= 45 || L.fame >= 20)) return false;
     if (m.follow && (L.soldier || L.band)) return false;
-    if (m.off && !L.office) return false;
+    if (m.off && !realOffice(L)) return false;
     if (m.sol && !(L.soldier && (m.sol === true || L.soldier.army === m.sol))) return false;
     if (!m.sol && m.q && L.soldier && !m.off) return false;
     if (m.cls && m.cls.indexOf(L.cls) < 0) return false;
@@ -670,7 +670,7 @@ var SGE = (function (D) {
   function statusMul(L) {
     var m = { gentry: 5, clerk: 3, merchant: 1.6, slave: 0.3, tenant: 0.6, tribal: 0.6, tuntian: 0.6, soldier: 0.7 }[L.cls] || 0.8;
     if (L.cls === 'gentry') m *= L.gate >= 3 ? 1.8 : L.gate >= 2 ? 1.3 : 1;
-    if (L.office) m *= OFF_RANK[L.office] || 2;
+    if (L.office) m *= OFF_RANK[L.office] || (LOCAL_OFF[L.office] ? 1.1 : 2);
     if (L.mil) m *= 1 + L.mil * 0.4;
     if (L.literate) m *= 1.3;
     if (L.flags.salon) m *= 1.4;
@@ -691,7 +691,7 @@ var SGE = (function (D) {
     if (a < 12 || L.eth || L.cls === 'slave' || L.band || !L.alive) return;
     var p = 0;
     if (L.cls === 'gentry') p = L.gate >= 3 ? 0.2 : L.gate >= 2 ? 0.12 : 0.05;
-    if (L.office) p = Math.max(p, CIRCLE_P[L.office] || 0.03);
+    if (realOffice(L)) p = Math.max(p, CIRCLE_P[L.office] || 0.03);
     if (L.mil >= 2) p = Math.max(p, L.mil * 0.025);
     if (L.cls === 'merchant' && L.wealth >= 60) p = Math.max(p, 0.015);
     if (L.fame >= 40) p = Math.max(p, 0.03);
@@ -842,6 +842,17 @@ var SGE = (function (D) {
       P.queue.push({ key: 'crisis', info: fd ? compareText(L, y, fd) : null, q: '家中入不敷出，如今欠债' + fmt(E.debt) + '钱值，' + (E.cash < 300 ? '粮储也快见底了。' : '债主已经上门催了几回。') + (dec2 ? '' : who + '愁得整夜睡不着。'),
         o: opts, keys: keys, w: w.map(function (x) { return Math.max(0.1, x); }), n: n, lab: lab, dest: fd, who: who, forced: !dec2 });
     }
+    // 幕府倒台：依附的势力败亡，幕僚各奔东西
+    if (L.office === '幕僚' && free && a >= 18 && !P.queue.some(function (q) { return q.key === 'regime'; })) {
+      if (!L.lordFk) L.lordFk = ctrl(z, y);
+      var lfk = L.lordFk;
+      while (LORD_END[lfk] && y >= LORD_END[lfk] && LORD_NEXT[lfk]) L.lordFk = lfk = LORD_NEXT[lfk];
+      if (LORD_END[lfk] && y >= LORD_END[lfk] && y <= LORD_END[lfk] + 1) {
+        var nk = ctrl(z, y), nnm = lordName(nk, y);
+        P.queue.push({ key: 'lordfall', ofk: lfk, nfk: nk, q: '你效力的' + lordName(lfk, y) + '败亡了。幕府里的人各奔东西，有人投了新主，有人回乡，也有人追随旧主到了最后。', o: ['投奔' + nnm, '回乡隐居', '为旧主守节，拒不出仕'],
+          w: [Math.max(0.3, 1.5 + (L.tr.ind - 50) / 30), Math.max(0.3, 1 + (L.tr.cau - 50) / 30), Math.max(0.2, 0.5 + (L.tr.per - 50) / 30)] });
+      }
+    }
     // 回响：年轻时的选择，多年后回来找你
     if (free) memCheck(L, y, P);
     // 人生抉择：身份越高，越常遇到需要拿主意的事
@@ -911,6 +922,7 @@ var SGE = (function (D) {
       case 'appraise': if (i === 0) { d.appraise = c.ap; L.apAsk = true; } else L.appraised = true; break;
       case 'regime': d.regime = { c: c, i: i }; break;
       case 'mem': d.memC = { mi: c.mi, i: i }; break;
+      case 'lordfall': d.lordfall = { c: c, i: i }; break;
       case 'purge': (d.purge = d.purge || {})[c.ev] = { i: i, tie: c.tie, pn: c.pn }; break;
     }
   }
@@ -967,6 +979,7 @@ var SGE = (function (D) {
     if (dec.life) { lifeOutcome(L, y, dec.life.c, dec.life.i); memRecord(L, y, dec.life.c, dec.life.i, dec.life.c.meta || {}); }
     if (L.alive) memApply(L, y, dec);
     if (dec.regime) regimeOutcome(L, y, dec.regime.c, dec.regime.i);
+    if (dec.lordfall) lordFallOutcome(L, y, dec.lordfall.c, dec.lordfall.i);
     if (!L.alive) return finishYear(L, rec);
     if (dec.appraise) appraise(L, y, dec.appraise);
     if (!L.alive) return finishYear(L, rec);
@@ -1393,6 +1406,7 @@ var SGE = (function (D) {
       var nx = end[1];
       if (nx === 'zone') nx = armyOf(ctrl(L.zone, y));
       if (!nx || nx === 'yellow') {
+        if ((L.mil || 0) >= 2 && L.R() < 0.2) { die(L, 'executed', 0.35, { full: '你所在的军队覆灭了。你作为败军的' + L.job + '被俘，与几个同僚一起被斩首示众。' }); return; }
         L.soldier = null; L.job = '农';
         add(L, 0.3, 'war', S.army === 'yellow' ? '黄巾兵败如山倒。你扔掉头巾，逃回了乡里，从此再不敢提起这件事。' : '你所在的军队覆灭了。你侥幸活下来，回到了乡里。');
         return;
@@ -1400,6 +1414,7 @@ var SGE = (function (D) {
       if (nx !== S.army) {
         var gname = { wei: S.army === 'wei' ? '晋' : '曹', shu: '蜀', wu: '吴', jin: '晋' }[nx] || fname(nx, y);
         add(L, 0.3, 'war', S.army === 'wei' && nx === 'jin' ? '魏帝禅位，你所在的魏军成了晋军。' : '你所在的军队覆灭，你被编入了' + gname + '军。');
+        if (!(S.army === 'wei' && nx === 'jin') && (L.mil || 0) >= 1 && L.R() < 0.5) { L.mil--; L.job = MIL[L.mil]; add(L, 0.32, 'bad', '降将不吃香。你被降了一级，做了' + L.job + '。'); }
         S.army = nx;
       }
     }
@@ -1447,12 +1462,17 @@ var SGE = (function (D) {
     else if (a < 14) {
       pool = pool.concat(L.cls === 'gentry' ? DD.childGentry.concat(L.sex === 'M' && DD.gentryChild ? DD.gentryChild : []) : L.cls === 'clerk' ? DD.childClerk.concat(DD.child) : L.cls === 'merchant' ? DD.childMerchant.concat(DD.child) : L.cls === 'artisan' ? DD.childArtisan.concat(DD.child) : L.cls === 'slave' ? DD.childSlave : DD.child);
       if (L.sex === 'F') pool = pool.concat(DD.childF);
-    } else if (a >= 62) pool = pool.concat(DD.old);
+    } else if (a >= 62) {
+      var otk = lifeTier(L, y).k, elite = L.cls === 'gentry' || !!L.officeMax || otk === 'top' || otk === 'high';
+      pool = pool.concat(DD.old, L.cls === 'slave' ? DD.oldSlave : elite ? DD.oldElite : L.cls === 'merchant' ? DD.oldMerchant : farmerish(L) ? DD.oldFarm : [], L.sex === 'F' && L.cls !== 'slave' ? DD.oldF : []);
+    }
     else if (L.soldier) pool = pool.concat(DD.soldier);
     else if (L.office) pool = pool.concat(DD.clerkJob);
     else if (L.cls === 'gentry') pool = pool.concat(L.sex === 'F' && DD.gentryF ? DD.gentryF : DD.gentry);
     else if (L.cls === 'merchant') pool = pool.concat(DD.merchant);
     else if (L.cls === 'artisan') pool = pool.concat(DD.artisan);
+    else if (L.job === '宫人' || L.job === '采女') pool = pool.concat(DD.gongren);
+    else if (L.flags.palace) pool = pool.concat(DD.gongrenHi);
     else if (L.cls === 'slave') pool = pool.concat(L.sex === 'F' && DD.slaveF ? DD.slaveF.concat(DD.slave) : DD.slave);
     else if (L.cls === 'tuntian') pool = pool.concat(DD.tuntian, L.sex === 'F' ? DD.farmerF : DD.farmer);
     else pool = pool.concat(L.sex === 'F' ? DD.farmerF : DD.farmer, L.cls === 'tenant' && DD.tenantLines ? DD.tenantLines : []);
@@ -1596,6 +1616,11 @@ var SGE = (function (D) {
     if (!L.alive) return;
     childEvent(L, y);
     eduYear(L, y);
+    if (L.flags.palace != null && L.alive) palaceYear(L, y);
+    if ((L.job === '宫人' || L.job === '采女') && L.alive) {
+      if (y === 280 && L.zone === 'jiangdong') relocate(L, 'luoyang', 1.5, '吴亡了。孙皓后宫的五千宫人，被晋军一船一船地运往北方。你也在其中，到了{dest}。', 0.03, y);
+      else if ((y === 290 || y === 281) && L.zone === 'luoyang' && R() < 0.4) { L.cls = 'peasant'; L.job = '农'; L.land = 0; add(L, 1.5, 'good', y === 290 ? '武帝驾崩，宫中放出了一批年长的宫人。你走出宫门，站了很久，不知道该往哪里去。' : '宫人太多，朝廷放出了一批。你走出宫门，站了很久，不知道该往哪里去。'); }
+    }
     // 家境滑落
     splitHousehold(L, y);
     if (L.cls === 'slave' && a >= 15 && R() < 0.012) {
@@ -1650,7 +1675,25 @@ var SGE = (function (D) {
   var WARLORD_DESC = { yu: '袁术的部将和汝南、颍川的黄巾余部', luoyang: '张杨、杨奉等各路兵马', qing: '青州黄巾和田楷、孔融等各路人马', bing: '黑山军张燕和各路豪强', jiangdong: '刘繇、王朗、严白虎等人' };
   function oldLordDesc(z, fk, y) { return fk === 'warlords' ? (WARLORD_DESC[z] || '割据此地的各路豪强') : lordName(fk, y); }
   function lordName(fk, y) { return { warlords: '新起的豪强', rebels: '凉州叛军', nzrebels: '南中豪帅', han: '汉廷', lijue: '李傕、郭汜' }[fk] || fname(fk, y); }
-  var LOW_OFF = { 书佐: 1, 计吏: 1, 县长: 1 };
+  var LOW_OFF = { 书佐: 1, 计吏: 1, 县长: 1, 亭长: 1, 里正: 1, 乡啬夫: 1, 游徼: 1 };
+  // 各方势力真正败亡（或由继承者接续）的年份
+  var LORD_END = { rebels: 190, dongzhuo: 192, lijue: 196, taoqian: 195, liuyan: 194, lvbu: 199, yuanshu: 199, gongsunzan: 199, sunce: 200, yuanshao: 205, liubiao: 208, xiliang: 214, liuzhang: 214, zhanglu: 215, caocao: 220, han: 220, liubei: 221, sunquan: 222, nzrebels: 225, shixie: 227, gongsun: 238, shu: 263, wei: 265, wu: 280, hanzhao: 329, chenghan: 347, houzhao: 350 };
+  var LORD_NEXT = { caocao: 'wei', han: 'wei', liubei: 'shu', sunce: 'sunquan', sunquan: 'wu', liuyan: 'liuzhang', wei: 'jin', dongzhuo: 'lijue' };
+  function factionAlive(fk, y) { return Object.keys(D.CTRL).some(function (z) { return ctrl(z, y) === fk; }); }
+  function lordFallOutcome(L, y, c, i) {
+    var R = L.R, on = lordName(c.ofk, y), nn = lordName(c.nfk, y);
+    if (i === 0) {
+      var r = R();
+      if (r < 0.5) { L.lordFk = c.nfk; L.officeMax = nn + '的掾属'; add(L, 1.2, 'life', nn + '看你有些才干，留你在幕府里做事。只是从此，旧日的同僚见了你，都有些不自在。'); serveLord(L, lordFigAt(c.nfk, y), y, '改投' + nn + '，在他幕府中任职'); }
+      else if (r < 0.8) {
+        add(L, 1.2, 'bad', '有人说你是' + on + '的心腹，劝新主不要用你。你被下了狱。');
+        if (R() < 0.25) { die(L, 'executed', 1.3, { full: '你在狱中被问了几次话，最后以' + on + '余党的罪名被处死。' }); return; }
+        L.office = null; L.job = L.cls === 'gentry' ? '士人' : '农'; L.eco.cash = Math.round(L.eco.cash * 0.6);
+        add(L, 1.35, 'life', '关了几个月，家里花钱上下打点，你才被放了出来。');
+      } else { L.office = null; L.job = L.cls === 'gentry' ? '士人' : '农'; add(L, 1.2, 'life', '新主的幕府人才济济，没有你的位置。你回了家。'); }
+    } else if (i === 1) { L.office = null; L.job = L.cls === 'gentry' ? '士人' : '农'; L.fame += 1; add(L, 1.2, 'life', '你回了乡，闭门读书，不再过问外面的事。'); }
+    else { L.office = null; L.job = L.cls === 'gentry' ? '士人' : '农'; L.fame += 4; L.standing += 2; L.tr.per = clamp(L.tr.per + 3, 5, 95); L.flags.loyal = true; add(L, 1.2, 'life', '新主派人来征召，你几次推辞不去。有人说你迂腐，也有人说你是义士。'); }
+  }
   function regimeOutcome(L, y, c, i) {
     var R = L.R, nn = c.nn || lordName(c.nfk, y), on = c.on || lordName(c.ofk, y), r = R();
     if (!L.office) {
@@ -1752,7 +1795,14 @@ var SGE = (function (D) {
       if (ev > 0.8) { L.fame += 3; add(L, 2.15, 'good', fresh(L, ['这一年的考课，你被评为"最"，上头记了你的名字。', '郡里考课，你经手的户口、钱谷一丝不乱，被评为上等。'])); }
       else if (ev < -1.2) { L.fame -= 2; add(L, 2.15, 'bad', fresh(L, ['这一年的考课，你被评为"殿"，挨了上司一顿训斥。', '考课时你经手的账目对不上，被罚了俸。'])); }
     }
-    if (L.office === '书佐' && L.learn >= 50 && R() < 0.06 * pc) {
+    if ((L.office === '亭长' || L.office === '里正') && L.standing >= 50 && L.fame >= 6 && R() < 0.05 * pc) {
+      var up = L.literate ? '乡啬夫' : '游徼';
+      L.office = up; L.job = up; L.officeMax = up; L.fame += 3;
+      add(L, 2, 'good', up === '乡啬夫' ? '你被县里任为乡啬夫，管一乡的赋税、诉讼。' : '你被县里任为游徼，带着几个人巡查一乡的盗贼。');
+    } else if ((L.office === '乡啬夫' || L.office === '游徼') && L.literate && L.learn >= 35 && R() < 0.04 * pc) {
+      L.office = '书佐'; L.job = '书佐'; L.officeMax = '县书佐'; L.fame += 3;
+      add(L, 2, 'good', '县令看你办事干练，把你调进了县廷做书佐。从乡官进了县廷，算是又上了一层。');
+    } else if (L.office === '书佐' && L.learn >= 50 && R() < 0.06 * pc) {
       L.office = '计吏'; L.job = '计吏'; L.officeMax = '郡上计吏'; L.fame += 4;
       add(L, 2, 'good', '你被郡里选为上计吏，年底要带着全郡的户口簿书进京上计。');
     } else if ((L.office === '计吏' || L.office === '书佐') && L.fame >= 15 && L.standing >= 45 && R() < 0.02 * pc) {
@@ -2160,7 +2210,7 @@ var SGE = (function (D) {
 
   /* ================= 家计 ================= */
   var PRICE = 100, LANDP = 1000;
-  var SAL = { 书佐: 9000, 计吏: 12000, 县长: 40000, 郎官: 30000, 县令: 60000, 幕僚: 30000, 郡守: 120000, 尚书郎: 50000, 刺史: 150000, 九卿: 200000 };
+  var SAL = { 里正: 1500, 亭长: 3000, 游徼: 4000, 乡啬夫: 5000, 书佐: 9000, 计吏: 12000, 县长: 40000, 郎官: 30000, 县令: 60000, 幕僚: 30000, 郡守: 120000, 尚书郎: 50000, 刺史: 150000, 九卿: 200000 };
   var JOBINC = { 医者: 1500, 巫祝: 800, 门客: 2000, 塾师: 900, 稳婆: 600, 山贼: 1500, 官匠: 1800, 代书先生: 1000, 游侠: 1200, 中人: 1200, 方士: 1000, 媒人: 600, 经师: 3000 };
   function fmt(n) { n = Math.round(n); return (n < 0 ? '-' : '') + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
   function initEco(L) {
@@ -2614,7 +2664,9 @@ var SGE = (function (D) {
     if (L.literate) m *= 1.2;
     return m;
   }
-  function isElite(L) { return L.cls === 'gentry' || L.cls === 'clerk' || !!L.office || L.learn >= 45 || L.fame >= 20; }
+  var LOCAL_OFF = { 亭长: 1, 里正: 1, 乡啬夫: 1, 游徼: 1 };
+  function realOffice(L) { return !!L.office && !LOCAL_OFF[L.office]; }
+  function isElite(L) { return L.cls === 'gentry' || L.cls === 'clerk' || realOffice(L) || L.learn >= 45 || L.fame >= 20; }
   function ctxH(L, y) {
     var fl = { war: 0, fam: 0, plag: 0 }, fk = ctrl(L.zone, y);
     (EV_BY_Y[y] || []).forEach(function (ev) { var fx = localFx(L, ev, L.zone, y); if (fx && !fx._skip) { fl.war += fx.war || 0; fl.fam += fx.fam || 0; fl.plag += fx.plag || 0; } });
@@ -2787,6 +2839,13 @@ var SGE = (function (D) {
     if (fx.cls) { L.cls = fx.cls; if (fx.cls !== 'slave' && E.house === 0) E.house = 1500; }
     if (fx.job) L.job = fx.job;
     if (fx.mil) { L.mil = fx.mil; L.milMax = ['军卒', '屯长', '军司马', '校尉', '将军'][fx.mil]; L.job = L.milMax; }
+    if (fx.nobleConc) {
+      L.spouseK = null; var ocls = L.cls; L.cls = 'gentry'; L.gate = L.gate || 1;
+      var nsp = makeSpouse(L, y); nsp.age = L.age + 12 + Math.floor(R() * 20); nsp.from = fx.nobleConc;
+      doMarry(L, nsp, y, s + 0.1, '你被抬进了' + fx.nobleConc + '的府里。');
+      L.flags.isConc = true; L.cls0 = ocls; L.standing += 6;
+      add(L, s + 0.12, 'life', '你成了' + nsp.name + '的妾。府里锦衣玉食，可正室才是主母；你的孩子，生下来就是"庶出"。');
+    }
     if (fx.gentryWed) { L.spouseK = null; doMarry(L, makeSpouse(L, y), y, s + 0.1, L.sex === 'F' ? '你奉父命出嫁。' : ''); }
     if (fx.clanDie) liveKin(L, function (k) { return !k.out || k.rel === 'father' || k.rel === 'sib'; }).forEach(function (k) { if (R() < 0.6) kinDie(L, k, 'executed', s + 0.08, y); });
     if (fx.office) { L.office = fx.office; L.officeMax = fx.office === '幕僚' ? (meta.lord || '') + '幕府的掾属' : fx.office; L.job = fx.office; }
@@ -2798,7 +2857,7 @@ var SGE = (function (D) {
     if (fx.kinLit && meta.kin) meta.kin.lit = true;
     if (fx.kinAff && meta.kin) affAdd(meta.kin, fx.kinAff);
     if (fx.kinSoldier && meta.kin && meta.kin.alive) meta.kin.soldier = armyOf(ctrl(L.zone, y));
-    if (fx.palace) { L.cls = 'slave'; L.job = '宫人'; L.eco.house = 0; relocate(L, 'ji', s + 0.05, '你被差役押上了车，一路送进了{dest}的宫里。', 0.02, y); }
+    if (fx.palace) { var pz = typeof fx.palace === 'string' ? fx.palace : 'ji'; L.cls = 'slave'; L.job = y < 190 ? '采女' : '宫人'; L.flags.palace = 0; L.eco.house = 0; if (pz !== L.zone) relocate(L, pz, s + 0.05, '你被押上了车，一路送进了{dest}的宫里。', 0.02, y); }
     if (fx.sonsAff) liveKin(L, function (k) { return k.rel === 'child' && k.sex === 'M'; }).forEach(function (k) { affAdd(k, fx.sonsAff); });
     if (fx.frAff && meta.friend) affAdd(meta.friend, fx.frAff);
     if (fx.frGone && meta.friend) { meta.friend.apart = true; meta.friend.fate = fx.frGone; }
@@ -2899,6 +2958,24 @@ var SGE = (function (D) {
     L.tierY = y; L.tierC = { lv: lv, k: TIER_K[lv] || null };
     return L.tierC;
   }
+  // 后宫：采女、宫人，偶有得宠者
+  function palaceRanks(y) { return y < 190 ? ['采女', '美人', '贵人', '皇后'] : ['宫人', '才人', '美人', '贵人', '夫人', '皇后']; }
+  var PAL_T = { 美人: '天子在宴上多看了你一眼。第二天，你被封为美人，搬进了自己的宫院。', 才人: '你在宫中谨慎勤勉，被拔为才人，管着几个宫女。', 贵人: '你得了宠，被封为贵人。宫里的人见了你，都要低头行礼了。', 夫人: '你被晋封为夫人，位次只在皇后之下。你家的父兄，也都得了官。', 皇后: '你被立为皇后。后宫的出身，能走到这一步的，史书上只有寥寥几人——郭女王是婢女出身，卞夫人是倡家之女。你成了其中一个。' };
+  function palaceYear(L, y) {
+    var R = L.R, rk = palaceRanks(y), lv = L.flags.palace || 0;
+    if (L.cls !== 'slave' && !L.flags.palaceUp) return;
+    if (lv >= rk.length - 1) return;
+    var p = [0.012, 0.006, 0.0025, 0.0006, 0.0002][Math.min(lv, 4)] * (L.found.charm ? 2 : 1) * (0.5 + L.tr.soc / 100) * (L.age <= 25 ? 1.3 : L.age >= 35 ? 0.3 : 1);
+    if (rk[lv + 1] === '皇后') p = 0.0004;
+    if (R() < p) {
+      lv++; L.flags.palace = lv; L.flags.palaceUp = true; L.job = rk[lv]; L.fame += 4 + lv * 3; L.standing += 5;
+      if (lv >= 1) L.cls = 'gentry';
+      add(L, 1.8, 'good', PAL_T[rk[lv]] || '你被晋了位分。');
+      return;
+    }
+    if (lv >= 2 && R() < 0.012) { die(L, 'executed', 1.9, { full: '有人告你在宫中行巫蛊、诅咒宫闱。你被赐死，年' + cnNum(L.age) + '。' }); return; }
+  }
+
   // 求学：太学、国子学、州郡学官
   var EDU_LINES = ['太学里的博士讲《春秋》公羊义，你抄了满满一卷笔记。', '你和同窗在学舍外的槐树下辩论经义，争到天黑。', '太学生们私下议论朝政，你在一旁听着，不敢插嘴。', '你抄完了一部《尚书》，手指上磨出了茧。', '学舍里冬天没有炭火，你裹着被子读书，墨都冻住了。', '你的文章被博士在讲堂上念了一段，同窗们都回头看你。'];
   function eduYear(L, y) {
