@@ -481,3 +481,6 @@ table.ledger tr.tot td { border-bottom: 0; font-weight: 600; color: var(--ink); 
 .fam-group li .s { grid-column: 2; font-family: var(--font-ui); font-size: var(--t-xs); color: var(--ink-2); }
 .fam-group li.dead .s { color: var(--cinnabar); }
 .fam-group .mk { font-family: var(--font-ui); font-size: 10px; border: 1px solid var(--rule); border-radius: 2px; padding: 0 3px; margin-left: 6px; color: var(--ink-2); vertical-align: 2px; }
+.choice-card .opts button.off { background: transparent; color: var(--ink-3); border-style: dashed; border-color: var(--rule); cursor: not-allowed; }
+.choice-card .opts button small { display: block; font-family: var(--font-ui); font-size: 11px; color: var(--ink-3); }
+.choice-card .opts button:first-child.off { background: transparent; color: var(--ink-3); }

@@ -165,6 +165,7 @@
       '<dt>出生地</dt><dd>' + Z.zhou + ' · ' + jun + ' · ' + L.county + (L.eth ? '（山野）' : L.urban ? '（县城）' : '（' + L.village + '）') + '</dd>' +
       '<dt>性别</dt><dd>' + (L.sex === 'M' ? '男' : '女') + '</dd>' +
       '<dt>家庭</dt><dd>' + (L.eth ? D.ETH[L.eth].tribe : clsName(L)) + '</dd>' +
+      (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '，' + L.gateName + '</dd>' : '') +
       '<dt>家中排行</dt><dd>' + rank + '</dd>' +
       '<dt>父亲识字</dt><dd>' + (father.alive ? (father.lit ? '是' : '否') : '父亲已殁') + '</dd>' +
       '<dt>母亲存活</dt><dd>' + (mother.alive ? '是' : '否') + '</dd>' +
@@ -294,7 +295,8 @@
     card.innerHTML = html;
     var box = card.querySelector('.opts');
     c.o.forEach(function (label, i) {
-      var b = h('button', '', esc(label)); b.type = 'button';
+      var b = h('button', '', esc(label) + (c.dis && c.dis[i] ? '<small>' + esc(c.dis[i]) + '</small>' : '')); b.type = 'button';
+      if (c.dis && c.dis[i]) { b.disabled = true; b.className = 'off'; }
       b.onclick = function () {
         E.answer(S.L, i);
         var done = h('li', 'e e-choice', (c.pre ? esc(c.pre) + '<br>' : '') + esc(c.q) + (c.narr ? '<b>' : ' —— 你选择了：<b>') + esc(label) + '</b>');
@@ -400,7 +402,9 @@
     var married = L.married ? '已婚' : L.widowed ? (L.sex === 'F' ? '寡居' : '丧妻') : '未婚';
     var job = L.band ? '随' + D.BANDS[L.band].who + '征战' : L.office ? L.office : L.soldier ? (L.job || '军卒') : L.age < 14 ? '孩童' : (L.job || '农');
     var land = L.land > 0 ? L.land + ' 亩' : '无';
-    $('status').innerHTML = '<dt>身份</dt><dd>' + clsName(L) + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>识字</dt><dd>' + (L.literate ? '识字' : '不识字') + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +
+    var who = L.sex === 'F' && L.married && L.spouseK ? esc(L.spouseK.name) + '之妻（' + clsName(L) + '）' : L.sex === 'F' && L.widowed ? '寡妇（' + clsName(L) + '）' : clsName(L);
+    $('status').innerHTML = '<dt>身份</dt><dd>' + who + '</dd><dt>营生</dt><dd>' + esc(job) + '</dd><dt>婚姻</dt><dd>' + married + '</dd><dt>田地</dt><dd>' + land + '</dd><dt>识字</dt><dd>' + (L.literate ? '识字' : '不识字') + '</dd>' + (L.zi ? '<dt>字</dt><dd>' + esc(L.zi) + '</dd>' : '') +
+      (L.clanName ? '<dt>门第</dt><dd>' + esc(L.clanName) + '</dd>' : '') + (L.milMax ? '<dt>军职</dt><dd>' + L.milMax + '</dd>' : '') +
       (L.age >= 6 ? '<dt>性情</dt><dd>' + E.traitWords(L).join('、') + '</dd>' : '') +
       (Object.keys(L.found).length ? '<dt>天资</dt><dd>' + Object.keys(L.found).map(function (k) { return E.TALENT[k].n; }).join('、') + '</dd>' : '');
   }
@@ -698,7 +702,11 @@
     lines.push(age === 0 ? '你没有活过一岁。' : '你活了' + cn(age) + '年。');
     lines.push(E.reignText(L.birthZone, L.by) + '生。');
     if (age > 0) lines.push(E.reignText(L.zone, L.dy) + '卒。');
-    if (L.sex === 'M' && age >= 20) lines.push(L.officeMax ? '曾任' + L.officeMax + '。' : '一生未曾入仕。');
+    if (L.clanName) lines.splice(1, 0, '出身' + L.clanName + '。');
+    if (L.sex === 'M' && age >= 20) lines.push(L.officeMax ? '曾任' + L.officeMax + '。' : L.milMax ? '官至' + L.milMax + '。' : '一生未曾入仕。');
+    if (L.sex === 'F' && age >= 15 && !L.married && !L.widowed && !L.divorced && L.kidsBorn === 0) lines.push('终身未嫁。');
+    if (L.divorced) lines.push('曾被夫家休弃。');
+    if (L.flags.abducted) lines.push('曾被乱兵掳走，流落异乡。');
     if (L.soldierYears > 0) lines.push('从军' + cn(L.soldierYears) + '年。');
     if (L.moves > 0) lines.push('迁居' + cn(L.moves) + '次。');
     else if (age >= 10) lines.push('一生未曾离开' + D.JUN[L.birthJun][0] + '。');
