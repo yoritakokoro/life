@@ -379,7 +379,7 @@
     card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
-  var TAGS = { law: '法令', hist: '本地', rumor: '传闻', war: '军', move: '迁', meet: '奇遇', far: '远方', spend: '支用' };
+  var TAGS = { fun: '趣闻', law: '法令', hist: '本地', rumor: '传闻', war: '军', move: '迁', meet: '奇遇', far: '远方', spend: '支用' };
   function ledgerEl(lg, age) {
     var li = h('li', 'e e-ledger');
     var who = lg.solo ? '你今年' : age < 15 || !lg.head ? '家中今年' : '你家今年';

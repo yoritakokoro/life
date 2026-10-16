@@ -139,6 +139,26 @@ var SGE = (function (D) {
     var fk = ctrl(z, y);
     return (POL_C[k] = (D.POLICIES || []).filter(function (p) { return y >= p.y[0] && y <= p.y[1] && (!p.f || p.f.indexOf(fk) >= 0) && (!p.zones || p.zones.indexOf(z) >= 0); }));
   }
+  /* ---------- 趣闻：史书里的段子，按时、地、身份偶尔碰上 ---------- */
+  function netaOk(L, n, y) {
+    if (y < n.y[0] || y > n.y[1] || (L.netaSeen || {})[n.id]) return false;
+    if (n.zones && n.zones.indexOf(L.zone) < 0) return false;
+    var w = n.who || 'any';
+    if (w === 'any') return L.age >= 8;
+    if (w === 'elite') return L.age >= 14 && (L.cls === 'gentry' || !!L.office || !!L.literate);
+    if (w === 'wu') return L.age >= 14 && (L.cls === 'gentry' || !!L.office) && group(ctrl(L.zone, y)) === 'wu';
+    if (w === 'kid') return liveKin(L, function (k) { return k.rel === 'child' && y - k.by <= 6; }).length > 0;
+    if (w.indexOf('soldier:') === 0) return !!(L.soldier && !L.band && L.soldier.army === w.slice(8));
+    if (w.indexOf('hh:') === 0) return !!(L.flags.famousConc === w.slice(3) && inHH(L) && L.spouseK.alive || L.flags.maidOf === w.slice(3));
+    return false;
+  }
+  function netaYear(L, y) {
+    if (!D.NETA || !L.alive || L.eth || (L.netaN || 0) >= 4) return;
+    var R = L.R, c = D.NETA.filter(function (n) { return netaOk(L, n, y); });
+    if (!c.length || R() >= (c.some(function (n) { return n.y[1] - n.y[0] <= 1; }) ? 0.4 : 0.15)) return;
+    var n = pick(R, c); (L.netaSeen = L.netaSeen || {})[n.id] = 1; L.netaN = (L.netaN || 0) + 1;
+    add(L, 2.5, 'fun', n.t);
+  }
   var ATM_C = {};
   function atmosAt(z, y) {
     var k = z + y; if (ATM_C[k] !== undefined) return ATM_C[k];
@@ -2734,6 +2754,7 @@ var SGE = (function (D) {
     consortYear(L, y);
     concSweep(L);
     atmosYear(L, y);
+    netaYear(L, y);
     if ((L.job === '宫人' || L.job === '采女') && L.alive) {
       if (y === 280 && L.zone === 'jiangdong') relocate(L, 'luoyang', 1.5, '吴亡了。孙皓后宫的五千宫人，被晋军一船一船地运往北方。你也在其中，到了{dest}。', 0.03, y);
       else if ((y === 290 || y === 281) && L.zone === 'luoyang' && R() < 0.4) { L.cls = 'peasant'; L.job = '农'; L.land = 0; L.flags.palaceOut = y; add(L, 1.5, 'good', y === 290 ? '武帝驾崩，宫中放出了一批年长的宫人。你走出宫门，站了很久，不知道该往哪里去。' : '宫人太多，朝廷放出了一批。你走出宫门，站了很久，不知道该往哪里去。'); }
