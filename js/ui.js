@@ -826,20 +826,31 @@
     if (L.edu) lines.push(L.edu.passed ? L.edu.city + L.edu.n + '出身。' : '曾在' + L.edu.city + L.edu.n + '求学。');
     if (L.sex === 'M' && age >= 20) lines.push(L.officeMax && L.milMax ? '曾任' + L.officeMax + '，又从军，官至' + L.milMax + '。' : L.officeMax ? '曾任' + L.officeMax + '。' : L.milMax ? '官至' + L.milMax + '。' : '一生未曾入仕。');
     if (F.loyal) lines.push(F.loyal + '败亡后，不仕新朝。');
-    if (L.sex === 'F' && age >= 15 && !L.married && !L.widowed && !L.divorced && L.kidsBorn === 0) lines.push('终身未嫁。');
+    if (L.sex === 'F' && age >= 15 && !L.married && !L.widowed && !L.divorced && L.kidsBorn === 0 && !F.palaceIn && !F.concubineOf && !F.isConc) lines.push('终身未嫁。');
     if (L.divorced) lines.push('曾被夫家休弃。');
     if (L.flags.abducted) lines.push('曾被乱兵掳走，流落异乡。');
+    var ORPH_EPI = { uncle: '幼失怙恃，由叔父养大。', clan: '幼失怙恃，由族中伯父养大。', mat: '幼失怙恃，在外祖家长大。', neigh: '幼失怙恃，被乡里一位老人收养。', jiazi: '幼失怙恃，为一位将军的假子。', yangnv: '幼失怙恃，为人养女。', sold: '幼失怙恃，被族人卖为奴婢。', beg: '幼失怙恃，曾在城门边乞讨。', sib: '幼失怙恃，由兄姊撑起家门。' }, OLD_EPI = ['祖父曾为县令。', '家本郡中大姓，败于党锢。', '祖上曾为豪商。'];
+    if (F.orphanK && ORPH_EPI[F.orphanK]) lines.push(ORPH_EPI[F.orphanK]);
+    if (F.oldFam != null) lines.push(OLD_EPI[F.oldFam]);
+    if (F.declineY) lines.push(F.declineY + '年家道中落。');
+    if (F.wasLM) lines.push('曾为流民。');
+    if (F.wasShan) lines.push(F.shanF && L.sex === 'F' ? '曾被山贼掳上山。' : '曾上山入' + F.wasShan + '之伙。');
+    if (F.moru) lines.push(F.moru + '年没入官府。');
+    else if (F.maidWas) lines.push(F.maidWas === 'bi' ? '曾卖身为婢。' : '曾为大户侍女。');
+    if (F.concubineOf && !F.isConc) lines.push('为主人之妾。');
+    if (L.job === '太妃') lines.push('后随子之国，为王太妃。');
     if (L.soldierYears > 0) lines.push('从军' + cn(L.soldierYears) + '年。');
-    if (L.moves > 0) lines.push('迁居' + cn(L.moves) + '次。');
-    if ((L.visited || []).length >= 2) lines.push('游历' + L.visited.slice(0, 4).join('、') + (L.visited.length > 4 ? '等地' : '') + '。');
-    else if (age >= 10) lines.push('一生未曾离开' + D.JUN[L.birthJun][0] + '。');
+    var jh = L.junHist && L.junHist.length ? L.junHist : [L.birthJun];
+    if (L.moves > 0) lines.push(jh.length <= 1 ? '迁居' + cn(L.moves) + '次，都没有离开' + D.JUN[L.birthJun][0] + '。' : '迁居' + cn(L.moves) + '次，住过' + jh.slice(0, 4).map(function (i) { return D.JUN[i][0]; }).join('、') + (jh.length > 4 ? '等地' : '') + '。');
+    if ((L.visited || []).length >= 1) lines.push('游历' + L.visited.slice(0, 4).join('、') + (L.visited.length > 4 ? '等地' : '') + '。');
+    else if (L.moves === 0 && age >= 10) lines.push('一生未曾离开' + D.JUN[L.birthJun][0] + '。');
     if (L.kidsBorn > 0) lines.push('生育' + cn(L.kidsBorn) + '子女，' + (adultKids === 0 ? '无一人' : cn(adultKids) + '人') + '活至成年。');
     if (L.grandkids > 0) lines.push('有孙辈' + cn(L.grandkids) + '人。');
     var lit = L.kin.filter(function (k) { return k.rel === 'child' && k.lit; }).length;
     if (lit) lines.push(cn(lit) + '个孩子识字。');
     if (age >= 15 && L.cls !== 'slave') {
       if (L.eco.debt > 0) lines.push('身后还欠着' + E.fmt(L.eco.debt) + '钱值的债。');
-      else if (L.land > 0) lines.push('身后留下田' + cn(L.land) + '亩。');
+      else if (L.land > 0 && !(F.palaceIn && !F.palaceOut) && !F.famousConc) lines.push('身后留下田' + cn(L.land) + '亩。');
       else if (L.eco.cash + L.eco.priv < 300) lines.push('身后几乎一无所有。');
     }
     if (L.flags.coffin) lines.push('你早早为自己备好了寿材。');

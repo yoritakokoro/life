@@ -58,7 +58,9 @@ var SGE = (function (D) {
     var f = L.kin[0], m = L.kin[1]; if (!f || !m) return t;
     var fg = !f.alive || f.apart, mg = !m.alive || m.apart; if (!fg && !mg) return t;
     var alt = fg && mg ? guardian(L) : D.FALL.guard.fam;
-    return t.replace(TX_PAR_G, function (all, w, v) { if (!parGone(L, w)) return all; var tail = w.length === 2 && /[はが]$/.test(w) ? w.slice(1) : ''; return alt + tail + v; });
+    t = t.replace(TX_PAR_G, function (all, w, v) { if (!parGone(L, w)) return all; var tail = w.length === 2 && /[はが]$/.test(w) ? w.slice(1) : ''; return alt + tail + v; });
+    t = t.replace(/(跟着|随着|陪着|帮着|求|替)(?<![祖叔伯养继])(父亲|母亲|父母)/g, function (all, p0, w) { return parGone(L, w) ? p0 + alt : all; });
+    return t.replace(/(?<![祖叔伯養義継嫡乳生実岳])(父親|母親|父母|父|母)(について|に従って|に頼んで|を手伝って|と一緒に)/g, function (all, w, p1) { return parGone(L, w) ? alt + p1 : all; });
   }
   // 抉择、童年小事里写到父母做事的（按中文原文预先算好，中日两版一致）：那位父母不在了，就不出现
   var PAR_NEED = { girlstudy: 'F', alliance: 'F', k_work: 'F', k_thief: 'F', k_beggar: 'M', taixue: 'M', pk_wu: 'F', c_hunger: 'M', c_show: 'F', c_lost: 'FM', c_playmate: 'M', c_pony: 'F', c_jun: 'F' };
@@ -228,7 +230,7 @@ var SGE = (function (D) {
     else if (k === 'jiazi') { L.cls = 'soldier'; L.flags.jiazi = armyOf(ctrl(L.zone, y)); L.land = 0; L.eco.cash = 0; L.standing += 3; }
     else if (k === 'yangnv') { L.land = 0; L.eco.cash = 0; L.flags.tongyang = R() < 0.6; if (L.flags.tongyang) t += O.tongyang; }
     else if (k === 'sold') { L.cls = 'slave'; L.eco = initEco(L); L.land = 0; L.job = '奴婢'; L.standing = 5; }
-    else if (k === 'beg') { L.eco.cash = 0; L.land = 0; L.body -= 8; L.flags.beggar = y; }
+    else if (k === 'beg') { L.eco.cash = 0; L.eco.ox = 0; L.eco.house = 0; L.land = 0; L.body -= 8; L.flags.beggar = y; }
     add(L, 3, k === 'sold' || k === 'beg' ? 'bad' : 'fam', t);
   }
   function fallLines(L, y) {
@@ -237,8 +239,8 @@ var SGE = (function (D) {
     if (L.shan) out = out.concat(L.shan.f ? F.shanF : (F.shan[L.shan.g].lines || []).concat(F.shanGen));
     else if (L.liumin) { out = out.concat(F.lmDaily); F.lmEra.forEach(function (e) { if (y >= e.y[0] && y <= e.y[1] && e.zones.indexOf(L.zone) >= 0) out = out.concat(e.t); }); }
     else if (L.flags.beggar && a <= 15) out = out.concat(F.orphan.dBeg);
-    else if (L.flags.orphanK && a <= 15 && F.orphan['d_' + L.flags.orphanK]) out = out.concat(F.orphan['d_' + L.flags.orphanK]);
-    else if (L.flags.declineY && y - L.flags.declineY <= 10) out = out.concat(F.decline[L.flags.declineK].daily);
+    else if (L.flags.orphanK && a >= 5 && a <= 15 && F.orphan['d_' + L.flags.orphanK]) out = out.concat(F.orphan['d_' + L.flags.orphanK]);
+    else if (L.flags.declineY && a >= 16 && y - L.flags.declineY <= 10) out = out.concat(F.decline[L.flags.declineK].daily);
     if (L.flags.oldFam != null && a >= 6 && !L.shan && !L.liumin) out = out.concat(F.oldFam[L.flags.oldFam].daily);
     return out;
   }
@@ -795,7 +797,7 @@ var SGE = (function (D) {
       case 'mother': return k.concMom ? '生母' : '母';
       case 'dimu': return '嫡母';
       case 'gp': return k.sex === 'M' ? '祖父' : '祖母';
-      case 'sib': return k.by <= L.by ? (k.sex === 'M' ? '兄' : '姉') : (k.sex === 'M' ? '弟' : '妹');
+      case 'sib': return k.by < L.by || k.by === L.by && !k.younger ? (k.sex === 'M' ? '兄' : '姉') : (k.sex === 'M' ? '弟' : '妹');
       case 'spouse': return L.sex === 'M' ? '妻' : '夫';
       case 'child': return k.sex === 'M' ? '息子' : '娘';
       case 'conc': return L.sex === 'M' ? '妾' : '夫の妾';
@@ -1557,7 +1559,7 @@ var SGE = (function (D) {
     L.flags.pathAsk = true;
     var ks = PATHS.filter(function (p) { return p.ok(L); });
     if (ks.length < 2) return;
-    P.queue.push({ key: 'path', ks: ks.map(function (p) { return p.k; }), q: L.sex === 'M' ? '十五歳になった。村の人々の目には、もう一人前の大人だ。これからどの道を進むか、長いあいだ考えた――' : '十五歳になった。あと一、二年で嫁ぐことになる。それまでに、何を学びたい？', o: ks.map(function (p) { return p.n; }), w: ks.map(function () { return 1; }) });
+    P.queue.push({ key: 'path', ks: ks.map(function (p) { return p.k; }), q: L.sex === 'M' ? '十五歳になった。村の人々の目には、もう一人前の大人だ。これからどの道を進むか、長いあいだ考えた――' : '十五歳になった。あと一、二年で嫁ぐことになる。それまでに、何を学びたい？', o: ks.map(function (p) { return fixPar(L, p.n); }), w: ks.map(function () { return 1; }) });
   }
   function pathOutcome(L, y, k) {
     var R = L.R, E = L.eco;
@@ -2401,7 +2403,8 @@ var SGE = (function (D) {
     if (L.eth) where = D.ZONES[L.zone].zhou + D.JUN[L.jun][0] + '境内の山野';
     add(L, 0, 'life', 'あなたは' + where + 'で生まれた。' + desc + '。');
     var sibs = L.kin.filter(function (k) { return k.rel === 'sib'; }).length;
-    var t = sibs === 0 ? 'あなたは家の最初の子だった。' : 'あなたの上には兄や姉が' + cnNum(sibs) + '人いた。';
+    var nbro = L.kin.filter(function (k) { return k.rel === 'sib' && k.sex === 'M'; }).length, nsis = sibs - nbro;
+    var t = sibs === 0 ? 'あなたは家の最初の子だった。' : 'あなたの上には' + [nbro ? '兄が' + cnNum(nbro) + '人' : '', nsis ? '姉が' + cnNum(nsis) + '人' : ''].filter(Boolean).join('、') + 'いた。';
     if (L.olderDead > 0) t += '母は他にも' + cnNum(L.olderDead) + '人の子を産んでいたが、みな育たなかった。';
     add(L, 0.05, 'fam', t);
     if (L.flags.posthumous) add(L, 0.1, 'fam', 'あなたが生まれる前に、父は乱兵の手にかかって死んだ。');
@@ -2825,7 +2828,8 @@ var SGE = (function (D) {
     if (inHH(L) && a >= 14) return fresh(L, L.spouseK.alive ? (L.flags.fcPal ? CONC_PAL : CONC_FU) : L.flags.fcPal === '皇宮' ? CONC_WIDP : L.flags.famousConc === 'caocao' && L.flags.noRemarry ? CONC_TQ.concat(CONC_WID) : CONC_WID);
     var hd = !L.eth && hhDaily(L, y); if (hd) return hd;
     var fd = !L.eth && fallLines(L, y); if (fd && fd.length && L.R() < 0.55) return fresh(L, fd);
-    if (L.eth && D.ETH[L.eth]) pool = pool.concat(a < 14 ? D.ETH[L.eth].child : D.ETH[L.eth].adult);
+    if (L.eth && D.ETH[L.eth] && a >= 5) pool = pool.concat(a < 14 ? D.ETH[L.eth].child : D.ETH[L.eth].adult);
+    else if (L.eth && a < 5) return null;
     else if (a < 3) return a === 0 ? null : pick(R, ['歩けるようになった。', '「阿母」と呼べるようになった。', '乳離れして、粟の粥を食べ始めた。']);
     else if (a < 14) {
       // 富家的孩子不必放牛、拾柴、跟着母親去河辺洗衣
@@ -3394,11 +3398,11 @@ var SGE = (function (D) {
     });
     // 弟妹出生
     var f = L.kin[0], m = L.kin[1];
-    if (L.age < 20 && f.alive && m.alive && !m.apart && !m.out && y - m.by <= 42 && y - m.by >= 16) {
+    if (L.age >= 1 && L.age < 20 && f.alive && m.alive && !m.apart && !m.out && y - m.by <= 42 && y - m.by >= 16 && !L.kin.some(function (x) { return x.rel === 'sib' && x.by >= y; })) {
       var nb = L.kin.filter(function (k) { return k.rel === 'sib' && k.by > L.by; }).length;
       if (nb < 6 && R() < 0.27) {
         var sx = R() < 0.51 ? 'M' : 'F';
-        var k = newKin(L, 'sib', sx, y, freshXiao(L, sx), { sur: L.sur });
+        var k = newKin(L, 'sib', sx, y, freshXiao(L, sx), { sur: L.sur }); k.younger = true;
         if (eliteFam(L)) giveName(L, k);
         add(L, 0.9, 'fam', '母が' + (sx === 'M' ? '弟' : '妹') + 'を産んだ。幼名は' + k.name + '。');
       }
@@ -4763,6 +4767,13 @@ var SGE = (function (D) {
     if (F.famousConc) a.push('あなたはかつて' + figName(F.famousConc) + 'の妾だった。');
     if (L.youthFig) a.push('あなたと' + figName(L.youthFig) + 'は少年時代の友人だった。' + (F.yfServed ? 'のちにあなたは彼のもとに身を寄せた。' : ''));
     if (F.wedFig) a.push('あなたは' + figName(F.wedFig) + 'の娘を娶った。');
+    if (F.orphanK && ['sib', 'tribe', 'slave'].indexOf(F.orphanK) < 0 && age >= 15) a.push('幼くして両親を失ったが、それでも大人になるまで生き延びた。');
+    if (F.orphanK === 'jiazi' && L.milMax) a.push('将軍の仮子から身を起こし、' + L.milMax + 'に至った。');
+    if (F.wasLM && L.land > 0) a.push('流民だったが、のちにまた自分の土地を持った。');
+    if (F.wasShan && !L.shan && L.cause !== 'executed') a.push('山に上り、そして生きて山を下りた。');
+    if (F.declineY && ['high', 'top'].indexOf(lifeTier(L, L.dy).k) >= 0) a.push('家運が傾いたのち、ふたたび家を立て直した。');
+    if (F.maidWas && (F.isConc || F.concubineOf)) a.push('婢女から妾になった。');
+    if (F.moru && (F.palace || 0) >= 1) a.push('織室の官婢から身を起こし、' + F.palaceTop + 'の位に至った。');
     if (age >= 80 && L.cause !== 'fade') a.push('あなたは' + cnNum(age) + '歳まで生きた。');
     if (L.cause === 'fade') a.push('あなたはこのシミュレーションの最後の年を越えて生き延びた。');
     return a;

@@ -58,7 +58,9 @@ var SGE = (function (D) {
     var f = L.kin[0], m = L.kin[1]; if (!f || !m) return t;
     var fg = !f.alive || f.apart, mg = !m.alive || m.apart; if (!fg && !mg) return t;
     var alt = fg && mg ? guardian(L) : D.FALL.guard.fam;
-    return t.replace(TX_PAR_G, function (all, w, v) { if (!parGone(L, w)) return all; var tail = w.length === 2 && /[はが]$/.test(w) ? w.slice(1) : ''; return alt + tail + v; });
+    t = t.replace(TX_PAR_G, function (all, w, v) { if (!parGone(L, w)) return all; var tail = w.length === 2 && /[はが]$/.test(w) ? w.slice(1) : ''; return alt + tail + v; });
+    t = t.replace(/(跟着|随着|陪着|帮着|求|替)(?<![祖叔伯养继])(父亲|母亲|父母)/g, function (all, p0, w) { return parGone(L, w) ? p0 + alt : all; });
+    return t.replace(/(?<![祖叔伯養義継嫡乳生実岳])(父親|母親|父母|父|母)(について|に従って|に頼んで|を手伝って|と一緒に)/g, function (all, w, p1) { return parGone(L, w) ? alt + p1 : all; });
   }
   // 抉择、童年小事里写到父母做事的（按中文原文预先算好，中日两版一致）：那位父母不在了，就不出现
   var PAR_NEED = { girlstudy: 'F', alliance: 'F', k_work: 'F', k_thief: 'F', k_beggar: 'M', taixue: 'M', pk_wu: 'F', c_hunger: 'M', c_show: 'F', c_lost: 'FM', c_playmate: 'M', c_pony: 'F', c_jun: 'F' };
@@ -228,7 +230,7 @@ var SGE = (function (D) {
     else if (k === 'jiazi') { L.cls = 'soldier'; L.flags.jiazi = armyOf(ctrl(L.zone, y)); L.land = 0; L.eco.cash = 0; L.standing += 3; }
     else if (k === 'yangnv') { L.land = 0; L.eco.cash = 0; L.flags.tongyang = R() < 0.6; if (L.flags.tongyang) t += O.tongyang; }
     else if (k === 'sold') { L.cls = 'slave'; L.eco = initEco(L); L.land = 0; L.job = '奴婢'; L.standing = 5; }
-    else if (k === 'beg') { L.eco.cash = 0; L.land = 0; L.body -= 8; L.flags.beggar = y; }
+    else if (k === 'beg') { L.eco.cash = 0; L.eco.ox = 0; L.eco.house = 0; L.land = 0; L.body -= 8; L.flags.beggar = y; }
     add(L, 3, k === 'sold' || k === 'beg' ? 'bad' : 'fam', t);
   }
   function fallLines(L, y) {
@@ -237,8 +239,8 @@ var SGE = (function (D) {
     if (L.shan) out = out.concat(L.shan.f ? F.shanF : (F.shan[L.shan.g].lines || []).concat(F.shanGen));
     else if (L.liumin) { out = out.concat(F.lmDaily); F.lmEra.forEach(function (e) { if (y >= e.y[0] && y <= e.y[1] && e.zones.indexOf(L.zone) >= 0) out = out.concat(e.t); }); }
     else if (L.flags.beggar && a <= 15) out = out.concat(F.orphan.dBeg);
-    else if (L.flags.orphanK && a <= 15 && F.orphan['d_' + L.flags.orphanK]) out = out.concat(F.orphan['d_' + L.flags.orphanK]);
-    else if (L.flags.declineY && y - L.flags.declineY <= 10) out = out.concat(F.decline[L.flags.declineK].daily);
+    else if (L.flags.orphanK && a >= 5 && a <= 15 && F.orphan['d_' + L.flags.orphanK]) out = out.concat(F.orphan['d_' + L.flags.orphanK]);
+    else if (L.flags.declineY && a >= 16 && y - L.flags.declineY <= 10) out = out.concat(F.decline[L.flags.declineK].daily);
     if (L.flags.oldFam != null && a >= 6 && !L.shan && !L.liumin) out = out.concat(F.oldFam[L.flags.oldFam].daily);
     return out;
   }
@@ -795,7 +797,7 @@ var SGE = (function (D) {
       case 'mother': return k.concMom ? '生母' : '母亲';
       case 'dimu': return '嫡母';
       case 'gp': return k.sex === 'M' ? '祖父' : '祖母';
-      case 'sib': return k.by <= L.by ? (k.sex === 'M' ? '哥哥' : '姐姐') : (k.sex === 'M' ? '弟弟' : '妹妹');
+      case 'sib': return k.by < L.by || k.by === L.by && !k.younger ? (k.sex === 'M' ? '哥哥' : '姐姐') : (k.sex === 'M' ? '弟弟' : '妹妹');
       case 'spouse': return L.sex === 'M' ? '妻子' : '丈夫';
       case 'child': return k.sex === 'M' ? '儿子' : '女儿';
       case 'conc': return L.sex === 'M' ? '妾' : '丈夫的妾';
@@ -1557,7 +1559,7 @@ var SGE = (function (D) {
     L.flags.pathAsk = true;
     var ks = PATHS.filter(function (p) { return p.ok(L); });
     if (ks.length < 2) return;
-    P.queue.push({ key: 'path', ks: ks.map(function (p) { return p.k; }), q: L.sex === 'M' ? '你十五岁了，在乡里人眼里已经是个大人。往后的路怎么走，你想了很久——' : '你十五岁了，再过一两年就要出嫁。在那之前，你想学些什么？', o: ks.map(function (p) { return p.n; }), w: ks.map(function () { return 1; }) });
+    P.queue.push({ key: 'path', ks: ks.map(function (p) { return p.k; }), q: L.sex === 'M' ? '你十五岁了，在乡里人眼里已经是个大人。往后的路怎么走，你想了很久——' : '你十五岁了，再过一两年就要出嫁。在那之前，你想学些什么？', o: ks.map(function (p) { return fixPar(L, p.n); }), w: ks.map(function () { return 1; }) });
   }
   function pathOutcome(L, y, k) {
     var R = L.R, E = L.eco;
@@ -2401,7 +2403,8 @@ var SGE = (function (D) {
     if (L.eth) where = D.ZONES[L.zone].zhou + D.JUN[L.jun][0] + '境内的山野之间';
     add(L, 0, 'life', '你出生在' + where + '，' + desc + '。');
     var sibs = L.kin.filter(function (k) { return k.rel === 'sib'; }).length;
-    var t = sibs === 0 ? '你是家里的第一个孩子。' : '你上面有' + cnNum(sibs) + '个哥哥姐姐。';
+    var nbro = L.kin.filter(function (k) { return k.rel === 'sib' && k.sex === 'M'; }).length, nsis = sibs - nbro;
+    var t = sibs === 0 ? '你是家里的第一个孩子。' : '你上面有' + [nbro ? cnNum(nbro) + '个哥哥' : '', nsis ? cnNum(nsis) + '个姐姐' : ''].filter(Boolean).join('、') + '。';
     if (L.olderDead > 0) t += '母亲原本还生过' + cnNum(L.olderDead) + '个孩子，都没能养大。';
     add(L, 0.05, 'fam', t);
     if (L.flags.posthumous) add(L, 0.1, 'fam', '你还没出生，父亲就死在了乱兵之中。');
@@ -2825,7 +2828,8 @@ var SGE = (function (D) {
     if (inHH(L) && a >= 14) return fresh(L, L.spouseK.alive ? (L.flags.fcPal ? CONC_PAL : CONC_FU) : L.flags.fcPal === '皇宫' ? CONC_WIDP : L.flags.famousConc === 'caocao' && L.flags.noRemarry ? CONC_TQ.concat(CONC_WID) : CONC_WID);
     var hd = !L.eth && hhDaily(L, y); if (hd) return hd;
     var fd = !L.eth && fallLines(L, y); if (fd && fd.length && L.R() < 0.55) return fresh(L, fd);
-    if (L.eth && D.ETH[L.eth]) pool = pool.concat(a < 14 ? D.ETH[L.eth].child : D.ETH[L.eth].adult);
+    if (L.eth && D.ETH[L.eth] && a >= 5) pool = pool.concat(a < 14 ? D.ETH[L.eth].child : D.ETH[L.eth].adult);
+    else if (L.eth && a < 5) return null;
     else if (a < 3) return a === 0 ? null : pick(R, ['你学会了走路。', '你会叫"阿母"了。', '你断了奶，开始吃粟米粥。']);
     else if (a < 14) {
       // 富家的孩子不必放牛、拾柴、跟着母亲去河边洗衣
@@ -3394,11 +3398,11 @@ var SGE = (function (D) {
     });
     // 弟妹出生
     var f = L.kin[0], m = L.kin[1];
-    if (L.age < 20 && f.alive && m.alive && !m.apart && !m.out && y - m.by <= 42 && y - m.by >= 16) {
+    if (L.age >= 1 && L.age < 20 && f.alive && m.alive && !m.apart && !m.out && y - m.by <= 42 && y - m.by >= 16 && !L.kin.some(function (x) { return x.rel === 'sib' && x.by >= y; })) {
       var nb = L.kin.filter(function (k) { return k.rel === 'sib' && k.by > L.by; }).length;
       if (nb < 6 && R() < 0.27) {
         var sx = R() < 0.51 ? 'M' : 'F';
-        var k = newKin(L, 'sib', sx, y, freshXiao(L, sx), { sur: L.sur });
+        var k = newKin(L, 'sib', sx, y, freshXiao(L, sx), { sur: L.sur }); k.younger = true;
         if (eliteFam(L)) giveName(L, k);
         add(L, 0.9, 'fam', '母亲生下了一个' + (sx === 'M' ? '弟弟' : '妹妹') + '，小名' + k.name + '。');
       }
@@ -4763,6 +4767,13 @@ var SGE = (function (D) {
     if (F.famousConc) a.push('你曾是' + figName(F.famousConc) + '的妾。');
     if (L.youthFig) a.push('你和' + figName(L.youthFig) + '是少年时的朋友。' + (F.yfServed ? '后来你投奔了他。' : ''));
     if (F.wedFig) a.push('你娶了' + figName(F.wedFig) + '的女儿。');
+    if (F.orphanK && ['sib', 'tribe', 'slave'].indexOf(F.orphanK) < 0 && age >= 15) a.push('你幼年失去双亲，还是活着长大了。');
+    if (F.orphanK === 'jiazi' && L.milMax) a.push('你从将军的假子做到了' + L.milMax + '。');
+    if (F.wasLM && L.land > 0) a.push('你做过流民，后来又有了自己的地。');
+    if (F.wasShan && !L.shan && L.cause !== 'executed') a.push('你上过山，又活着下了山。');
+    if (F.declineY && ['high', 'top'].indexOf(lifeTier(L, L.dy).k) >= 0) a.push('家道中落之后，你又把家撑了起来。');
+    if (F.maidWas && (F.isConc || F.concubineOf)) a.push('你从婢女成了妾。');
+    if (F.moru && (F.palace || 0) >= 1) a.push('你从织室的官婢，做到了' + F.palaceTop + '。');
     if (age >= 80 && L.cause !== 'fade') a.push('你活到了' + cnNum(age) + '岁。');
     if (L.cause === 'fade') a.push('你活过了这部模拟的最后一年。');
     return a;

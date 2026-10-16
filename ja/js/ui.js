@@ -826,20 +826,31 @@
     if (L.edu) lines.push(L.edu.passed ? L.edu.city + L.edu.n + '出身。' : 'かつて' + L.edu.city + L.edu.n + 'で学んだ。');
     if (L.sex === 'M' && age >= 20) lines.push(L.officeMax && L.milMax ? 'かつて' + L.officeMax + 'を務め、のちに従軍して' + L.milMax + 'に至った。' : L.officeMax ? 'かつて' + L.officeMax + 'を務めた。' : L.milMax ? '官は' + L.milMax + 'に至った。' : '生涯、仕官しなかった。');
     if (F.loyal) lines.push(F.loyal + 'が滅びたのち、新しい朝廷には仕えなかった。');
-    if (L.sex === 'F' && age >= 15 && !L.married && !L.widowed && !L.divorced && L.kidsBorn === 0) lines.push('生涯、嫁がなかった。');
+    if (L.sex === 'F' && age >= 15 && !L.married && !L.widowed && !L.divorced && L.kidsBorn === 0 && !F.palaceIn && !F.concubineOf && !F.isConc) lines.push('生涯、嫁がなかった。');
     if (L.divorced) lines.push('夫の家から離縁されたことがある。');
     if (L.flags.abducted) lines.push('乱兵にさらわれ、異郷をさまよったことがある。');
+    var ORPH_EPI = { uncle: '幼くして両親を失い、叔父に育てられた。', clan: '幼くして両親を失い、一族の伯父に育てられた。', mat: '幼くして両親を失い、母方の祖父の家で育った。', neigh: '幼くして両親を失い、村の老人に引き取られた。', jiazi: '幼くして両親を失い、ある将軍の仮子となった。', yangnv: '幼くして両親を失い、人の養女となった。', sold: '幼くして両親を失い、一族の者に奴婢として売られた。', beg: '幼くして両親を失い、城門のそばで物乞いをした。', sib: '幼くして両親を失い、兄や姉が家を支えた。' }, OLD_EPI = ['祖父はかつて県令を務めた。', '家はもと郡の名族で、党錮で没落した。', '先祖はかつて豪商だった。'];
+    if (F.orphanK && ORPH_EPI[F.orphanK]) lines.push(ORPH_EPI[F.orphanK]);
+    if (F.oldFam != null) lines.push(OLD_EPI[F.oldFam]);
+    if (F.declineY) lines.push(F.declineY + '年、家運が傾いた。');
+    if (F.wasLM) lines.push('流民となったことがある。');
+    if (F.wasShan) lines.push(F.shanF && L.sex === 'F' ? '山賊にさらわれ、山へ連れていかれたことがある。' : F.wasShan + 'の仲間として山に上ったことがある。');
+    if (F.moru) lines.push(F.moru + '年、官に没収された。');
+    else if (F.maidWas) lines.push(F.maidWas === 'bi' ? '身を売って婢となったことがある。' : '大家に侍女として仕えた。');
+    if (F.concubineOf && !F.isConc) lines.push('主人の妾となった。');
+    if (L.job === '太妃') lines.push('のちに子に従って封国へ移り、王太妃となった。');
     if (L.soldierYears > 0) lines.push('従軍' + cn(L.soldierYears) + '年。');
-    if (L.moves > 0) lines.push('移住' + cn(L.moves) + '度。');
-    if ((L.visited || []).length >= 2) lines.push('各地を巡った：' + L.visited.slice(0, 4).join('、') + (L.visited.length > 4 ? 'など' : '') + '。');
-    else if (age >= 10) lines.push('生涯、' + D.JUN[L.birthJun][0] + 'を離れることはなかった。');
+    var jh = L.junHist && L.junHist.length ? L.junHist : [L.birthJun];
+    if (L.moves > 0) lines.push(jh.length <= 1 ? '移住' + cn(L.moves) + '度、いずれも' + D.JUN[L.birthJun][0] + 'の内だった。' : '移住' + cn(L.moves) + '度、' + jh.slice(0, 4).map(function (i) { return D.JUN[i][0]; }).join('・') + (jh.length > 4 ? 'など' : '') + 'に住んだ。');
+    if ((L.visited || []).length >= 1) lines.push('各地を巡った：' + L.visited.slice(0, 4).join('、') + (L.visited.length > 4 ? 'など' : '') + '。');
+    else if (L.moves === 0 && age >= 10) lines.push('生涯、' + D.JUN[L.birthJun][0] + 'を離れることはなかった。');
     if (L.kidsBorn > 0) lines.push('子を' + cn(L.kidsBorn) + '人もうけ、' + (adultKids === 0 ? '成人した者はいなかった' : cn(adultKids) + '人が成人した') + '。');
     if (L.grandkids > 0) lines.push('孫は' + cn(L.grandkids) + '人。');
     var lit = L.kin.filter(function (k) { return k.rel === 'child' && k.lit; }).length;
     if (lit) lines.push(cn(lit) + '人の子が読み書きできた。');
     if (age >= 15 && L.cls !== 'slave') {
       if (L.eco.debt > 0) lines.push('死後にも' + E.fmt(L.eco.debt) + '銭の借金が残った。');
-      else if (L.land > 0) lines.push('死後、田' + cn(L.land) + '畝を遺した。');
+      else if (L.land > 0 && !(F.palaceIn && !F.palaceOut) && !F.famousConc) lines.push('死後、田' + cn(L.land) + '畝を遺した。');
       else if (L.eco.cash + L.eco.priv < 300) lines.push('死後にはほとんど何も残らなかった。');
     }
     if (L.flags.coffin) lines.push('あなたは早くから自分の棺を用意していた。');
