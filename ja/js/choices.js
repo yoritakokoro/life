@@ -49,7 +49,7 @@
       r: [[{ p: 1, t: '三百銭を出して、土地を持たない若者を僱い、代わりに行かせた。', fx: { cash: -300 } }],
         [{ p: 0.97, t: '城壁の上で一か月土を担ぎ、帰ってきたときにはひと回り痩せていた。', fx: { body: -2 } }, { p: 0.03, t: '', fx: { die: 'corv' } }]],
       aw: function (L) { return L.eco.cash > 1500 ? [3, 1] : [1, 3]; } },
-    { id: 'school', w: 1.2, ok: function (L, H) { var k = H.kids(7, 12, null, function (x) { return !x.lit; })[0]; return H.head && L.cls !== 'slave' && k && L.eco.cash >= 400 && { kin: k }; },
+    { id: 'school', w: 1.2, ok: function (L, H) { var k = H.kids(7, 12, null, function (x) { return !x.lit; })[0]; return H.head && L.cls !== 'slave' && L.cls !== 'gentry' && L.wealth < 60 && k && L.eco.cash >= 400 && { kin: k }; },
       q: '{kin}も七つ八つになった。郷里に弟子を取る老先生がいて、一年の束脩（謝礼）は五百銭だという。', o: ['学問をさせに通わせる', '家に残して手伝わせる'],
       r: [[{ p: 1, t: '{kin}を学問に通わせた。子は毎日帰ってくると、地面に木の枝で字をいくつか書いて見せてくれた。', fx: { cash: -500, kinLit: true, kinAff: 8 } }],
         [{ p: 1, t: '{kin}は家に残って牛の番をした。もう少し暮らし向きがよくなってからにしよう、とあなたは思った。', fx: {} }]],

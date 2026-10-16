@@ -49,7 +49,7 @@
       r: [[{ p: 1, t: '你出了三百钱，雇了个无地的后生替你去。', fx: { cash: -300 } }],
         [{ p: 0.97, t: '你在城墙上挑了一个月的土，回来时瘦了一圈。', fx: { body: -2 } }, { p: 0.03, t: '', fx: { die: 'corv' } }]],
       aw: function (L) { return L.eco.cash > 1500 ? [3, 1] : [1, 3]; } },
-    { id: 'school', w: 1.2, ok: function (L, H) { var k = H.kids(7, 12, null, function (x) { return !x.lit; })[0]; return H.head && L.cls !== 'slave' && k && L.eco.cash >= 400 && { kin: k }; },
+    { id: 'school', w: 1.2, ok: function (L, H) { var k = H.kids(7, 12, null, function (x) { return !x.lit; })[0]; return H.head && L.cls !== 'slave' && L.cls !== 'gentry' && L.wealth < 60 && k && L.eco.cash >= 400 && { kin: k }; },
       q: '{kin}七八岁了。乡里有个老先生收学生，一年的束脩要五百钱。', o: ['送去读书', '留在家里帮忙'],
       r: [[{ p: 1, t: '你送{kin}去读书。孩子每天回来，都要在地上用树枝写几个字给你看。', fx: { cash: -500, kinLit: true, kinAff: 8 } }],
         [{ p: 1, t: '{kin}留在家里放牛。你想，等年景好些再说吧。', fx: {} }]],
