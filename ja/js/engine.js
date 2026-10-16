@@ -159,6 +159,193 @@ var SGE = (function (D) {
     var n = pick(R, c); (L.netaSeen = L.netaSeen || {})[n.id] = 1; L.netaN = (L.netaN || 0) + 1;
     add(L, 2.5, 'fun', n.t);
   }
+  /* ---------- 落難之路：孤児、流民、家道中落、落草為寇 ---------- */
+  var TK_RANK = { slave: -1, low: 0, mid: 1, high: 2, top: 3 };
+  function shanGroup(L, y) {
+    var G = D.FALL.shan, ks = Object.keys(G).filter(function (k) { var g = G[k]; return g.zones && g.y && y >= g.y[0] && y <= g.y[1] && g.zones.indexOf(L.zone) >= 0; });
+    return ks.length ? ks[0] : 'gen';
+  }
+  function goShan(L, y, s, t, f) {
+    var gk = shanGroup(L, y), G = D.FALL.shan[gk];
+    L.shan = { since: y, g: gk, rank: 0, f: !!f }; L.flags.outlaw = true; L.office = null; L.flags.wasShan = G.n; L.liumin = null;
+    if (!f) L.job = '山賊';
+    if (t) add(L, s, 'bad', t.replace(/\{g\}/g, G.n));
+  }
+  function leaveShan(L) { L.shan = null; L.flags.outlaw = false; if (L.job === '山賊' || L.job === '山賊頭目') L.job = '農'; }
+  function orphanFate(L, y) {
+    var R = L.R, a = L.age, O = D.FALL.orphan;
+    L.flags.orphan = true; L.flags.orphanY = y;
+    var older = liveKin(L, function (k) { return k.rel === 'sib' && y - k.by >= 16; });
+    if (older.length) { L.flags.orphanK = 'sib'; add(L, 3, 'fam', O.sib.replace('{k}', kinLabel(L, older[0]))); return; }
+    if (L.eth) { L.flags.orphanK = 'tribe'; add(L, 3, 'fam', O.tribe); return; }
+    if (L.cls === 'slave') { L.flags.orphanK = 'slave'; add(L, 3, 'bad', O.slave); return; }
+    var r = R(), k;
+    if (L.cls === 'gentry') k = r < 0.65 ? 'clan' : 'mat';
+    else if (r < 0.38) k = 'uncle';
+    else if (r < 0.52) k = 'mat';
+    else if (r < 0.62) k = 'neigh';
+    else if (r < 0.68 && chaos(y) > 1.05) k = L.sex === 'M' ? 'jiazi' : 'yangnv';
+    else if (r < 0.8) k = L.sex === 'F' ? 'yangnv' : a >= 5 ? 'sold' : 'neigh';
+    else k = a >= 5 ? 'beg' : 'neigh';
+    L.flags.orphanK = k;
+    var t = O[k];
+    if (k === 'clan') { L.flags.clanTook = R() < 0.45; t += L.flags.clanTook ? O.clanTook : O.clanKept; if (L.flags.clanTook) { L.land = Math.round(L.land * 0.3); L.eco.cash = Math.round(L.eco.cash * 0.3); } }
+    else if (k === 'uncle') { var took = L.land > 0 && R() < 0.6; t += took ? O.uncleTook : O.uncleKept; if (took) L.land = 0; L.eco.cash = Math.round(L.eco.cash * 0.5); }
+    else if (k === 'mat') L.eco.cash = Math.round(L.eco.cash * 0.6);
+    else if (k === 'neigh') { L.land = 0; L.eco.cash = 0; if (L.cls !== 'gentry') L.cls = 'peasant'; }
+    else if (k === 'jiazi') { L.cls = 'soldier'; L.flags.jiazi = armyOf(ctrl(L.zone, y)); L.land = 0; L.eco.cash = 0; L.standing += 3; }
+    else if (k === 'yangnv') { L.land = 0; L.eco.cash = 0; L.flags.tongyang = R() < 0.6; if (L.flags.tongyang) t += O.tongyang; }
+    else if (k === 'sold') { L.cls = 'slave'; L.eco = initEco(L); L.land = 0; L.job = '奴婢'; L.standing = 5; }
+    else if (k === 'beg') { L.eco.cash = 0; L.land = 0; L.body -= 8; L.flags.beggar = y; }
+    add(L, 3, k === 'sold' || k === 'beg' ? 'bad' : 'fam', t);
+  }
+  function fallLines(L, y) {
+    var F = D.FALL, a = L.age, out = [];
+    if (!F) return out;
+    if (L.shan) out = out.concat(L.shan.f ? F.shanF : (F.shan[L.shan.g].lines || []).concat(F.shanGen));
+    else if (L.liumin) { out = out.concat(F.lmDaily); F.lmEra.forEach(function (e) { if (y >= e.y[0] && y <= e.y[1] && e.zones.indexOf(L.zone) >= 0) out = out.concat(e.t); }); }
+    else if (L.flags.beggar && a <= 15) out = out.concat(F.orphan.dBeg);
+    else if (L.flags.orphanK && a <= 15 && F.orphan['d_' + L.flags.orphanK]) out = out.concat(F.orphan['d_' + L.flags.orphanK]);
+    else if (L.flags.declineY && y - L.flags.declineY <= 10) out = out.concat(F.decline[L.flags.declineK].daily);
+    if (L.flags.oldFam != null && a >= 6 && !L.shan && !L.liumin) out = out.concat(F.oldFam[L.flags.oldFam].daily);
+    return out;
+  }
+  // 年初：落難中的人要拿主意
+  function fallChoice(L, y, P) {
+    var R = L.R, a = L.age, F = D.FALL, g = group(ctrl(L.zone, y));
+    if (!F || !L.alive || inHH(L) || inPal(L) || L.soldier || L.band) return;
+    // 族人侵吞的田産
+    if (L.flags.clanTook && L.sex === 'M' && a >= 16 && a <= 22 && !L.flags.clanAsk && R() < 0.5) { L.flags.clanAsk = true; P.queue.push({ key: 'fall', kd: 'clan', q: F.orphan.clanQ, o: F.orphan.clanO, w: [1, 1.5, 1] }); return; }
+    // 流民的去路
+    if (L.liumin && a >= 16 && y > L.liumin.since && (R() < 0.6 || y - L.liumin.since >= 3)) {
+      var ks = ['tenant'];
+      if ((g === 'wei' || g === 'jin') && y >= 196) ks.push('zhaofu');
+      if (g === 'wei' && y >= 196 && y <= 264) ks.push('tuntian');
+      if (L.sex === 'M' && y >= 306 && y <= 335 && ['ji', 'yu', 'bing', 'yan'].indexOf(L.zone) >= 0) ks.push('qihuo');
+      if (L.sex === 'M' && a <= 40) ks.push('shan');
+      if (y >= 307 && y <= 335 && ['ji', 'yu', 'yan', 'xu', 'qing', 'luoyang'].indexOf(L.zone) >= 0) ks.push('south');
+      if (y >= 296 && y <= 301 && ['guanzhong', 'liang'].indexOf(L.zone) >= 0) ks.push('shu');
+      if (L.sex === 'F' && !L.married && a <= 25) ks.push('wed');
+      if (L.sex === 'F' && !L.married && a <= 22) ks.push('sell');
+      P.queue.push({ key: 'fall', kd: 'lm', ks: ks, q: F.lmQ, o: ks.map(function (k) { return F.lmO[k]; }), w: ks.map(function (k) { return k === 'shan' || k === 'sell' ? 0.5 : 1; }) });
+      return;
+    }
+    // 山上的日子：官府招安
+    if (L.shan && !L.shan.f && y - L.shan.since >= 2 && R() < 0.15) { P.queue.push({ key: 'fall', kd: 'zhao', q: g === 'wei' || g === 'jin' ? F.zhaoQ.wei : F.zhaoQ.gen, o: F.zhaoO, w: [1.2, 1, 1] }); return; }
+    // 女子被擄上山
+    if (L.sex === 'F' && !L.married && !L.shan && a >= 14 && a <= 28 && chaos(y) > 1.05 && !L.urban && ['peasant', 'tenant'].indexOf(L.cls) >= 0 && !L.flags.shanF && R() < 0.003) { L.flags.shanF = true; P.queue.push({ key: 'fall', kd: 'shanF', q: F.shanFQ, o: F.shanFO, w: [1.2, 1, 0.4] }); return; }
+    // 家道中落：拿主意
+    if (L.flags.declineY === y - 1 && !L.flags.declAsk && a >= 18 && isHead(L)) { L.flags.declAsk = true; var dk = L.flags.declineK; P.queue.push({ key: 'fall', kd: 'decl', q: F.decline[dk].q, o: F.declO, w: [1, L.tr.per >= 60 ? 2 : 1, L.tr.soc >= 60 ? 1.5 : 0.8] }); }
+  }
+  function fallOutcome(L, y, c, i) {
+    var R = L.R, F = D.FALL, k = c.ks ? c.ks[i] : i, s = 1.25;
+    if (!L.alive) return;
+    if (c.kd === 'clan') {
+      if (i === 0) { if (R() < 0.4) { L.land = Math.round(L.land / 0.3); L.standing += 3; add(L, s, 'good', F.orphan.clanR[0]); } else { L.standing -= 3; add(L, s, 'bad', F.orphan.clanR[1]); } }
+      else if (i === 1) { if (R() < 0.6) { L.land = Math.round(L.land / 0.6); add(L, s, 'life', F.orphan.clanR[2]); } else add(L, s, 'life', F.orphan.clanR[3]); }
+      else { L.tr.per = clamp(L.tr.per + 4, 5, 95); add(L, s, 'life', F.orphan.clanR[4]); }
+      L.flags.clanTook = false; return;
+    }
+    if (c.kd === 'lm') {
+      var t = F.lmR[k];
+      if (k === 'tenant') { L.cls = 'tenant'; L.job = '佃戸'; L.liumin = null; }
+      else if (k === 'zhaofu') { L.cls = 'peasant'; L.job = '農'; L.land = 15 + Math.floor(R() * 20); L.liumin = null; t = t.replace('{n}', cnNum(L.land)); }
+      else if (k === 'tuntian') { L.cls = 'tuntian'; L.job = '屯田客'; L.land = 0; L.liumin = null; }
+      else if (k === 'qihuo') { goShan(L, y, s, null); L.shan.g = 'qihuo'; L.flags.wasShan = F.shan.qihuo.n; }
+      else if (k === 'shan') { goShan(L, y, s, null); t = t.replace(/\{g\}/g, F.shan[L.shan.g].n); }
+      else if (k === 'south') { L.liumin.since = y; relocate(L, 'jiangdong', s, t, 0.06, y); return; }
+      else if (k === 'shu') { L.liumin.since = y; relocate(L, 'shu', s, t, 0.05, y); return; }
+      else if (k === 'wed') { L.liumin = null; L.cls = 'peasant'; doMarry(L, makeSpouse(L, y), y, s + 0.02, t); return; }
+      else if (k === 'sell') { L.liumin = null; L.cls = 'slave'; L.eco = initEco(L); L.land = 0; L.job = '婢女'; L.flags.maidWas = 'bi'; L.flags.maidHS = F.lmSellHS; L.standing = 5; }
+      add(L, s, k === 'zhaofu' || k === 'tuntian' ? 'good' : k === 'tenant' ? 'life' : 'bad', t);
+      return;
+    }
+    if (c.kd === 'zhao') {
+      if (i === 0) { leaveShan(L); L.cls = 'tenant'; L.job = '佃戸'; L.standing += 3; add(L, s, 'life', F.zhaoR[0]); }
+      else if (i === 1) { leaveShan(L); var ar = armyOf(ctrl(L.zone, y)); L.soldier = { army: ar, since: y }; L.job = '軍卒'; add(L, s, 'war', F.zhaoR[1]); }
+      else { add(L, s, 'life', F.zhaoR[2]); L.shan.since = y; }
+      return;
+    }
+    if (c.kd === 'shanF') {
+      if (i === 0) { goShan(L, y, s, F.shanFR[0], true); var sp = makeSpouse(L, y); sp.job = '山賊頭領'; sp.age = L.age + 8 + Math.floor(R() * 12); doMarry(L, sp, y, s + 0.02, ''); L.shan.since = y; }
+      else if (i === 1) { if (R() < 0.4) add(L, s, 'life', F.shanFR[1]); else { goShan(L, y, s, F.shanFR[2], true); L.body -= 5; var sp2 = makeSpouse(L, y); sp2.job = '山賊頭領'; doMarry(L, sp2, y, s + 0.02, ''); } }
+      else if (R() < 0.3) die(L, 'suicide', s, { full: F.shanFR[3] });
+      else { L.cls = 'slave'; L.eco = initEco(L); L.land = 0; L.job = '婢女'; L.standing = 5; liveKin(L, function (x) { return ['father', 'mother', 'sib', 'gp', 'dimu'].indexOf(x.rel) >= 0; }).forEach(function (x) { x.apart = true; }); add(L, s, 'bad', F.shanFR[4]); }
+      return;
+    }
+    if (c.kd === 'decl') {
+      var D2 = F.decline[L.flags.declineK];
+      if (i === 0) { L.eco.cash += Math.round(2000 + L.land * 150); L.land = Math.round(L.land * 0.5); L.standing -= 3; add(L, s, 'life', D2.r[0]); }
+      else if (i === 1) { L.eco.debt += 3000; L.standing += 2; add(L, s, 'life', D2.r[1]); }
+      else if (R() < 0.55) { L.eco.cash += 3000; L.standing -= 2; add(L, s, 'life', D2.r[2]); }
+      else { L.standing -= 4; add(L, s, 'bad', D2.r[3]); }
+    }
+  }
+  function fallYear(L, y) {
+    var R = L.R, a = L.age, F = D.FALL;
+    if (!F || !L.alive) return;
+    // 乞児的出路
+    if (L.flags.beggar && a >= 8) {
+      if (a >= 15) { L.flags.beggar = null; L.cls = 'tenant'; L.job = '佃戸'; add(L, 3, 'life', F.orphan.begGrow); }
+      else if (R() < 0.22) {
+        var bk = L.sex === 'M' && a >= 13 && chaos(y) > 1.05 ? 'army' : R() < 0.45 ? 'slave' : 'old';
+        L.flags.beggar = null;
+        if (bk === 'army') enlist(L, y, 3, false);
+        else if (bk === 'slave') { L.cls = 'slave'; L.eco = initEco(L); L.job = '奴婢'; }
+        else { L.cls = 'peasant'; L.flags.orphanK = 'neigh'; }
+        add(L, 3.05, bk === 'slave' ? 'bad' : 'life', F.orphan.begOut[bk]);
+      }
+    }
+    // 仮子長成
+    if (L.flags.jiazi && a === 15 && L.sex === 'M' && !L.soldier) { L.soldier = { army: armyOf(ctrl(L.zone, y)), since: y }; L.mil = Math.max(L.mil || 0, 1); L.job = MIL[1]; L.flags.jiazi = null; add(L, 3, 'war', F.orphan.jiaziUp); }
+    // 童養媳完婚
+    if (L.flags.tongyang && L.sex === 'F' && a >= 15 && !L.married) { L.flags.tongyang = false; doMarry(L, makeSpouse(L, y), y, 3, F.orphan.tongyangWed); }
+    // 流民：路上的苦
+    if (L.liumin) { L.body = clamp(L.body - 2, 1, 100); if (a < 16 && y - L.liumin.since >= 2 && R() < 0.5) { var kk = R() < 0.6 ? 'tenant' : 'zhaofu'; L.liumin = null; L.cls = kk === 'tenant' ? 'tenant' : 'peasant'; if (kk === 'zhaofu') L.land = 15 + Math.floor(R() * 15); add(L, 2.8, 'life', F.lmKid[kk]); } }
+    // 山上的日子
+    if (L.flags.outlaw && L.job === '山賊' && !L.shan) { L.shan = { since: y - 1, g: shanGroup(L, y), rank: 0 }; L.flags.wasShan = D.FALL.shan[L.shan.g].n; }
+    if (L.shan) {
+      var G = F.shan[L.shan.g];
+      if (G.end && y === G.end.y && !L.shan.f) {
+        leaveShan(L);
+        if (G.end.army) { L.soldier = { army: G.end.army, since: y }; L.job = '軍卒'; add(L, 2.9, 'war', G.end.t); }
+        else { L.cls = 'tenant'; L.job = '佃戸'; add(L, 2.9, 'life', G.end.t); }
+        return;
+      }
+      var ord = L.reg ? L.reg.order : 60;
+      if (R() < 0.035 * (ord / 60)) {
+        if (L.shan.f) { var hb = L.spouseK; if (hb && hb.alive) kinDie(L, hb, 'war', 2.9, y); leaveShan(L); if (R() < 0.5) { L.cls = 'peasant'; add(L, 2.95, 'life', F.shanFEnd[0]); } else { L.cls = 'soldier'; doMarry(L, makeSpouse(L, y), y, 2.95, F.shanFEnd[1]); } return; }
+        if (R() < 0.35) { die(L, 'war', 2.9, { full: F.sweepDie }); return; }
+        L.body = clamp(L.body - 6, 1, 100); add(L, 2.9, 'bad', pick(R, F.sweep)); return;
+      }
+      if (!L.shan.f && R() < 0.4) { var gain = 500 + Math.floor(R() * 1500) * (L.shan.rank ? 2 : 1); L.eco.priv += gain; }
+      if (!L.shan.f && !L.shan.rank && y - L.shan.since >= 2 && (L.found.strength || L.tr.act >= 65 || L.tr.cmp >= 65) && R() < 0.1) { L.shan.rank = 1; L.job = '山賊頭目'; L.fame += 2; add(L, 2.9, 'life', F.shanRank); }
+    }
+    // 家道中落：察覚
+    if (L.age >= 6 && !L.eth && L.cls !== 'slave' && !inHH(L) && !inPal(L) && !L.soldier && !L.shan) {
+      var rk = TK_RANK[lifeTier(L, y).k];
+      if (rk == null) return;
+      var pkey = L.sex === 'F' && L.married && L.spouseK ? L.spouseK.name : 'self';
+      if (L.peakKey !== pkey) { L.peakKey = pkey; L.peakTk = rk; }
+      if (L.peakTk == null || rk > L.peakTk) L.peakTk = rk;
+      if (!L.flags.declineY && L.peakTk >= 2 && (rk <= L.peakTk - 2 || (L.cls === 'gentry' || L.cls === 'merchant') && rk <= 1) && !L.liumin) {
+        var dk = L.cls === 'gentry' ? 'gentry' : L.cls === 'merchant' ? 'merchant' : L.officeMax && !L.office ? 'official' : 'farm';
+        L.flags.declineY = y; L.flags.declineK = dk;
+        add(L, 2.85, 'bad', a < 15 ? F.decline[dk].kid : F.decline[dk].adult);
+      }
+    }
+  }
+  // 結局里的一句話
+  function fallEnd(L) {
+    var F = D.FALL, t = [];
+    if (!F) return t;
+    if (L.flags.bornOrphan || L.flags.orphanK && ['sib', 'tribe', 'slave'].indexOf(L.flags.orphanK) < 0) t.push(F.end.orphan[L.flags.orphanK] || F.end.orphan.gen);
+    if (L.flags.wasLM) t.push(F.end.liumin);
+    if (L.flags.wasShan) t.push(F.end.shan.replace('{g}', L.flags.wasShan));
+    if (L.flags.declineY) t.push(F.decline[L.flags.declineK].end);
+    if (L.flags.oldFam != null) t.push(F.oldFam[L.flags.oldFam].end);
+    return t;
+  }
   var ATM_C = {};
   function atmosAt(z, y) {
     var k = z + y; if (ATM_C[k] !== undefined) return ATM_C[k];
@@ -479,6 +666,8 @@ var SGE = (function (D) {
     } else {
       if (R() < (war ? 0.04 : 0.015)) { father.alive = false; father.dy = L.by; father.cause = 'war'; L.flags.posthumous = true; }
       if (R() < 0.015) { mother.alive = false; mother.dy = L.by; mother.cause = 'childbirth'; L.flags.motherDied = true; }
+      if (!L.eth && R() < (war ? 0.02 : 0.008) * (L.cls === 'slave' || L.cls === 'tenant' ? 1.4 : 1)) { var bc = war && R() < 0.5 ? 'war' : R() < 0.6 ? 'fam' : 'plag'; father.alive = false; father.dy = L.by; father.cause = bc; mother.alive = false; mother.dy = L.by; mother.cause = bc; L.flags.bornOrphan = bc; L.flags.posthumous = false; L.flags.motherDied = false; }
+      if (!L.eth && ['peasant', 'tenant', 'artisan', 'clerk'].indexOf(L.cls) >= 0 && R() < 0.03) { L.flags.oldFam = Math.floor(R() * D.FALL.oldFam.length); if (L.flags.oldFam === 2 && L.cls !== 'artisan') L.flags.oldFam = 0; father.lit = father.lit || L.flags.oldFam < 2; L.standing += 3; }
     }
 
     // 庶出：富家、士族多有妾室，你可能是妾所生
@@ -1315,7 +1504,7 @@ var SGE = (function (D) {
     { k: 'qinF', n: '琴を習い、詩書を学ぶ', ok: function (L) { return L.sex === 'F' && L.cls === 'gentry'; } }
   ];
   function pathChoice(L, y, P) {
-    if (L.age !== 15 || L.flags.pathAsk || L.eth || L.cls === 'slave' || L.flags.palaceIn || L.soldier || L.office) return;
+    if (L.age !== 15 || L.flags.pathAsk || L.eth || L.cls === 'slave' || L.flags.palaceIn || L.soldier || L.office || L.flags.jiazi || L.shan || L.liumin) return;
     L.flags.pathAsk = true;
     var ks = PATHS.filter(function (p) { return p.ok(L); });
     if (ks.length < 2) return;
@@ -1726,6 +1915,7 @@ var SGE = (function (D) {
     if (inHH(L)) hhChoice(L, y, P);
     maidChoice(L, y, P);
     consortChoice(L, y, P);
+    fallChoice(L, y, P);
     if (L.crime && L.crime.ask) { L.crime.ask = false; P.queue.push({ key: 'crimeAfter', q: 'あなたははずみで人を殺してしまった。死者の家族はすでに県に訴え出ており、亭長が求盗を率いてあちこちで下手人を捜している。', o: ['夜のうちに他郷へ逃げる', '自首する', '一族に金を集めてもらい、死者の家と示談にする'], w: [3, 1, L.eco.cash >= 10000 ? 2 : 0.1] }); }
     var gap = a - L.lastChoice >= 3;
     (EV_BY_Y[y] || []).forEach(function (ev) {
@@ -1954,6 +2144,7 @@ var SGE = (function (D) {
       case 'hh': d.hh = { c: c, i: i }; break;
       case 'maid': d.maid = { c: c, i: i }; break;
       case 'cfate': d.cfate = { c: c, i: i }; break;
+      case 'fall': d.fall = { c: c, i: i }; break;
       case 'hobby': d.hobby = { c: c, i: i }; break;
       case 'path': d.path = { c: c, i: i }; break;
       case 'civwar': d.civwar = { c: c, i: i }; break;
@@ -2022,6 +2213,7 @@ var SGE = (function (D) {
     if (dec.hh) hhOutcome(L, y, dec.hh.c, dec.hh.i);
     if (dec.maid) maidOutcome(L, y, dec.maid.c, dec.maid.i);
     if (dec.cfate) consortOutcome(L, y, dec.cfate.c, dec.cfate.i);
+    if (dec.fall) fallOutcome(L, y, dec.fall.c, dec.fall.i);
     if (dec.hobby) hobbyPick(L, y, dec.hobby.c, dec.hobby.i);
     if (dec.path) pathOutcome(L, y, dec.path.c.ks[dec.path.i]);
     planYear(L, y);
@@ -2163,6 +2355,8 @@ var SGE = (function (D) {
     add(L, 0.05, 'fam', t);
     if (L.flags.posthumous) add(L, 0.1, 'fam', 'あなたが生まれる前に、父は乱兵の手にかかって死んだ。');
     if (L.flags.motherDied) add(L, 0.12, 'fam', '母はあなたを産んで間もなく亡くなった。');
+    if (L.flags.bornOrphan) add(L, 0.12, 'fam', D.FALL.bornOrphan[L.flags.bornOrphan]);
+    if (L.flags.oldFam != null) add(L, 0.13, 'life', D.FALL.oldFam[L.flags.oldFam].birth);
     if (L.cls === 'slave') add(L, 0.15, 'note', '律令によれば、奴婢の産んだ子もまた奴婢である。あなたの名は主人の家の簿籍に、牛馬と並んで書き込まれた。');
     add(L, 0.2, 'fam', L.sex === 'M' ? '父母はあなたに' + L.xiao + 'という幼名をつけた。' : '大人たちはあなたを' + L.xiao + 'と呼んだ。');
   }
@@ -2293,6 +2487,7 @@ var SGE = (function (D) {
       var txt = fled ? (fx.ft || '一家は避難する人々の群れに混じって、{dest}へ向かった。') : (fx.mt || '一家は官府によって{dest}へ強制的に移された。');
       if (fled && a < 14) txt = '父母は逃げることを決めた。' + txt;
       if (L.yCart) txt = '一家は数台の車に金目の物を積み、僮僕を連れて{dest}へ向かった。';
+      if (fled && !L.yCart && !L.soldier && !inHH(L) && !inPal(L) && ['peasant', 'tenant', 'clerk', 'artisan', 'tuntian'].indexOf(L.cls) >= 0 && L.wealth < 40 && R() < 0.4) L.yLM = fx.fam ? 'fam' : 'war';
       relocate(L, dest, s + 0.2, txt, (fx.mr || 0.03) * (L.yCart ? 0.3 : 1), y);
       if (!L.alive) return;
       if (fled && fx.fn === 'changban') changban(L, y, s + 0.3);
@@ -2317,6 +2512,7 @@ var SGE = (function (D) {
       if (R() < risk * (ka < 5 || ka > 60 ? 2 : 1)) kinDie(L, k, 'road', s + 0.04, y);
     });
     // 新地方的生計
+    if (L.yLM) { var lw = L.yLM; L.yLM = null; L.liumin = { since: y, why: lw }; L.flags.wasLM = true; L.land = 0; L.eco.cash = Math.round(L.eco.cash * 0.3); L.eco.ox = 0; L.eco.house = 0; if (L.cls === 'clerk' || L.cls === 'tuntian') L.cls = 'peasant'; add(L, s + 0.1, 'bad', D.FALL.lmStart[lw]); var fk0 = ctrl(L.zone, y); if (oldZone !== L.zone && L.regimes[L.regimes.length - 1] !== fk0) L.regimes.push(fk0); return; }
     L.eco.cash = Math.round(L.eco.cash * (L.yCart ? 0.8 : 0.5)); L.eco.ox = 0; L.eco.house = Math.min(L.eco.house, L.cls === 'gentry' ? 20000 : 1500);
     if (['peasant', 'clerk'].indexOf(L.cls) >= 0) {
       L.land = 0;
@@ -2577,6 +2773,7 @@ var SGE = (function (D) {
     if (RG && a >= 6) pool = pool.concat(RG.custom);
     if (inHH(L) && a >= 14) return fresh(L, L.spouseK.alive ? (L.flags.fcPal ? CONC_PAL : CONC_FU) : L.flags.fcPal === '皇宮' ? CONC_WIDP : L.flags.famousConc === 'caocao' && L.flags.noRemarry ? CONC_TQ.concat(CONC_WID) : CONC_WID);
     var hd = !L.eth && hhDaily(L, y); if (hd) return hd;
+    var fd = !L.eth && fallLines(L, y); if (fd && fd.length && L.R() < 0.55) return fresh(L, fd);
     if (L.eth && D.ETH[L.eth]) pool = pool.concat(a < 14 ? D.ETH[L.eth].child : D.ETH[L.eth].adult);
     else if (a < 3) return a === 0 ? null : pick(R, ['歩けるようになった。', '「阿母」と呼べるようになった。', '乳離れして、粟の粥を食べ始めた。']);
     else if (a < 14) {
@@ -2722,20 +2919,10 @@ var SGE = (function (D) {
 
     // 孤児
     var f = L.kin[0], m = L.kin[1];
-    if (a < 12 && !f.alive && !m.alive && !L.flags.orphan) {
-      L.flags.orphan = true;
-      var older = liveKin(L, function (k) { return k.rel === 'sib' && y - k.by >= 16; });
-      if (older.length) add(L, 3, 'fam', '父母はもういない。' + kinLabel(L, older[0]) + 'が家を支えることになった。');
-      else {
-        var r = R();
-        if (r < 0.6) { add(L, 3, 'fam', '父母はもういない。叔父があなたを引き取った。'); L.eco.cash = Math.round(L.eco.cash * 0.5); }
-        else if (r < 0.85 && L.cls !== 'gentry') { L.cls = 'slave'; L.eco = initEco(L); L.land = 0; L.job = '奴婢'; L.standing = 5; add(L, 3, 'bad', '父母はもういない。あなたはある豪族の家に奴婢として引き取られ、どうにか食いつないだ。'); }
-        else { L.eco.cash = 0; L.land = 0; L.body -= 8; add(L, 3, 'bad', '父母はもういない。あなたは路頭に迷う孤児となり、物乞いをして生き延びた。'); }
-      }
-    }
+    if (a < 12 && !f.alive && !m.alive && !L.flags.orphan) orphanFate(L, y);
 
     // 徴兵
-    if (L.sex === 'M' && a >= 16 && a <= 50 && !L.soldier && !L.band && L.cls !== 'slave' && L.cls !== 'gentry' && !L.office) {
+    if (L.sex === 'M' && a >= 16 && a <= 50 && !L.soldier && !L.band && !L.shan && L.cls !== 'slave' && L.cls !== 'gentry' && !L.office) {
       var rate = conscriptRate(L.zone, y) + L.yConscript;
       if (L.eth === 'cong' || L.eth === 'wuhuan' || L.eth === 'qiang' || L.eth === 'xiongnu') rate *= 1.5;
       if (R() < rate) {
@@ -2755,6 +2942,7 @@ var SGE = (function (D) {
     concSweep(L);
     atmosYear(L, y);
     netaYear(L, y);
+    fallYear(L, y);
     if ((L.job === '宮人' || L.job === '采女') && L.alive) {
       if (y === 280 && L.zone === 'jiangdong') relocate(L, 'luoyang', 1.5, '呉が滅んだ。孫皓の後宮にいた五千人の宮人は、晋の軍によって船で次々と北へ運ばれた。あなたもその中にいて、{dest}に着いた。', 0.03, y);
       else if ((y === 290 || y === 281) && L.zone === 'luoyang' && R() < 0.4) { L.cls = 'peasant'; L.job = '農'; L.land = 0; L.flags.palaceOut = y; add(L, 1.5, 'good', y === 290 ? '武帝が崩御し、宮中から年長の宮人たちが放たれた。あなたは宮門を出て長いこと立ち尽くした。どこへ行けばよいのかわからなかった。' : '宮人が多すぎるため、朝廷は一部を宮中から出した。あなたは宮門を出て長いこと立ち尽くした。どこへ行けばよいのかわからなかった。'); }
@@ -2975,7 +3163,7 @@ var SGE = (function (D) {
       add(L, 2.6, 'bad', 'かつて賄賂を受け取ったことを告発され、あなたは官職を失い、家産の大半も没収された。');
       L.eco.cash = Math.round(L.eco.cash * 0.4);
     }
-    if (L.flags.outlaw && R() < 0.12) {
+    if (L.flags.outlaw && !L.shan && R() < 0.12) {
       L.flags.outlaw = false; L.job = '農'; L.standing += 4;
       add(L, 2.6, 'life', '役所が山中の者たちを招撫し、山を下りて田に帰ることを許した。あなたは平地に戻り、改めて戸籍に編入された。');
     }
@@ -3550,7 +3738,7 @@ var SGE = (function (D) {
     var R = L.R, E = L.eco, rec = L.rec, fo = rec.focus ? rec.focus.eff : null, a = L.age, c = L.cls;
     if (c === 'slave') { if (a >= 15) E.priv += Math.round(10 + R() * 50); rec.ledger = null; L.grainMonths = null; return; }
     // 诸侯府中的姬妾：吃穿用度都由府里供给，不再有自家的账
-    if (inHH(L)) { E.debt = 0; rec.ledger = null; L.grainMonths = null; L.crisis = false; return; }
+    if (inHH(L) || L.flags.beggar && L.age < 15) { E.debt = 0; rec.ledger = null; L.grainMonths = null; L.crisis = false; return; }
     if (L.band || (L.soldier && liveKin(L, function (k) { return !k.out; }).length === 0)) {
       var pay = 2400, keep = Math.round(pay * (L.tr.cau > 55 ? 0.6 : 0.35));
       E.priv += keep;
@@ -3688,7 +3876,7 @@ var SGE = (function (D) {
         E.debt = 0; L.land = 0; E.ox = 0; L.standing -= 4;
         add(L, 0.5, 'bad', who + '田地を土地の豪族に差し出し、以後その佃客となった。借金はもう返さなくてよくなった。');
         break;
-      case 'flee': E.debt = 0; relocate(L, c.dest, 0.6, 'あなたの家は夜陰に乗じて故郷を離れ、債主の手を逃れて{dest}へ落ち延びた。', 0.04, y); break;
+      case 'flee': E.debt = 0; if (R() < 0.5 && ['peasant', 'tenant', 'artisan'].indexOf(L.cls) >= 0) L.yLM = 'debt'; relocate(L, c.dest, 0.6, 'あなたの家は夜陰に乗じて故郷を離れ、債主の手を逃れて{dest}へ落ち延びた。', 0.04, y); break;
       case 'friend':
         var bf = bestFriend(L, 0);
         if (bf && R() < 0.6) { var got = Math.min(E.debt, 1500 + Math.round(R() * 2000)); E.debt -= got; affAdd(bf, -5); add(L, 0.5, 'good', bf.name + 'は自分の家の蓄えを持ち出し、あなたに代わって' + fmt(got) + '銭相当の借金を返してくれた。あなたは言葉が出なかった。'); }
@@ -4013,7 +4201,7 @@ var SGE = (function (D) {
       if (kid && !c.kid) return;
       // 諸侯府里的姫妾，不再操持外面的営生
       if (L.flags.famousConc && L.spouseK && L.spouseK.alive && /^(call_|craft|apprentice|shop|f_tavern|f_master|f_levy|buyoffice|taixue)/.test(c.id)) return;
-      if (inPal(L) && PAL_OK.indexOf(c.id) < 0) return;
+      if ((inPal(L) || L.shan) && PAL_OK.indexOf(c.id) < 0) return;
       var seen = (L.choiceSeen || {})[c.id];
       var REP = { sick: 5, plague: 6, storm: 3, relief: 4, lean: 3, extort: 6, kidsick: 4, haul: 5, pressgang: 6, taxdue: 5, hoard: 5, levy: 6, ration: 5, birthday: 8, case: 4, sellchild: 99, bondage: 8, rentup: 99 };
       if (seen != null && (REP[c.id] == null || y - seen < REP[c.id])) return;
@@ -4458,6 +4646,7 @@ var SGE = (function (D) {
     if (L.cond && L.cond.rev) t.push(D.CONDS[L.cond.k].end[L.cond.gift || (L.cls === 'gentry' ? 'hi' : 'lo')] || D.CONDS[L.cond.k].end.lo);
     if (L.chronic === 'li') t.push('あなたは癘風を患い、里の門から追い出され、村はずれの草小屋で余生を送った。秦漢の律令では、癘者は「癘所」に移され、人から隔てられた。');
     if (L.love) { var lv2 = L.sex === 'M' ? '男子' : '女子'; t.push(L.love.mutual ? 'あなたは同じ' + lv2 + 'である' + L.love.name + 'と愛し合った。あの時代、こうした情には名分がなく、史書に一字の居場所もない。それでも、それは本物だった。' : 'あなたは生涯、同じ' + lv2 + 'である' + L.love.name + 'を心に抱いていた。そのことを、あなたは死ぬまで誰にも話さなかった。'); }
+    fallEnd(L).forEach(function (x) { t.push(x); });
     if (L.flags.moru) t.push(D.MAID.endMo);
     else if (L.flags.maidWas && !L.flags.famousConc) t.push(L.flags.maidWas === 'bi' ? D.MAID.endBi : D.MAID.endHire2);
     if (L.flags.duishi) t.push('宮中で、あなたは宮女の' + L.flags.duishi + 'と「対食」の仲になった――二人の女が、夫婦のように長年互いを支え合った。');
