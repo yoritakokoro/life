@@ -947,11 +947,12 @@ var SGE = (function (D) {
     var R = L.R, W = D.CIV_WAR[c.wi];
     if (i === 1 && L.eco.cash < 2000) i = 0;
     if (i === 0) {
+      L.civGo = { y: y, wi: c.wi };
       if (R() < W.die * bodyMul(L)) { die(L, 'corv', 1.3, { full: W.n === '北伐' ? '食糧を背負って桟道を進んでいたとき、足を滑らせ、荷もろとも谷底へ落ちた。' : W.n === '赤壁' ? '軍中で疫病にかかり、生きて帰れなかった。' : '軍糧を運ぶ途中で力尽きて倒れ、二度と起き上がらなかった。' }); return; }
       L.body -= 4; L.standing += 1; L.rec.tags.push('war');
       add(L, 1.3, 'life', pick(R, ['何か月も糧車を押して歩き、足のまめは潰れてはまたできた。帰ってきたときには、家族にも見分けがつかないほど痩せていた。', '大軍のために一度糧を運び、前線の陣営と地を埋める死者をこの目で見た。帰ってからも、長いあいだそのことを口にしたがらなかった。', '輸送隊について' + W.n + 'まで歩き、また歩いて戻った。一緒に行った者のうち、何人もが帰らなかった。']));
     } else if (i === 1) { payFrom(L, 2000); add(L, 1.3, 'life', '二千銭で貧しい男を僱い、代わりに行かせた。のちに聞いたところでは、その男は帰ってこなかった。'); }
-    else if (R() < 0.35) { L.body -= 5; L.eco.cash = Math.max(0, L.eco.cash - 500); add(L, 1.3, 'bad', '山に隠れたが、数日で見つけ出された。棒で打たれ、罰金まで取られ、結局は糧を運びに引っ立てられた。'); }
+    else if (R() < 0.35) { L.body -= 5; L.civGo = { y: y, wi: c.wi }; L.eco.cash = Math.max(0, L.eco.cash - 500); add(L, 1.3, 'bad', '山に隠れたが、数日で見つけ出された。棒で打たれ、罰金まで取られ、結局は糧を運びに引っ立てられた。'); }
     else { L.standing -= 2; add(L, 1.3, 'life', '山に一か月あまり隠れ、徴発の役人が去ってからようやく戻った。村の人々があなたを見る目は、どこかよそよそしかった。'); }
   }
   // 大戦之年，不同身份的人各有各的経歴
@@ -2036,7 +2037,7 @@ var SGE = (function (D) {
     if (dec.migrate) relocate(L, dec.migrate, 1.2, '一家は持てるだけの物をまとめ、同郷の人々と共に{dest}へ移った。', 0.03, y);
     // 伝聞
     L.rumors = L.rumors.filter(function (r) {
-      if (r.y <= y) { add(L, Math.floor(R() * 4) + 0.5, 'rumor', r.t); return false; }
+      if (r.y <= y) { if (!(r.ev && (L.foughtEv || {})[r.ev])) add(L, Math.floor(R() * 4) + 0.5, 'rumor', r.t); return false; }
       return true;
     });
 
@@ -2149,15 +2150,35 @@ var SGE = (function (D) {
   /* ---------- 遠方大事与伝聞 ---------- */
   var FAR_ARMY = ['この知らせは、たちまち軍中に広まった。', '陣営の者たちは何日もこの話でもちきりだった。次は自分たちの番だ、と言う者もいた。', '伍長が将軍の幕舎の前から戻ってきて、この知らせをみなに伝えた。'];
   // 军中之人：本军这一年正在打仗，战报就是自己身边的事，不再写成远方的传闻
-  function onCampaign(L, ev, y) { return !!(L.soldier && !L.band && ev.at && (CAMP_BY_Y[y] || []).some(function (c) { return c.a.indexOf(L.soldier.army) >= 0; }) && Object.keys(ev.at).some(function (z) { return ev.at[z] && ev.at[z].war; })); }
+  // 史书上的一场大战，对应哪几支军队的战役（D.CAMPAIGNS 的序号）、哪一次民夫征发（D.CIV_WAR 的序号）
+  var EV_CAMP = { 184: [0, 1], 190: [4], 193: [7, 8], 200: [19, 20], 208: [27, 28], 219: [42, 43], 222: [44, 45], 228: [50], 234: [54], 238: [56, 57], 263: [68, 69], 280: [74], 311: [80], 347: [88], 349: [90], 350: [91] };
+  var EV_CIV = { 200: [0, 1], 208: [3], 222: [5], 228: [6], 234: [6] };
+  var EV_KEEP = EV_CAMP;
+  var FAR_MUFU = '幕府には毎日のように軍報が届いた。この戦の知らせを、あなたは誰よりも早く知った。', FAR_KIN = 'あなたの{k}は、この戦の軍中にいた。毎日前線の知らせを聞きたがり、夜もなかなか眠れなかった。';
+  function evCamps(ev, y) { return ev.major ? (EV_CAMP[y] || []).map(function (i) { return D.CAMPAIGNS[i]; }).filter(Boolean) : []; }
+  function inArmy(cs, army) { return !!army && cs.some(function (c) { return c.a.indexOf(army) >= 0; }); }
+  // 你本人就在这场仗里（从军、或被征去运粮）：编年里写的是你自己的经历，不再写成远方的消息
+  function onCampaign(L, ev, y) {
+    if (L.soldier && !L.band && inArmy(evCamps(ev, y), L.soldier.army)) return true;
+    return !!(ev.major && L.civGo && L.civGo.y === y && (EV_CIV[y] || []).indexOf(L.civGo.wi) >= 0);
+  }
+  // 你和这场仗有牵连：幕府随军、家人在军中
+  function warTie(L, ev, y) {
+    var cs = evCamps(ev, y); if (!cs.length) return null;
+    if (L.office === '幕僚' && L.lordFk && (inArmy(cs, armyOf(L.lordFk)) || inArmy(cs, L.lordFk))) return FAR_MUFU;
+    var k = liveKin(L, function (x) { return typeof x.soldier === 'string' && inArmy(cs, x.soldier) && ['spouse', 'child', 'father', 'sib'].indexOf(x.rel) >= 0; })[0];
+    return k ? FAR_KIN.replace('{k}', kinLabel(L, k)) : null;
+  }
+  function tagEv(y, e) { if (e) e.evY = y; return e; }
   function farOrRumor(L, ev, y) {
     var R = L.R;
     if (onCampaign(L, ev, y)) { if (ev.major) L.rec.major = true; return; }
+    var wt = warTie(L, ev, y);
     if (ev.major && ev.far && L.age >= 0) {
       var dir = dirWord(L.zone, ev.o);
-      add(L, ev.s + 0.05, 'far', (ev.farE && eliteView(L) && L.age >= 10 ? ev.farE : ev.far).replace('{dir}', dir));
+      tagEv(y, add(L, ev.s + 0.05, 'far', (ev.farE && eliteView(L) && L.age >= 10 ? ev.farE : ev.far).replace('{dir}', dir)));
       L.rec.major = true;
-      if (L.age >= 5) add(L, ev.s + 0.06, 'far2', inHH(L) ? pick(R, L.flags.fcPal ? FAR_HH.gong : FAR_HH.fu) : L.soldier && !L.band ? pick(R, FAR_ARMY) : L.office ? pick(R, ['知らせはすぐに官署に届き、あなたもその軍報を読んだ。', '官署ではこの件で何日も議論が続いた。']) : L.cls === 'gentry' && L.age >= 12 ? pick(R, ['一族にはすぐに知らせが届いた。', '家の食客が知らせを持ち帰り、年長者たちは長いこと話し合った。']) : pick(R, ['あなたは関わらなかった。', 'あなたはこのことを何も知らなかった。', 'それらは、あなたからは遠い出来事だった。']));
+      if (L.age >= 5) tagEv(y, add(L, ev.s + 0.06, 'far2', inHH(L) ? pick(R, L.flags.fcPal ? FAR_HH.gong : FAR_HH.fu) : wt ? wt : L.soldier && !L.band ? pick(R, FAR_ARMY) : L.office ? pick(R, ['知らせはすぐに官署に届き、あなたもその軍報を読んだ。', '官署ではこの件で何日も議論が続いた。']) : L.cls === 'gentry' && L.age >= 12 ? pick(R, ['一族にはすぐに知らせが届いた。', '家の食客が知らせを持ち帰り、年長者たちは長いこと話し合った。']) : pick(R, ['あなたは関わらなかった。', 'あなたはこのことを何も知らなかった。', 'それらは、あなたからは遠い出来事だった。'])));
     }
     var r = (L.learn >= 40 || L.cls === 'gentry') && ev.r2 ? ev.r2 : ev.r1;
     if (!r && ev.r2 && (L.learn >= 40 || L.cls === 'gentry')) r = ev.r2;
@@ -2167,8 +2188,8 @@ var SGE = (function (D) {
       if (REMOTE[L.zone]) delay++;
       if (L.cls === 'gentry' && delay > 0) delay--;
       if (L.office) delay = 0;
-      if (delay === 0) add(L, Math.min(3.9, ev.s + 0.6 + R()), 'rumor', r);
-      else L.rumors.push({ y: y + delay, t: r });
+      if (delay === 0) tagEv(y, add(L, Math.min(3.9, ev.s + 0.6 + R()), 'rumor', r));
+      else L.rumors.push({ y: y + delay, t: r, ev: y });
     }
   }
 
@@ -2482,8 +2503,9 @@ var SGE = (function (D) {
       if (!L.alive || !L.soldier || c.a.indexOf(S.army) < 0) return;
       var pk = povKey(c, S.army), POV = (D.BATTLE_POV || {})[pk], forced = L.bpovDec && L.bpovDec.k === pk;
       if (POV && POV.ch && !forced) return; // 有関頭抉択的名戦，是否参戦已在年初定下
-      if (!forced && R() >= (c.p == null ? 0.5 : c.p)) return;
+      if (!forced && R() >= (c.p == null ? 0.5 : c.p)) { if (EV_KEEP[c.y] && EV_KEEP[c.y].indexOf(D.CAMPAIGNS.indexOf(c)) >= 0) add(L, 1.5, 'war', 'あなたの属する軍は' + c.n + 'に加わった。あなたは後方に残されて陣営を守り、兵糧を運び、前線には出なかった。'); return; }
       fought = true;
+      if ((EV_CAMP[y] || []).indexOf(D.CAMPAIGNS.indexOf(c)) >= 0) { (L.foughtEv = L.foughtEv || {})[y] = 1; L.rec.entries = L.rec.entries.filter(function (e) { return e.evY !== y; }); }
       add(L, 1.5, 'war', c.t ? 'あなたは軍に従って' + c.n + 'に加わった。' + c.t : 'あなたは軍に従って' + c.n + 'に加わった。');
       L.rec.tags.push('war');
       if (POV) add(L, 1.55, 'war', pick(R, POV.t));

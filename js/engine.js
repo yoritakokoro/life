@@ -947,11 +947,12 @@ var SGE = (function (D) {
     var R = L.R, W = D.CIV_WAR[c.wi];
     if (i === 1 && L.eco.cash < 2000) i = 0;
     if (i === 0) {
+      L.civGo = { y: y, wi: c.wi };
       if (R() < W.die * bodyMul(L)) { die(L, 'corv', 1.3, { full: W.n === '北伐' ? '你背着粮食走在栈道上，脚下一滑，连人带粮掉进了山谷。' : W.n === '赤壁' ? '你在军中染上了疫病，没能活着回来。' : '你在转运军粮的路上累倒了，再也没有起来。' }); return; }
       L.body -= 4; L.standing += 1; L.rec.tags.push('war');
       add(L, 1.3, 'life', pick(R, ['你推着粮车走了几个月，脚上的泡破了又起。回来的时候，瘦得家里人都快认不出了。', '你给大军运了一趟粮，亲眼看见了前线的营垒和满地的死人。回来以后，你很久都不愿提起。', '你跟着运粮的队伍走到了' + W.n + '，又走了回来。同去的人，少了好几个。']));
     } else if (i === 1) { payFrom(L, 2000); add(L, 1.3, 'life', '你花两千钱雇了一个穷汉替你去。后来听说，他没有回来。'); }
-    else if (R() < 0.35) { L.body -= 5; L.eco.cash = Math.max(0, L.eco.cash - 500); add(L, 1.3, 'bad', '你躲进了山里，没几天就被搜了出来。挨了一顿板子，还被罚了钱，最后还是被押去运粮了。'); }
+    else if (R() < 0.35) { L.body -= 5; L.civGo = { y: y, wi: c.wi }; L.eco.cash = Math.max(0, L.eco.cash - 500); add(L, 1.3, 'bad', '你躲进了山里，没几天就被搜了出来。挨了一顿板子，还被罚了钱，最后还是被押去运粮了。'); }
     else { L.standing -= 2; add(L, 1.3, 'life', '你在山里躲了一个多月，等征发的人走了才回来。乡里人看你的眼神有些异样。'); }
   }
   // 大战之年，不同身份的人各有各的经历
@@ -2036,7 +2037,7 @@ var SGE = (function (D) {
     if (dec.migrate) relocate(L, dec.migrate, 1.2, '你家收拾了能带走的东西，跟着同乡迁往{dest}。', 0.03, y);
     // 传闻
     L.rumors = L.rumors.filter(function (r) {
-      if (r.y <= y) { add(L, Math.floor(R() * 4) + 0.5, 'rumor', r.t); return false; }
+      if (r.y <= y) { if (!(r.ev && (L.foughtEv || {})[r.ev])) add(L, Math.floor(R() * 4) + 0.5, 'rumor', r.t); return false; }
       return true;
     });
 
@@ -2149,15 +2150,35 @@ var SGE = (function (D) {
   /* ---------- 远方大事与传闻 ---------- */
   var FAR_ARMY = ['军中很快传开了这个消息。', '营里的人议论了好几天，有人说，下一个就轮到你们了。', '伍长从将军帐前回来，把这消息说给大家听。'];
   // 军中之人：本军这一年正在打仗，战报就是自己身边的事，不再写成远方的传闻
-  function onCampaign(L, ev, y) { return !!(L.soldier && !L.band && ev.at && (CAMP_BY_Y[y] || []).some(function (c) { return c.a.indexOf(L.soldier.army) >= 0; }) && Object.keys(ev.at).some(function (z) { return ev.at[z] && ev.at[z].war; })); }
+  // 史书上的一场大战，对应哪几支军队的战役（D.CAMPAIGNS 的序号）、哪一次民夫征发（D.CIV_WAR 的序号）
+  var EV_CAMP = { 184: [0, 1], 190: [4], 193: [7, 8], 200: [19, 20], 208: [27, 28], 219: [42, 43], 222: [44, 45], 228: [50], 234: [54], 238: [56, 57], 263: [68, 69], 280: [74], 311: [80], 347: [88], 349: [90], 350: [91] };
+  var EV_CIV = { 200: [0, 1], 208: [3], 222: [5], 228: [6], 234: [6] };
+  var EV_KEEP = EV_CAMP;
+  var FAR_MUFU = '幕府里每天都有军报送来。这一仗的消息，你比谁都先知道。', FAR_KIN = '你的{k}就在这一仗的军中。你天天打听前方的消息，夜里常常睡不着。';
+  function evCamps(ev, y) { return ev.major ? (EV_CAMP[y] || []).map(function (i) { return D.CAMPAIGNS[i]; }).filter(Boolean) : []; }
+  function inArmy(cs, army) { return !!army && cs.some(function (c) { return c.a.indexOf(army) >= 0; }); }
+  // 你本人就在这场仗里（从军、或被征去运粮）：编年里写的是你自己的经历，不再写成远方的消息
+  function onCampaign(L, ev, y) {
+    if (L.soldier && !L.band && inArmy(evCamps(ev, y), L.soldier.army)) return true;
+    return !!(ev.major && L.civGo && L.civGo.y === y && (EV_CIV[y] || []).indexOf(L.civGo.wi) >= 0);
+  }
+  // 你和这场仗有牵连：幕府随军、家人在军中
+  function warTie(L, ev, y) {
+    var cs = evCamps(ev, y); if (!cs.length) return null;
+    if (L.office === '幕僚' && L.lordFk && (inArmy(cs, armyOf(L.lordFk)) || inArmy(cs, L.lordFk))) return FAR_MUFU;
+    var k = liveKin(L, function (x) { return typeof x.soldier === 'string' && inArmy(cs, x.soldier) && ['spouse', 'child', 'father', 'sib'].indexOf(x.rel) >= 0; })[0];
+    return k ? FAR_KIN.replace('{k}', kinLabel(L, k)) : null;
+  }
+  function tagEv(y, e) { if (e) e.evY = y; return e; }
   function farOrRumor(L, ev, y) {
     var R = L.R;
     if (onCampaign(L, ev, y)) { if (ev.major) L.rec.major = true; return; }
+    var wt = warTie(L, ev, y);
     if (ev.major && ev.far && L.age >= 0) {
       var dir = dirWord(L.zone, ev.o);
-      add(L, ev.s + 0.05, 'far', (ev.farE && eliteView(L) && L.age >= 10 ? ev.farE : ev.far).replace('{dir}', dir));
+      tagEv(y, add(L, ev.s + 0.05, 'far', (ev.farE && eliteView(L) && L.age >= 10 ? ev.farE : ev.far).replace('{dir}', dir)));
       L.rec.major = true;
-      if (L.age >= 5) add(L, ev.s + 0.06, 'far2', inHH(L) ? pick(R, L.flags.fcPal ? FAR_HH.gong : FAR_HH.fu) : L.soldier && !L.band ? pick(R, FAR_ARMY) : L.office ? pick(R, ['消息很快送到了官署，你读到了这份军报。', '官署里为此议论了好几天。']) : L.cls === 'gentry' && L.age >= 12 ? pick(R, ['族中很快就得到了消息。', '家里的门客把消息带了回来，长辈们议论了很久。']) : pick(R, ['你没有参与。', '你对此一无所知。', '这些事，离你很远。']));
+      if (L.age >= 5) tagEv(y, add(L, ev.s + 0.06, 'far2', inHH(L) ? pick(R, L.flags.fcPal ? FAR_HH.gong : FAR_HH.fu) : wt ? wt : L.soldier && !L.band ? pick(R, FAR_ARMY) : L.office ? pick(R, ['消息很快送到了官署，你读到了这份军报。', '官署里为此议论了好几天。']) : L.cls === 'gentry' && L.age >= 12 ? pick(R, ['族中很快就得到了消息。', '家里的门客把消息带了回来，长辈们议论了很久。']) : pick(R, ['你没有参与。', '你对此一无所知。', '这些事，离你很远。'])));
     }
     var r = (L.learn >= 40 || L.cls === 'gentry') && ev.r2 ? ev.r2 : ev.r1;
     if (!r && ev.r2 && (L.learn >= 40 || L.cls === 'gentry')) r = ev.r2;
@@ -2167,8 +2188,8 @@ var SGE = (function (D) {
       if (REMOTE[L.zone]) delay++;
       if (L.cls === 'gentry' && delay > 0) delay--;
       if (L.office) delay = 0;
-      if (delay === 0) add(L, Math.min(3.9, ev.s + 0.6 + R()), 'rumor', r);
-      else L.rumors.push({ y: y + delay, t: r });
+      if (delay === 0) tagEv(y, add(L, Math.min(3.9, ev.s + 0.6 + R()), 'rumor', r));
+      else L.rumors.push({ y: y + delay, t: r, ev: y });
     }
   }
 
@@ -2482,8 +2503,9 @@ var SGE = (function (D) {
       if (!L.alive || !L.soldier || c.a.indexOf(S.army) < 0) return;
       var pk = povKey(c, S.army), POV = (D.BATTLE_POV || {})[pk], forced = L.bpovDec && L.bpovDec.k === pk;
       if (POV && POV.ch && !forced) return; // 有关头抉择的名战，是否参战已在年初定下
-      if (!forced && R() >= (c.p == null ? 0.5 : c.p)) return;
+      if (!forced && R() >= (c.p == null ? 0.5 : c.p)) { if (EV_KEEP[c.y] && EV_KEEP[c.y].indexOf(D.CAMPAIGNS.indexOf(c)) >= 0) add(L, 1.5, 'war', '你所在的军队参加了' + c.n + '。你被留在后方守营、押运粮草，没有上阵。'); return; }
       fought = true;
+      if ((EV_CAMP[y] || []).indexOf(D.CAMPAIGNS.indexOf(c)) >= 0) { (L.foughtEv = L.foughtEv || {})[y] = 1; L.rec.entries = L.rec.entries.filter(function (e) { return e.evY !== y; }); }
       add(L, 1.5, 'war', c.t ? '你随军参加了' + c.n + '。' + c.t : '你随军参加了' + c.n + '。');
       L.rec.tags.push('war');
       if (POV) add(L, 1.55, 'war', pick(R, POV.t));
