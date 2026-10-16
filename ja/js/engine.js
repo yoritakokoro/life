@@ -976,6 +976,22 @@ var SGE = (function (D) {
   }
   // 同席交遊：高門、大官、名士之家，常在宴会、拝訪、雅集中結識当時当地的人物
   var FIG_AT = null;
+  /* ---------- 名册人物：生年（史书一栏）与身份（在什么场合见得到） ---------- */
+  var FIG_SEP = '、';
+  var FIG_BORN = { caocao: 155, sunjian: 155, liubei: 161, sunquan: 182, zhugeliang: 181, zhangliao: 169, guanning: 158, simayi: 179, jiangwei: 202, zhouyu: 175, lusu: 172, sunce: 175, luxun: 183, machao: 176, caozhi: 192, wangcan: 177, kongrong: 153, xushao: 150, jikang: 224, yanghu: 221, chenshou: 233, guojia: 170, xunyu: 163, fazheng: 176, pangtong: 179, lvmeng: 178, guanlu: 209, shantao: 205, taishici: 166, miheng: 173, maliang: 187, caopi: 187, caoren: 168, ruanji: 210, zhonghui: 225, zhugeke: 203, liushan: 207, sunhao: 242, duyu: 222, wangjun: 206, xunyou: 157, zhongyou: 151, masu: 190, zhangzhao: 156, zhugejin: 174, lukang: 226, yufan: 164, simazhao: 211, simayan: 236, zhanghua: 232, huangfumi: 215, wangdao: 276, zuti: 266, taokan: 259, huanwen: 312, wangxizhi: 303, shile: 274, shihu: 295, murongh: 297, lixiong: 274 };
+  function figBirths(y) { return D.FIGURES.filter(function (f) { return FIG_BORN[f.id] === y; }); }
+  var FIG_ROLE = { liubei: 'ruler', caocao: 'ruler', sunjian: 'ruler', sunquan: 'ruler', sunce: 'ruler', dongzhuo: 'ruler', yuanshao: 'ruler', liubiao: 'ruler', gongsunzan: 'ruler', zhanglu: 'ruler', shixie: 'ruler', yuanshu: 'ruler', liuzhang: 'ruler', mateng: 'ruler', taoqian: 'ruler', lvbu: 'ruler', zhangxiu: 'ruler', menghuo: 'craft', caopi: 'ruler', liushan: 'ruler', sunhao: 'ruler', simazhao: 'ruler', simayan: 'ruler', shile: 'ruler', shihu: 'ruler', ranmin: 'ruler', murongh: 'ruler', lixiong: 'ruler',
+    zhugeliang: 'minister', simayi: 'minister', xunyu: 'minister', xunyou: 'minister', guojia: 'minister', chengyu: 'minister', jiaxu: 'minister', fazheng: 'minister', zhongyou: 'minister', zhangzhao: 'minister', lusu: 'minister', jiangwan: 'minister', feiyi: 'minister', zhugejin: 'minister', zhugeke: 'minister', zhonghui: 'minister', wangdao: 'minister', zhanghua: 'minister', mizhu: 'minister', masu: 'minister', maliang: 'minister', xushu: 'minister', pangtong: 'minister', kongrong: 'minister', luzhi: 'minister', zhouyu: 'general', yanghu: 'general', duyu: 'general',
+    guanyu: 'general', zhaoyun: 'general', zhangliao: 'general', zhangfei: 'general', ganning: 'general', machao: 'general', xiahoudun: 'general', dengai: 'general', jiangwei: 'general', lvmeng: 'general', huangzhong: 'general', dianwei: 'general', xuchu: 'general', taishici: 'general', weiyan: 'general', xiahouyuan: 'general', caoren: 'general', zhanghe: 'general', xuhuang: 'general', manchong: 'general', wangping: 'general', huanggai: 'general', lukang: 'general', luxun: 'general', wangjun: 'general', zuti: 'general', taokan: 'general', huanwen: 'general', huangfusong: 'general',
+    caozhi: 'scholar', wangcan: 'scholar', zhengxuan: 'scholar', xushao: 'scholar', simahui: 'scholar', caiyong: 'scholar', jikang: 'scholar', chenshou: 'scholar', guotai: 'scholar', qiaoxuan: 'scholar', heyong: 'scholar', pangdegong: 'scholar', xujing: 'scholar', shantao: 'scholar', ruanji: 'scholar', huangfumi: 'scholar', zuosi: 'scholar', wangxizhi: 'scholar', guanning: 'scholar', miheng: 'scholar', yufan: 'scholar',
+    huatuo: 'craft', zhangji: 'craft', zhujianping: 'craft', guanlu: 'craft', majun: 'craft', yuji: 'craft', zhangjiao: 'craft', caiyan: 'woman' };
+  var EMP_Y = { liubei: [221, 223], caopi: [220, 226], sunquan: [229, 252], liushan: [223, 263], sunhao: [264, 280], simayan: [266, 290], shile: [330, 333], shihu: [334, 349], lixiong: [306, 334], ranmin: [350, 352] };
+  function isEmperor(id, y) { var e = EMP_Y[id]; return !!e && y >= e[0] && y <= e[1]; }
+  function figScene(L, id, y) {
+    var S = D.FIGSET, r = FIG_ROLE[id] || 'scholar';
+    if (r === 'scholar') return y >= 240 ? S.scholar.concat(S.qingtan) : S.scholar;
+    return S[r] || S.scholar;
+  }
   function figPresence() {
     if (FIG_AT) return FIG_AT;
     FIG_AT = {};
@@ -1927,17 +1943,19 @@ var SGE = (function (D) {
     // 高門与大官的交遊不限於本郡：同一政権治下、当時在世的人物都可能同席
     var wide = (L.cls === 'gentry' && L.gate >= 2) || (OFF_RANK[L.office] || 0) >= 2.2 || L.fame >= 50 || L.lastFocus === 'travel';
     var lf = lordFigAt(fk, y);
-    if (lf && !L.met[lf] && (L.office || L.cls === 'gentry' || L.fame >= 30)) cands.push({ id: lf, lord: true });
+    if (lf && !L.met[lf] && (L.office || L.cls === 'gentry' || L.fame >= 30) && (!isEmperor(lf, y) || (OFF_RANK[L.office] || 0) >= 2.2 || (L.gate || 0) >= 3)) cands.push({ id: lf, lord: true });
     Object.keys(FA).forEach(function (id) {
       if (L.met[id] || id === lf) return;
+      var fr = FIG_ROLE[id]; if (fr === 'craft' || fr === 'woman' && L.sex !== 'F' || isEmperor(id, y)) return;
       if (FA[id].some(function (m) { return y >= m.y[0] && y <= m.y[1] && (m.zones.indexOf(L.zone) >= 0 || (wide && !m.q && group(ctrl(m.zones[0], y)) === gk)); })) cands.push({ id: id });
     });
     if (!cands.length) return;
     var c = pick(R, cands), fig = D.FIGURES.filter(function (f) { return f.id === c.id; })[0];
     if (!fig) return;
     var who = a < 18 && L.kin[0] && L.kin[0].alive && !L.kin[0].apart ? '父親' : null, t;
-    if (c.lord) t = pick(R, [fig.n + 'が本郡を巡視し、郡では宴を設けて迎えた。あなたもその席にいた。', fig.n + 'が郡中の士人と属吏を召し出し、あなたもその中にいた。']) + 'あなたは初めて間近に彼を見た。' + (LORD_LOOK[c.id] || '');
-    else t = pick(R, ['郡の大族が宴を設け、あなたもその席にいた。', '太守が府で郡中の士人を招いて宴を開き、あなたも招かれた。', 'あなたは' + (who ? who + 'に連れられて' : '') + 'ある名士の家を訪ねた。座には他にも客がいた。', 'ある清談の集まりで、あなたは何人かの名士と同席した。']) + '席上、ひときわ目を引く客がいた——' + fig.n + '、' + fig.d + '。' + (LORD_LOOK[c.id] || '');
+    if (c.lord && isEmperor(c.id, y)) t = pick(R, D.FIGSET.emp).replace('{n}', fig.n);
+    else if (c.lord) t = pick(R, [fig.n + 'が本郡を巡視し、郡では宴を設けて迎えた。あなたもその席にいた。', fig.n + 'が郡中の士人と属吏を召し出し、あなたもその中にいた。']) + 'あなたは初めて間近に彼を見た。' + (LORD_LOOK[c.id] || '');
+    else t = pick(R, figScene(L, c.id, y)).replace('{fig}', fig.n + (fig.d ? FIG_SEP + fig.d : '')) + (LORD_LOOK[c.id] || '');
     add(L, 2.2, 'meet', t);
     markMet(L, c.id, y, 'あなたはかつて' + fig.n + (c.lord ? 'と一度顔を合わせたことがある' : 'と同席したことがある') + '。');
     L.rec.tags.push('meet');
@@ -4947,7 +4965,7 @@ var SGE = (function (D) {
     era: era, ganzhi: ganzhi, reignText: reignText, ctrl: ctrl, group: group, fname: fname, zonePop: zonePop, totalPop: totalPop,
     cnNum: cnNum, slipNum: slipNum, zname: zname, household: household, slipText: slipText, kinLabel: kinLabel, relName: relName,
     placeText: placeText, focusOptions: focusOptions, setFocus: setFocus, FOCUS: FOCUS, traitWords: traitWords, hobbyText: hobbyText, condText: condText, TALENT: TALENT, ecoView: ecoView,
-    spendOptions: spendOptions, spend: spend, relLabel: relLabel, famLevel: famLevel, lifeTier: lifeTier, polsAt: polsAt, atmosAt: atmosAt, regionView: regionView, lifeSummary: lifeSummary, heirOf: heirOf, afterlife: afterlife, afterword: afterword, endAch: endAch, isHead: isHead, autoAnswer: autoAnswer, fmt: fmt, LANDP: LANDP, CAUSE_SHORT: CAUSE_SHORT, CAUSE_STAT: CAUSE_STAT, POP_SCALE: POP_SCALE, stats: stats
+    spendOptions: spendOptions, spend: spend, relLabel: relLabel, famLevel: famLevel, lifeTier: lifeTier, polsAt: polsAt, atmosAt: atmosAt, figBirths: figBirths, regionView: regionView, lifeSummary: lifeSummary, heirOf: heirOf, afterlife: afterlife, afterword: afterword, endAch: endAch, isHead: isHead, autoAnswer: autoAnswer, fmt: fmt, LANDP: LANDP, CAUSE_SHORT: CAUSE_SHORT, CAUSE_STAT: CAUSE_STAT, POP_SCALE: POP_SCALE, stats: stats
   };
 })(SGD);
 if (typeof module !== 'undefined') module.exports = SGE;

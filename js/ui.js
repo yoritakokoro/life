@@ -316,6 +316,7 @@
     chip.lastChild.textContent = S.blind ? '治所不明' : E.fname(fk, y);
     chip.hidden = S.blind;
     var world = (D.EVENTS.filter(function (e) { return e.y === y; }).map(function (e) { return e.w; })).join(' ');
+    var bs = E.figBirths(y).map(function (f) { return f.n; }); if (bs.length) world = (world ? world + ' ' : '') + y + '年，' + bs.join('、') + '出生。';
     $('ticker').lastElementChild.textContent = world || '史书上没有记下这一年的大事。';
     updateMap(y);
     renderComps($('comps'), y, false);
