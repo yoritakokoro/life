@@ -48,6 +48,8 @@ var SGE = (function (D) {
     if (L.sex === 'M' && /妻子/.test(t) && !(L.married && L.spouseK && L.spouseK.alive && !L.spouseK.apart) && !TX_DEAD.test(t) && !/娶|说亲|嫁|縁談|娶|嫁/.test(t)) return false;
     if (/婆婆|公婆|婆家|姑|舅姑|姑嫜|夫の家|姑と/.test(t) && L.sex === 'F' && !L.married && !L.widowed && !/姑娘/.test(t)) return false;
     if (/僮仆|乘车|婢女们|乳母|小僮|僮僕|車に乗|婢女たち/.test(t) && !/主家|主人|大户|豪强|别人家|人家的|富户|贵人|他家|她家|门外|卖|遣散|辞|主家|大家|豪族|人の家|売|暇を出/.test(t) && !inHH(L) && !inPal(L)) { var tk = lifeTier(L, L.by + L.age).k; if (!(L.cls === 'gentry' || tk === 'high' || tk === 'top')) return false; }
+    if (L.liumin && /地窖|你家的田|自家田|你家的牛|你家的猪|自分の田|家の牛|家の豚/.test(t)) return false;
+    if (L.shan && /田里|下地|锄草|插秧|地里|田んぼ|畑|草取り|田植え/.test(t)) return false;
     if (L.flags.beggar && L.age < 15 && /你家|家里|母亲|父亲|あなたの家|家の|母|父/.test(t)) return false;
     return true;
   }

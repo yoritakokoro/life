@@ -843,6 +843,7 @@
     var jh = L.junHist && L.junHist.length ? L.junHist : [L.birthJun];
     if (L.moves > 0) lines.push(jh.length <= 1 ? '迁居' + cn(L.moves) + '次，都没有离开' + D.JUN[L.birthJun][0] + '。' : '迁居' + cn(L.moves) + '次，住过' + jh.slice(0, 4).map(function (i) { return D.JUN[i][0]; }).join('、') + (jh.length > 4 ? '等地' : '') + '。');
     if ((L.visited || []).length >= 1) lines.push('游历' + L.visited.slice(0, 4).join('、') + (L.visited.length > 4 ? '等地' : '') + '。');
+    else if (L.moves === 0 && age >= 10 && (L.battles || []).length) lines.push('除了随军参加' + L.battles.slice(0, 3).join('、') + (L.battles.length > 3 ? '等战事' : '') + '，一生没有离开过' + D.JUN[L.birthJun][0] + '。');
     else if (L.moves === 0 && age >= 10) lines.push('一生未曾离开' + D.JUN[L.birthJun][0] + '。');
     if (L.kidsBorn > 0) lines.push('生育' + cn(L.kidsBorn) + '子女，' + (adultKids === 0 ? '无一人' : cn(adultKids) + '人') + '活至成年。');
     if (L.grandkids > 0) lines.push('有孙辈' + cn(L.grandkids) + '人。');

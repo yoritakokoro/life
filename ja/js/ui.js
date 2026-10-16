@@ -843,6 +843,7 @@
     var jh = L.junHist && L.junHist.length ? L.junHist : [L.birthJun];
     if (L.moves > 0) lines.push(jh.length <= 1 ? '移住' + cn(L.moves) + '度、いずれも' + D.JUN[L.birthJun][0] + 'の内だった。' : '移住' + cn(L.moves) + '度、' + jh.slice(0, 4).map(function (i) { return D.JUN[i][0]; }).join('・') + (jh.length > 4 ? 'など' : '') + 'に住んだ。');
     if ((L.visited || []).length >= 1) lines.push('各地を巡った：' + L.visited.slice(0, 4).join('、') + (L.visited.length > 4 ? 'など' : '') + '。');
+    else if (L.moves === 0 && age >= 10 && (L.battles || []).length) lines.push('従軍して' + L.battles.slice(0, 3).join('・') + (L.battles.length > 3 ? 'など' : '') + 'に加わったほかは、生涯' + D.JUN[L.birthJun][0] + 'を離れることはなかった。');
     else if (L.moves === 0 && age >= 10) lines.push('生涯、' + D.JUN[L.birthJun][0] + 'を離れることはなかった。');
     if (L.kidsBorn > 0) lines.push('子を' + cn(L.kidsBorn) + '人もうけ、' + (adultKids === 0 ? '成人した者はいなかった' : cn(adultKids) + '人が成人した') + '。');
     if (L.grandkids > 0) lines.push('孫は' + cn(L.grandkids) + '人。');
