@@ -260,6 +260,7 @@
   // 默认最新在上
   function upMode() { return store.chronUp !== false; }
   function follow() {
+    if (S.ol && S.ol.parentNode) S.ol.parentNode.classList.remove('wait');
     var c = $('chron'); if (S.stick === false) return;
     if (narrow()) { if (!upMode() && S.playing !== false) { var r = c.getBoundingClientRect(); if (r.bottom > window.innerHeight) window.scrollBy(0, r.bottom - window.innerHeight + 12); } return; }
     if (!upMode()) c.scrollTop = c.scrollHeight; else c.scrollTop = 0;
@@ -330,7 +331,7 @@
     renderRegister(y);
     renderHanji($('hanji-scroll'), $('hanji-tip'), y - 1, y);
     // 编年中的年份
-    var sec = h('section', 'yr');
+    var sec = h('section', 'yr wait');
     var head = h('div', 'yr-head');
     head.innerHTML = '<b>' + (S.blind ? E.ganzhi(y) : esc(el.big)) + '</b><span>' + (S.blind ? '' : y + ' · ' + E.ganzhi(y) + '<br><i class="ys"> · </i>') + (L.age === 0 ? '出生' : L.age + ' 岁') + '</span>';
     var ol = h('ol');
@@ -972,6 +973,7 @@
       rec.entries.forEach(function (e) { ol.appendChild(entryEl(e)); });
       if (rec.ledger && (rec.age >= 14 || rec.ledger.net < 0)) ol.appendChild(ledgerEl(rec.ledger, rec.age));
       (L.spendLog || []).filter(function (x) { return x.y === rec.y; }).forEach(function (x) { ol.appendChild(entryEl({ k: 'spend', t: x.t })); });
+      if (!ol.children.length) sec.classList.add('wait');
       sec.appendChild(ol);
       box.appendChild(sec);
     });

@@ -535,8 +535,8 @@ table.ledger tr.tot td { border-bottom: 0; font-weight: 600; color: var(--ink); 
 /* ---------- 窄屏的人生页：顶栏收紧，编年占满 ---------- */
 .more-btn { display: none; }
 .yr-head .ys { display: none; font-style: normal; }
-.yr:has(> ol:empty) { display: none; }
-.chron > .yr:has(> ol:empty):first-child + * { border-top: 0; padding-top: 0; margin-top: 0; }
+.yr.wait { display: none; }
+.chron > .yr.wait:first-child + * { border-top: 0; padding-top: 0; margin-top: 0; }
 @media (max-width: 860px) {
   .hud { padding-block: 6px; }
   .hud-row { gap: 2px var(--s-3); }
