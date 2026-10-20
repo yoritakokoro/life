@@ -8,11 +8,17 @@
 <meta name="description" content="五千万分の一：漢末三国時代のひとりの庶民としてランダムに生まれ、その一生を見届ける。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@400;600;700&display=swap">
 <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 <!--BODY-->
+<style>
+/* 日本語版：仮名を含む日本語フォント（中国語フォントには仮名がなく、漢字も中国の字形になる） */
+:root { --font-display: "Yuji Syuku", "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif; --font-body: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif; --font-ui: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif; }
+details.panel > summary::after { content: "開く"; }
+details.panel[open] > summary::after { content: "閉じる"; }
+</style>
 <header class="topbar">
   <div class="wrap">
     <button class="brand" id="btn-home" type="button">五千万分の一<small>漢末三国の一生</small></button>
