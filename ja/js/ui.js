@@ -25,7 +25,6 @@
 
   /* ---------- 屏幕切換 ---------- */
   function show(id) {
-    document.body.classList.toggle('in-life', id === 'life');
     ['intro', 'birth', 'life', 'end'].forEach(function (s) { $(s).hidden = s !== id; });
     window.scrollTo(0, 0);
   }
@@ -300,20 +299,11 @@
     nextYear();
   }
 
-  // 窄屏：收起的设置面板（眼下所重、谋划与支用、页面导航）
+  // 窄屏：可收起的设置面板（眼下所重、谋划与支用），默认展开
   (function () {
-    var more = document.getElementById('btn-more'), hud = more && more.closest('.hud'), nav = document.getElementById('hud-nav');
+    var more = document.getElementById('btn-more'), hud = more && more.closest('.hud');
     if (!more) return;
     more.addEventListener('click', function () { var o = hud.classList.toggle('open'); more.setAttribute('aria-expanded', o ? 'true' : 'false'); });
-    if (nav) document.querySelectorAll('.topbar .nav > *').forEach(function (el) {
-      var b = document.createElement(el.tagName === 'A' ? 'a' : 'button');
-      b.className = 'btn'; b.textContent = el.textContent;
-      if (el.tagName === 'A') { b.href = el.getAttribute('href'); if (el.target) b.target = el.target; }
-      else { b.type = 'button'; b.addEventListener('click', function () { hud.classList.remove('open'); el.click(); }); }
-      nav.appendChild(b);
-    });
-    var tk = document.getElementById('ticker');
-    if (tk) tk.addEventListener('click', function () { tk.classList.toggle('full'); });
   })();
 
   function nextYear() {
