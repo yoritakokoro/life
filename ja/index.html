@@ -154,6 +154,7 @@ details.panel[open] > summary::after { content: "閉じる"; }
             <button class="icon-btn" id="btn-play" type="button" aria-label="一時停止"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="1" width="3.5" height="12"/><rect x="8.5" y="1" width="3.5" height="12"/></svg></button>
             <div class="seg" role="radiogroup" aria-label="速度" id="speed-hud"></div>
             <button class="btn" id="btn-skip" type="button">結末まで飛ばす</button>
+            <button class="icon-btn more-btn" id="btn-more" type="button" aria-label="設定" aria-expanded="false" aria-controls="focus-row"><svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1" y="2" width="12" height="1.6"/><rect x="1" y="6.2" width="12" height="1.6"/><rect x="1" y="10.4" width="12" height="1.6"/></svg></button>
           </div>
         </div>
         <div class="focus-row" id="focus-row">
@@ -166,6 +167,7 @@ details.panel[open] > summary::after { content: "閉じる"; }
             <label class="focus-chk" title="オンにすると、毎年あなたの性情・目下の重点・暮らし向きに応じて、余財の一部を自動で使う：買い物、学問、交遊、不動産、仕官の根回し……"><input type="checkbox" id="auto-spend"> 自動支出</label>
             <label class="focus-chk" title="オンにすると、避難・縁談・借金などの大事もシステムが代わりに決める"><input type="checkbox" id="auto-choice"> 大事も運命に任せる</label>
           </div>
+          <div class="hud-nav" id="hud-nav"></div>
         </div>
         <div class="season" id="season" aria-hidden="true"><span>春</span><span>夏</span><span>秋</span><span>冬</span></div>
       </div>

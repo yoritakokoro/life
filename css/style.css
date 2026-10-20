@@ -531,3 +531,38 @@ table.ledger tr.tot td { border-bottom: 0; font-weight: 600; color: var(--ink); 
 @media (max-width: 860px) {
   #life .chron-pane .chron { max-height: none !important; min-height: 0; overflow: visible; }
 }
+
+/* ---------- 窄屏的人生页：顶栏收紧，编年占满 ---------- */
+.more-btn, .hud-nav { display: none; }
+.yr-head .ys { display: none; font-style: normal; }
+.yr:has(> ol:empty) { display: none; }
+.chron > .yr:has(> ol:empty):first-child + * { border-top: 0; padding-top: 0; margin-top: 0; }
+@media (max-width: 860px) {
+  body.in-life .topbar { display: none; }
+  .hud { padding-block: 6px; }
+  .hud-row { gap: 2px var(--s-3); }
+  .hud-era b { font-size: 1.35rem; }
+  .hud-era span { font-size: var(--t-xs); }
+  .hud-name { font-size: var(--t-lg); margin-right: 4px; }
+  .hud-age b { font-size: var(--t-lg); }
+  .hud-meta { font-size: var(--t-xs); width: 100%; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+  .hud-meta #hud-place { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #hud-days { display: none; }
+  .controls { width: 100%; gap: 6px; flex-wrap: wrap; }
+  .controls .seg label, .controls .seg button { padding: 4px 8px; white-space: nowrap; font-size: var(--t-xs); }
+  .controls #btn-skip { padding: 5px 10px; margin-left: auto; white-space: nowrap; }
+  .more-btn { display: inline-grid; }
+  .hud .focus-row { display: none; }
+  .hud.open .focus-row { display: grid; padding-bottom: 4px; }
+  .hud.open .more-btn { background: var(--ink); }
+  .hud.open .more-btn svg { fill: var(--silk); }
+  .hud-nav { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; border-top: 1px dotted var(--rule); }
+  .hud-nav .btn { text-decoration: none; color: var(--ink-2); }
+  .season { margin-top: 4px; }
+  .season span { font-size: 0; height: 3px; padding: 0; }
+  .ticker { cursor: pointer; padding-block: 6px; }
+  .ticker p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ticker.full p { display: block; }
+  .chron-pane { background: none; border: 0; padding: 0; box-shadow: none; }
+  .yr-head .ys { display: inline; }
+}

@@ -25,6 +25,7 @@
 
   /* ---------- 屏幕切換 ---------- */
   function show(id) {
+    document.body.classList.toggle('in-life', id === 'life');
     ['intro', 'birth', 'life', 'end'].forEach(function (s) { $(s).hidden = s !== id; });
     window.scrollTo(0, 0);
   }
@@ -299,6 +300,22 @@
     nextYear();
   }
 
+  // 窄屏：收起的设置面板（眼下所重、谋划与支用、页面导航）
+  (function () {
+    var more = document.getElementById('btn-more'), hud = more && more.closest('.hud'), nav = document.getElementById('hud-nav');
+    if (!more) return;
+    more.addEventListener('click', function () { var o = hud.classList.toggle('open'); more.setAttribute('aria-expanded', o ? 'true' : 'false'); });
+    if (nav) document.querySelectorAll('.topbar .nav > *').forEach(function (el) {
+      var b = document.createElement(el.tagName === 'A' ? 'a' : 'button');
+      b.className = 'btn'; b.textContent = el.textContent;
+      if (el.tagName === 'A') { b.href = el.getAttribute('href'); if (el.target) b.target = el.target; }
+      else { b.type = 'button'; b.addEventListener('click', function () { hud.classList.remove('open'); el.click(); }); }
+      nav.appendChild(b);
+    });
+    var tk = document.getElementById('ticker');
+    if (tk) tk.addEventListener('click', function () { tk.classList.toggle('full'); });
+  })();
+
   function nextYear() {
     var L = S.L;
     if (!L.alive) { finish(); return; }
@@ -325,7 +342,7 @@
     // 編年中的年份
     var sec = h('section', 'yr');
     var head = h('div', 'yr-head');
-    head.innerHTML = '<b>' + (S.blind ? E.ganzhi(y) : esc(el.big)) + '</b><span>' + (S.blind ? '' : y + ' · ' + E.ganzhi(y) + '<br>') + (L.age === 0 ? '誕生' : L.age + ' 歳') + '</span>';
+    head.innerHTML = '<b>' + (S.blind ? E.ganzhi(y) : esc(el.big)) + '</b><span>' + (S.blind ? '' : y + ' · ' + E.ganzhi(y) + '<br><i class="ys"> · </i>') + (L.age === 0 ? '誕生' : L.age + ' 歳') + '</span>';
     var ol = h('ol');
     sec.appendChild(head); sec.appendChild(ol);
     if (upMode()) $('chron').prepend(sec); else $('chron').appendChild(sec);
